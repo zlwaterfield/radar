@@ -42,7 +42,7 @@ A Slack application that connects to GitHub and tracks activity to notify users 
 2. Set up a virtual environment:
    ```
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate
    ```
 
 3. Install dependencies:
@@ -118,28 +118,14 @@ radar/
 │   ├── models/         # Pydantic models
 │   ├── services/       # External services (Slack, GitHub)
 │   └── utils/          # Utility functions
+│── client/         # Next.js application
 ├── docs/               # Documentation
 ├── scripts/            # Utility scripts
-├── tests/              # Test suite
 ├── .env.example        # Example environment variables
 ├── Dockerfile          # Docker configuration
 ├── docker-compose.yml  # Docker Compose configuration
 ├── README.md           # Project documentation
 └── requirements.txt    # Project dependencies
-```
-
-### Testing
-
-Run the test suite with pytest:
-
-```
-pytest
-```
-
-For coverage report:
-
-```
-pytest --cov=app tests/
 ```
 
 ### Code Style
@@ -156,36 +142,6 @@ black app tests
 isort app tests
 flake8 app tests
 ```
-
-## Deployment
-
-### Production Deployment
-
-For production deployment, consider:
-
-1. Using a reverse proxy like Nginx
-2. Setting up SSL certificates
-3. Using a process manager like Supervisor
-4. Configuring proper logging
-
-Example Nginx configuration:
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-### Docker Deployment
-
-The included Docker configuration can be used for production with appropriate environment variables.
 
 ## Troubleshooting
 
