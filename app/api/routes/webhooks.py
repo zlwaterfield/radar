@@ -1,0 +1,594 @@
+"""
+Webhook routes for Radar.
+
+This module handles incoming webhooks from GitHub.
+"""
+import hashlib
+import hmac
+import json
+import logging
+from typing import Dict, Any, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Header
+
+from app.core.config import settings
+from app.db.supabase import SupabaseManager
+from app.models.github import (
+    EventType,
+    ActionType,
+    GitHubEvent,
+    PullRequestEvent,
+    PullRequestReviewEvent,
+    PullRequestReviewCommentEvent,
+    IssueEvent,
+    IssueCommentEvent,
+    PushEvent,
+)
+from app.services.slack_service import SlackService
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+async def verify_github_webhook(request: Request, x_hub_signature_256: Optional[str] = Header(None)):
+    """
+    Verify GitHub webhook signature.
+    
+    Args:
+        request: FastAPI request
+        x_hub_signature_256: GitHub webhook signature
+        
+    Returns:
+        True if signature is valid
+        
+    Raises:
+        HTTPException: If signature is invalid
+    """
+    if not settings.GITHUB_WEBHOOK_SECRET:
+        logger.warning("GitHub webhook secret not configured, skipping signature verification")
+        return True
+    
+    if not x_hub_signature_256:
+        logger.error("No GitHub webhook signature provided")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No signature provided"
+        )
+    
+    # Get request body
+    body = await request.body()
+    
+    # Calculate expected signature
+    expected_signature = "sha256=" + hmac.new(
+        settings.GITHUB_WEBHOOK_SECRET.encode(),
+        body,
+        hashlib.sha256
+    ).hexdigest()
+    
+    # Compare signatures
+    if not hmac.compare_digest(expected_signature, x_hub_signature_256):
+        logger.error("Invalid GitHub webhook signature")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid signature"
+        )
+    
+    return True
+
+
+@router.post("/github")
+async def github_webhook(request: Request, verified: bool = Depends(verify_github_webhook)):
+    """
+    Handle GitHub webhook events.
+    
+    Args:
+        request: FastAPI request
+        verified: Whether the webhook signature is verified
+        
+    Returns:
+        Success message
+    """
+    try:
+        # Get event type from header
+        event_type = request.headers.get("X-GitHub-Event")
+        if not event_type:
+            logger.error("No GitHub event type provided")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No event type provided"
+            )
+        
+        # Get request body
+        body = await request.json()
+        
+        # Store event in database
+        event_data = {
+            "event_type": event_type,
+            "action": body.get("action"),
+            "repository_id": str(body.get("repository", {}).get("id")),
+            "repository_name": body.get("repository", {}).get("full_name"),
+            "sender_id": str(body.get("sender", {}).get("id")),
+            "sender_login": body.get("sender", {}).get("login"),
+            "payload": body,
+        }
+        
+        # Store event in database
+        event = await SupabaseManager.create_event(event_data)
+        
+        if not event:
+            logger.error("Failed to store GitHub event")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to store event"
+            )
+        
+        # Process event asynchronously
+        # In a production environment, you would use a task queue like Celery
+        # For simplicity, we'll process it directly here
+        await process_github_event(event_type, body, event["id"])
+        
+        return {"message": "Webhook received successfully"}
+        
+    except Exception as e:
+        logger.error(f"Error processing GitHub webhook: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing webhook: {str(e)}"
+        )
+
+
+async def process_github_event(event_type: str, payload: Dict[str, Any], event_id: str):
+    """
+    Process GitHub event.
+    
+    Args:
+        event_type: GitHub event type
+        payload: Event payload
+        event_id: Event ID in database
+    """
+    try:
+        # Get repository
+        repository = payload.get("repository", {})
+        repo_id = str(repository.get("id"))
+        repo_name = repository.get("full_name")
+        
+        # Find users who are watching this repository
+        users = await SupabaseManager.get_users_by_repository(repo_id)
+        
+        if not users:
+            logger.info(f"No users watching repository {repo_name}")
+            return
+        
+        # Process event based on type
+        if event_type == "pull_request":
+            await process_pull_request_event(payload, users, event_id)
+        elif event_type == "pull_request_review":
+            await process_pull_request_review_event(payload, users, event_id)
+        elif event_type == "pull_request_review_comment":
+            await process_pull_request_review_comment_event(payload, users, event_id)
+        elif event_type == "issue":
+            await process_issue_event(payload, users, event_id)
+        elif event_type == "issue_comment":
+            await process_issue_comment_event(payload, users, event_id)
+        elif event_type == "push":
+            await process_push_event(payload, users, event_id)
+        else:
+            logger.info(f"Unhandled GitHub event type: {event_type}")
+        
+        # Mark event as processed
+        await SupabaseManager.update_event(event_id, {"processed": True})
+        
+    except Exception as e:
+        logger.error(f"Error processing GitHub event: {e}", exc_info=True)
+
+
+async def process_pull_request_event(payload: Dict[str, Any], users: list, event_id: str):
+    """
+    Process pull request event.
+    
+    Args:
+        payload: Event payload
+        users: List of users watching the repository
+        event_id: Event ID in database
+    """
+    try:
+        action = payload.get("action")
+        pr = payload.get("pull_request", {})
+        repository = payload.get("repository", {})
+        sender = payload.get("sender", {})
+        
+        # Skip if action is not interesting
+        if action not in ["opened", "closed", "reopened", "assigned", "review_requested"]:
+            return
+        
+        # Create message for each user
+        for user in users:
+            # Check user settings
+            settings = await SupabaseManager.get_user_settings(user["id"])
+            if not settings:
+                continue
+            
+            # Check if user wants to receive this notification
+            notification_key = f"pull_request_{action}"
+            if action == "closed" and pr.get("merged"):
+                notification_key = "pull_request_merged"
+                
+            if not settings.get("notification_preferences", {}).get(notification_key, True):
+                continue
+            
+            # Create Slack message
+            slack_service = SlackService(token=user["slack_access_token"])
+            
+            # Get user's Slack channel (DM)
+            # In a real app, you would store this or get it from Slack API
+            channel = f"@{user['slack_id']}"
+            
+            # Create message
+            from app.models.slack import PullRequestMessage
+            
+            message = PullRequestMessage(
+                channel=channel,
+                text=f"Pull Request {action}: {pr.get('title')}",
+                pull_request_number=pr.get("number"),
+                pull_request_title=pr.get("title"),
+                pull_request_url=pr.get("html_url"),
+                repository=repository.get("full_name"),
+                action=action if action != "closed" or not pr.get("merged") else "merged",
+                user=sender.get("login"),
+                blocks=[]  # Will be filled by create_pull_request_message
+            )
+            
+            # Format message
+            message = slack_service.create_pull_request_message(message)
+            
+            # Send message
+            response = await slack_service.send_message(message)
+            
+            # Store notification in database
+            notification_data = {
+                "user_id": user["id"],
+                "event_id": event_id,
+                "message_type": "pull_request",
+                "channel": channel,
+                "message_ts": response.get("ts"),
+                "payload": {
+                    "pull_request_id": pr.get("id"),
+                    "pull_request_number": pr.get("number"),
+                    "action": action,
+                }
+            }
+            
+            await SupabaseManager.create_notification(notification_data)
+            
+    except Exception as e:
+        logger.error(f"Error processing pull request event: {e}", exc_info=True)
+
+
+async def process_pull_request_review_event(payload: Dict[str, Any], users: list, event_id: str):
+    """
+    Process pull request review event.
+    
+    Args:
+        payload: Event payload
+        users: List of users watching the repository
+        event_id: Event ID in database
+    """
+    try:
+        action = payload.get("action")
+        review = payload.get("review", {})
+        pr = payload.get("pull_request", {})
+        repository = payload.get("repository", {})
+        sender = payload.get("sender", {})
+        
+        # Skip if action is not interesting
+        if action != "submitted":
+            return
+        
+        # Create message for each user
+        for user in users:
+            # Check user settings
+            settings = await SupabaseManager.get_user_settings(user["id"])
+            if not settings:
+                continue
+            
+            # Check if user wants to receive this notification
+            if not settings.get("notification_preferences", {}).get("pull_request_reviewed", True):
+                continue
+            
+            # Create Slack message
+            slack_service = SlackService(token=user["slack_access_token"])
+            
+            # Get user's Slack channel (DM)
+            channel = f"@{user['slack_id']}"
+            
+            # Create message
+            from app.models.slack import PullRequestReviewMessage
+            
+            message = PullRequestReviewMessage(
+                channel=channel,
+                text=f"Pull Request Review: {pr.get('title')}",
+                pull_request_number=pr.get("number"),
+                pull_request_title=pr.get("title"),
+                pull_request_url=pr.get("html_url"),
+                repository=repository.get("full_name"),
+                review_state=review.get("state"),
+                review_comment=review.get("body"),
+                user=sender.get("login"),
+                blocks=[]  # Will be filled by create_pull_request_review_message
+            )
+            
+            # Format message
+            message = slack_service.create_pull_request_review_message(message)
+            
+            # Send message
+            response = await slack_service.send_message(message)
+            
+            # Store notification in database
+            notification_data = {
+                "user_id": user["id"],
+                "event_id": event_id,
+                "message_type": "pull_request_review",
+                "channel": channel,
+                "message_ts": response.get("ts"),
+                "payload": {
+                    "pull_request_id": pr.get("id"),
+                    "pull_request_number": pr.get("number"),
+                    "review_id": review.get("id"),
+                    "review_state": review.get("state"),
+                }
+            }
+            
+            await SupabaseManager.create_notification(notification_data)
+            
+    except Exception as e:
+        logger.error(f"Error processing pull request review event: {e}", exc_info=True)
+
+
+async def process_pull_request_review_comment_event(payload: Dict[str, Any], users: list, event_id: str):
+    """
+    Process pull request review comment event.
+    
+    Args:
+        payload: Event payload
+        users: List of users watching the repository
+        event_id: Event ID in database
+    """
+    try:
+        action = payload.get("action")
+        comment = payload.get("comment", {})
+        pr = payload.get("pull_request", {})
+        repository = payload.get("repository", {})
+        sender = payload.get("sender", {})
+        
+        # Skip if action is not interesting
+        if action != "created":
+            return
+        
+        # Create message for each user
+        for user in users:
+            # Check user settings
+            settings = await SupabaseManager.get_user_settings(user["id"])
+            if not settings:
+                continue
+            
+            # Check if user wants to receive this notification
+            if not settings.get("notification_preferences", {}).get("pull_request_commented", True):
+                continue
+            
+            # Create Slack message
+            slack_service = SlackService(token=user["slack_access_token"])
+            
+            # Get user's Slack channel (DM)
+            channel = f"@{user['slack_id']}"
+            
+            # Create message
+            from app.models.slack import PullRequestCommentMessage
+            
+            message = PullRequestCommentMessage(
+                channel=channel,
+                text=f"Pull Request Comment: {pr.get('title')}",
+                pull_request_number=pr.get("number"),
+                pull_request_title=pr.get("title"),
+                pull_request_url=pr.get("html_url"),
+                repository=repository.get("full_name"),
+                comment=comment.get("body"),
+                comment_url=comment.get("html_url"),
+                user=sender.get("login"),
+                blocks=[]  # Will be filled by create_pull_request_comment_message
+            )
+            
+            # Format message
+            message = slack_service.create_pull_request_comment_message(message)
+            
+            # Send message
+            response = await slack_service.send_message(message)
+            
+            # Store notification in database
+            notification_data = {
+                "user_id": user["id"],
+                "event_id": event_id,
+                "message_type": "pull_request_comment",
+                "channel": channel,
+                "message_ts": response.get("ts"),
+                "payload": {
+                    "pull_request_id": pr.get("id"),
+                    "pull_request_number": pr.get("number"),
+                    "comment_id": comment.get("id"),
+                }
+            }
+            
+            await SupabaseManager.create_notification(notification_data)
+            
+    except Exception as e:
+        logger.error(f"Error processing pull request review comment event: {e}", exc_info=True)
+
+
+async def process_issue_event(payload: Dict[str, Any], users: list, event_id: str):
+    """
+    Process issue event.
+    
+    Args:
+        payload: Event payload
+        users: List of users watching the repository
+        event_id: Event ID in database
+    """
+    try:
+        action = payload.get("action")
+        issue = payload.get("issue", {})
+        repository = payload.get("repository", {})
+        sender = payload.get("sender", {})
+        
+        # Skip if action is not interesting
+        if action not in ["opened", "closed", "reopened", "assigned"]:
+            return
+        
+        # Create message for each user
+        for user in users:
+            # Check user settings
+            settings = await SupabaseManager.get_user_settings(user["id"])
+            if not settings:
+                continue
+            
+            # Check if user wants to receive this notification
+            notification_key = f"issue_{action}"
+            if not settings.get("notification_preferences", {}).get(notification_key, True):
+                continue
+            
+            # Create Slack message
+            slack_service = SlackService(token=user["slack_access_token"])
+            
+            # Get user's Slack channel (DM)
+            channel = f"@{user['slack_id']}"
+            
+            # Create message
+            from app.models.slack import IssueMessage
+            
+            message = IssueMessage(
+                channel=channel,
+                text=f"Issue {action}: {issue.get('title')}",
+                issue_number=issue.get("number"),
+                issue_title=issue.get("title"),
+                issue_url=issue.get("html_url"),
+                repository=repository.get("full_name"),
+                action=action,
+                user=sender.get("login"),
+                blocks=[]  # Will be filled by create_issue_message
+            )
+            
+            # Format message
+            message = slack_service.create_issue_message(message)
+            
+            # Send message
+            response = await slack_service.send_message(message)
+            
+            # Store notification in database
+            notification_data = {
+                "user_id": user["id"],
+                "event_id": event_id,
+                "message_type": "issue",
+                "channel": channel,
+                "message_ts": response.get("ts"),
+                "payload": {
+                    "issue_id": issue.get("id"),
+                    "issue_number": issue.get("number"),
+                    "action": action,
+                }
+            }
+            
+            await SupabaseManager.create_notification(notification_data)
+            
+    except Exception as e:
+        logger.error(f"Error processing issue event: {e}", exc_info=True)
+
+
+async def process_issue_comment_event(payload: Dict[str, Any], users: list, event_id: str):
+    """
+    Process issue comment event.
+    
+    Args:
+        payload: Event payload
+        users: List of users watching the repository
+        event_id: Event ID in database
+    """
+    try:
+        action = payload.get("action")
+        comment = payload.get("comment", {})
+        issue = payload.get("issue", {})
+        repository = payload.get("repository", {})
+        sender = payload.get("sender", {})
+        
+        # Skip if action is not interesting
+        if action != "created":
+            return
+        
+        # Create message for each user
+        for user in users:
+            # Check user settings
+            settings = await SupabaseManager.get_user_settings(user["id"])
+            if not settings:
+                continue
+            
+            # Check if user wants to receive this notification
+            if not settings.get("notification_preferences", {}).get("issue_commented", True):
+                continue
+            
+            # Create Slack message
+            slack_service = SlackService(token=user["slack_access_token"])
+            
+            # Get user's Slack channel (DM)
+            channel = f"@{user['slack_id']}"
+            
+            # Create message
+            from app.models.slack import IssueCommentMessage
+            
+            message = IssueCommentMessage(
+                channel=channel,
+                text=f"Issue Comment: {issue.get('title')}",
+                issue_number=issue.get("number"),
+                issue_title=issue.get("title"),
+                issue_url=issue.get("html_url"),
+                repository=repository.get("full_name"),
+                comment=comment.get("body"),
+                comment_url=comment.get("html_url"),
+                user=sender.get("login"),
+                blocks=[]  # Will be filled by create_issue_comment_message
+            )
+            
+            # Format message
+            message = slack_service.create_issue_comment_message(message)
+            
+            # Send message
+            response = await slack_service.send_message(message)
+            
+            # Store notification in database
+            notification_data = {
+                "user_id": user["id"],
+                "event_id": event_id,
+                "message_type": "issue_comment",
+                "channel": channel,
+                "message_ts": response.get("ts"),
+                "payload": {
+                    "issue_id": issue.get("id"),
+                    "issue_number": issue.get("number"),
+                    "comment_id": comment.get("id"),
+                }
+            }
+            
+            await SupabaseManager.create_notification(notification_data)
+            
+    except Exception as e:
+        logger.error(f"Error processing issue comment event: {e}", exc_info=True)
+
+
+async def process_push_event(payload: Dict[str, Any], users: list, event_id: str):
+    """
+    Process push event.
+    
+    Args:
+        payload: Event payload
+        users: List of users watching the repository
+        event_id: Event ID in database
+    """
+    # For simplicity, we'll skip implementing push event notifications
+    # This would be similar to the other event handlers
+    pass
