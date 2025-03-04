@@ -1,270 +1,204 @@
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import axios from 'axios';
-import { FiGithub, FiAlertCircle, FiCheckCircle, FiSettings, FiChevronLeft, FiChevronRight, FiEdit, FiList } from 'react-icons/fi';
+import { FiRefreshCw, FiGithub, FiMessageSquare, FiGitPullRequest, FiEye } from 'react-icons/fi';
 
-interface Repository {
-  id: string;
-  name: string;
-  full_name: string;
-  description: string;
-  enabled: boolean;
+interface UserStats {
+  totalNotifications: number;
+  pullRequests: number;
+  reviews: number;
+  comments: number;
 }
 
-interface PaginationInfo {
-  page: number;
-  page_size: number;
-  total_items: number;
-  total_pages: number;
-}
-
-export default function Dashboard() {
-  const { user, isAuthenticated, loading, connectGithub, reconnectGithub, manageGithubRepoAccess } = useAuth();
-  const router = useRouter();
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [repoLoading, setRepoLoading] = useState(false);
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    page: 1,
-    page_size: 10,
-    total_items: 0,
-    total_pages: 0
-  });
-  const [stats, setStats] = useState({
-    totalNotifications: 0,
-    pullRequests: 0,
-    reviews: 0,
-    comments: 0
-  });
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/');
-    }
-  }, [isAuthenticated, loading, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && user?.github_id) {
-      fetchRepositories(pagination.page, pagination.page_size);
-      fetchStats();
-    }
-  }, [isAuthenticated, user, pagination.page, pagination.page_size]);
-
-  const fetchRepositories = async (page: number, pageSize: number) => {
-    try {
-      setRepoLoading(true);
-      const response = await axios.get(`/api/settings/user/${user?.id}/repositories`, {
-        params: {
-          page: page,
-          page_size: pageSize,
-          enabled: true    // Only get enabled repositories
-        }
-      });
-      
-      // Handle the paginated response
-      if (response.data) {
-        setRepositories(response.data.items || []);
-        setPagination({
-          page: response.data.page || 1,
-          page_size: response.data.page_size || 10,
-          total_items: response.data.total_items || 0,
-          total_pages: response.data.total_pages || 0
-        });
-      } else {
-        setRepositories([]);
-      }
-    } catch (error) {
-      console.error('Error fetching repositories:', error);
-    } finally {
-      setRepoLoading(false);
-    }
-  };
+const Dashboard: React.FC = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState<boolean>(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   const fetchStats = async () => {
+    if (!user) return;
+    
+    setStatsLoading(true);
+    setStatsError(null);
+    
     try {
-      const response = await axios.get(`/api/users/${user?.id}/stats`);
-      setStats(response.data || {
-        totalNotifications: 0,
-        pullRequests: 0,
-        reviews: 0,
-        comments: 0
-      });
+      const response = await axios.get(`/api/users/${user.id}/stats`);
+      setStats(response.data);
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching user stats:', error);
+      setStatsError('Failed to load statistics. Please try again.');
+    } finally {
+      setStatsLoading(false);
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= pagination.total_pages) {
-      fetchRepositories(newPage, pagination.page_size);
+  useEffect(() => {
+    if (user) {
+      fetchStats();
     }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
+  }, [user]);
 
   return (
     <Layout title="Dashboard">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="card bg-primary-500 text-white">
-          <h3 className="text-lg font-medium">Total Notifications</h3>
-          <p className="text-3xl font-bold">{stats.totalNotifications}</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="section-header">Activity Overview</h1>
+          <button 
+            onClick={fetchStats} 
+            disabled={statsLoading} 
+            className="btn btn-outline-secondary flex items-center text-sm"
+          >
+            <FiRefreshCw className={`mr-2 h-4 w-4 ${statsLoading ? 'animate-spin' : ''}`} />
+            {statsLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
         </div>
-        <div className="card">
-          <h3 className="text-lg font-medium">Pull Requests</h3>
-          <p className="text-3xl font-bold">{stats.pullRequests}</p>
-        </div>
-        <div className="card">
-          <h3 className="text-lg font-medium">Reviews</h3>
-          <p className="text-3xl font-bold">{stats.reviews}</p>
-        </div>
-        <div className="card">
-          <h3 className="text-lg font-medium">Comments</h3>
-          <p className="text-3xl font-bold">{stats.comments}</p>
-        </div>
-      </div>
 
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">GitHub Integration</h2>
-        
-        {!user?.github_id ? (
-          <div className="card bg-yellow-50 border border-yellow-200">
-            <div className="flex items-start">
-              <FiAlertCircle className="text-yellow-500 text-xl mr-4 mt-1" />
-              <div>
-                <h3 className="text-lg font-medium">GitHub account not connected</h3>
-                <p className="mb-4">Connect your GitHub account to start receiving notifications.</p>
-                <button 
-                  onClick={connectGithub}
-                  className="btn btn-primary flex items-center"
-                >
-                  <FiGithub className="mr-2" />
-                  Connect GitHub Account
-                </button>
+        {statsError && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{statsError}</p>
               </div>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="card bg-green-50 border border-green-200 mb-6">
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start">
-                    <FiCheckCircle className="text-green-500 text-xl mr-4 mt-1" />
-                    <div>
-                      <h3 className="text-lg font-medium">GitHub account connected</h3>
-                      <p>Your GitHub account is successfully connected to Radar.</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={manageGithubRepoAccess}
-                    className="btn btn-outline-primary flex items-center"
-                    title="Update GitHub permissions"
-                  >
-                    <FiEdit className="mr-2" />
-                    Manage Repository Access
-                  </button>
-                </div>
-              </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="stat-card">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="stat-card-title">Total Notifications</h3>
+              <span className="text-gray-400 dark:text-gray-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </span>
             </div>
-            
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Monitored Repositories</h3>
-              <button 
-                onClick={() => router.push('/settings')}
-                className="btn btn-secondary flex items-center"
-              >
-                <FiSettings className="mr-2" />
-                Manage Settings
-              </button>
-            </div>
-            
-            {repoLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
-              </div>
-            ) : repositories.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {repositories.map(repo => (
-                    <div key={repo.id} className={`card ${repo.enabled ? 'border-l-4 border-green-500' : 'border-l-4 border-gray-300'}`}>
-                      <div className="flex justify-between">
-                        <h4 className="font-medium">{repo.name}</h4>
-                        <span className={`px-2 py-1 text-xs rounded-full ${repo.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                          {repo.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{repo.description || 'No description'}</p>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Pagination Controls */}
-                {pagination.total_pages > 1 && (
-                  <div className="flex justify-center items-center mt-6 space-x-2">
-                    <button 
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page === 1}
-                      className={`p-2 rounded-md ${pagination.page === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-primary-600 hover:bg-primary-50'}`}
-                    >
-                      <FiChevronLeft />
-                    </button>
-                    
-                    {/* Page Numbers */}
-                    <div className="flex space-x-1">
-                      {Array.from({ length: Math.min(5, pagination.total_pages) }, (_, i) => {
-                        // Show pages around current page
-                        let pageNum;
-                        if (pagination.total_pages <= 5) {
-                          pageNum = i + 1;
-                        } else if (pagination.page <= 3) {
-                          pageNum = i + 1;
-                        } else if (pagination.page >= pagination.total_pages - 2) {
-                          pageNum = pagination.total_pages - 4 + i;
-                        } else {
-                          pageNum = pagination.page - 2 + i;
-                        }
-                        
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => handlePageChange(pageNum)}
-                            className={`w-8 h-8 rounded-md ${
-                              pagination.page === pageNum 
-                                ? 'bg-primary-600 text-white' 
-                                : 'text-gray-700 hover:bg-primary-50'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    
-                    <button 
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page === pagination.total_pages}
-                      className={`p-2 rounded-md ${pagination.page === pagination.total_pages ? 'text-gray-400 cursor-not-allowed' : 'text-primary-600 hover:bg-primary-50'}`}
-                    >
-                      <FiChevronRight />
-                    </button>
-                  </div>
-                )}
-              </>
+            {statsLoading ? (
+              <div className="animate-pulse h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
             ) : (
-              <div className="card bg-gray-50 border border-gray-200">
-                <p className="text-center py-4">No repositories configured. Go to settings to add repositories.</p>
+              <p className="stat-card-value">{stats?.totalNotifications || 0}</p>
+            )}
+          </div>
+
+          <div className="stat-card">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="stat-card-title">Pull Requests</h3>
+              <span className="text-primary-500 dark:text-primary-400">
+                <FiGitPullRequest className="w-5 h-5" />
+              </span>
+            </div>
+            {statsLoading ? (
+              <div className="animate-pulse h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            ) : (
+              <p className="stat-card-value">{stats?.pullRequests || 0}</p>
+            )}
+          </div>
+
+          <div className="stat-card">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="stat-card-title">Reviews</h3>
+              <span className="text-green-500 dark:text-green-400">
+                <FiEye className="w-5 h-5" />
+              </span>
+            </div>
+            {statsLoading ? (
+              <div className="animate-pulse h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            ) : (
+              <p className="stat-card-value">{stats?.reviews || 0}</p>
+            )}
+          </div>
+
+          <div className="stat-card">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="stat-card-title">Comments</h3>
+              <span className="text-yellow-500 dark:text-yellow-400">
+                <FiMessageSquare className="w-5 h-5" />
+              </span>
+            </div>
+            {statsLoading ? (
+              <div className="animate-pulse h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            ) : (
+              <p className="stat-card-value">{stats?.comments || 0}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-card border border-gray-100 dark:border-gray-700 p-6">
+            <div className="flex items-center mb-4">
+              <FiGithub className="w-5 h-5 mr-2 text-gray-700 dark:text-gray-300" />
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">GitHub Connection</h2>
+            </div>
+            
+            {user?.github_id ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Connected to GitHub</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Your GitHub account is connected. You will receive notifications for your repositories.
+                  </p>
+                </div>
+                <span className="badge badge-success">Connected</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Not connected to GitHub</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Connect your GitHub account to start receiving notifications.
+                  </p>
+                </div>
+                <a href="/connect-github" className="btn btn-primary text-sm">
+                  Connect
+                </a>
               </div>
             )}
-          </>
-        )}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-card border border-gray-100 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Recent Activity</h2>
+            
+            {statsLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="animate-pulse flex items-center">
+                    <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-10 w-10"></div>
+                    <div className="ml-4 flex-1">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : stats && stats.totalNotifications > 0 ? (
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Activity data will be displayed here in a future update.
+              </p>
+            ) : (
+              <div className="text-center py-8">
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-300">No activity yet</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Once you start receiving notifications, your activity will appear here.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </Layout>
   );
-}
+};
+
+export default Dashboard;

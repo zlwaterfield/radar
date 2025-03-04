@@ -24,6 +24,23 @@ interface NotificationSettings {
   issues: boolean;
   digest_enabled: boolean;
   digest_time: string;
+  reviewer_review_requested: boolean;
+  reviewer_commented: boolean;
+  reviewer_merged: boolean;
+  reviewer_closed: boolean;
+  reviewer_check_failed: boolean;
+  author_reviewed: boolean;
+  author_commented: boolean;
+  author_check_failed: boolean;
+  author_check_succeeded: boolean;
+  mute_own_activity: boolean;
+  mute_bot_comments: boolean;
+  group_similar: boolean;
+}
+
+interface KeywordSettings {
+  enabled: boolean;
+  keywords: string[];
 }
 
 export default function Settings() {
@@ -40,8 +57,28 @@ export default function Settings() {
     comments: true,
     issues: true,
     digest_enabled: false,
-    digest_time: '09:00'
+    digest_time: '09:00',
+    reviewer_review_requested: true,
+    reviewer_commented: true,
+    reviewer_merged: true,
+    reviewer_closed: true,
+    reviewer_check_failed: true,
+    author_reviewed: true,
+    author_commented: true,
+    author_check_failed: true,
+    author_check_succeeded: true,
+    mute_own_activity: true,
+    mute_bot_comments: true,
+    group_similar: true,
   });
+
+  const [keywordSettings, setKeywordSettings] = useState<KeywordSettings>({
+    enabled: false,
+    keywords: []
+  });
+
+  const [keywordInput, setKeywordInput] = useState('');
+  const [isSavingKeywords, setIsSavingKeywords] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -50,6 +87,7 @@ export default function Settings() {
   const [enabledFilter, setEnabledFilter] = useState<boolean | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -60,7 +98,7 @@ export default function Settings() {
   useEffect(() => {
     if (isAuthenticated && user?.github_id) {
       fetchRepositories();
-      fetchSettings();
+      fetchUserSettings();
     }
   }, [isAuthenticated, user]);
 
@@ -109,14 +147,76 @@ export default function Settings() {
     }
   }, [user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm]);
 
-  const fetchSettings = async () => {
+  const fetchUserSettings = async () => {
     try {
-      const response = await axios.get(`/api/users/${user?.id}/settings`);
-      if (response.data) {
-        setNotificationSettings(response.data);
+      if (!user?.id) return;
+      
+      const response = await fetch(`/api/users/${user.id}/settings`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user settings');
+      }
+      
+      const data = await response.json();
+      
+      // Update notification settings
+      if (data.notification_preferences) {
+        const prefs = data.notification_preferences;
+        
+        setNotificationSettings(prev => ({
+          ...prev,
+          // Basic settings
+          issues: prefs.issues ?? prev.issues,
+          
+          // Reviewer notifications
+          reviewer_review_requested: prefs.reviewer_review_requested ?? prev.reviewer_review_requested,
+          reviewer_commented: prefs.reviewer_commented ?? prev.reviewer_commented,
+          reviewer_merged: prefs.reviewer_merged ?? prev.reviewer_merged,
+          reviewer_closed: prefs.reviewer_closed ?? prev.reviewer_closed,
+          reviewer_check_failed: prefs.reviewer_check_failed ?? prev.reviewer_check_failed,
+          
+          // Author notifications
+          author_reviewed: prefs.author_reviewed ?? prev.author_reviewed,
+          author_commented: prefs.author_commented ?? prev.author_commented,
+          author_check_failed: prefs.author_check_failed ?? prev.author_check_failed,
+          author_check_succeeded: prefs.author_check_succeeded ?? prev.author_check_succeeded,
+          
+          // Noise reduction
+          mute_own_activity: prefs.mute_own_activity ?? prev.mute_own_activity,
+          mute_bot_comments: prefs.mute_bot_comments ?? prev.mute_bot_comments,
+          group_similar: prefs.group_similar ?? prev.group_similar,
+        }));
+      }
+      
+      // Update digest settings
+      if (data.notification_schedule) {
+        const schedule = data.notification_schedule;
+        
+        setNotificationSettings(prev => ({
+          ...prev,
+          digest_enabled: schedule.digest_enabled ?? prev.digest_enabled,
+          digest_time: schedule.digest_time ?? prev.digest_time,
+        }));
+      }
+      
+      // Update keyword notification settings
+      if (data.keyword_notification_preferences) {
+        const keywordPrefs = data.keyword_notification_preferences;
+        
+        setKeywordSettings({
+          enabled: keywordPrefs.enabled ?? false,
+          keywords: keywordPrefs.keywords ?? []
+        });
       }
     } catch (error) {
-      console.error('Error fetching settings:', error);
+      console.error('Error fetching user settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load notification settings.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -186,11 +286,159 @@ export default function Settings() {
   };
 
   const handleNotificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked, value, type } = e.target;
+    const { name, type, checked, value } = e.target;
+    
     setNotificationSettings(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleKeywordToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { checked } = e.target;
+    setKeywordSettings(prev => ({
+      ...prev,
+      enabled: checked
+    }));
+  };
+
+  const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    setKeywordInput(value);
+  };
+
+  const addKeyword = () => {
+    if (keywordInput.trim() === '') return;
+    
+    setKeywordSettings(prev => ({
+      ...prev,
+      keywords: [...prev.keywords, keywordInput.trim()]
+    }));
+    
+    setKeywordInput('');
+  };
+
+  const removeKeyword = (keyword: string) => {
+    setKeywordSettings(prev => ({
+      ...prev,
+      keywords: prev.keywords.filter(k => k !== keyword)
+    }));
+  };
+
+  const saveNotificationSettings = async () => {
+    setIsSaving(true);
+    
+    try {
+      // Format settings for API
+      const settings = {
+        notification_preferences: {
+          // Basic settings
+          issues: notificationSettings.issues,
+          
+          // Reviewer notifications
+          reviewer_review_requested: notificationSettings.reviewer_review_requested,
+          reviewer_commented: notificationSettings.reviewer_commented,
+          reviewer_merged: notificationSettings.reviewer_merged,
+          reviewer_closed: notificationSettings.reviewer_closed,
+          reviewer_check_failed: notificationSettings.reviewer_check_failed,
+          
+          // Author notifications
+          author_reviewed: notificationSettings.author_reviewed,
+          author_commented: notificationSettings.author_commented,
+          author_check_failed: notificationSettings.author_check_failed,
+          author_check_succeeded: notificationSettings.author_check_succeeded,
+          
+          // Noise reduction
+          mute_own_activity: notificationSettings.mute_own_activity,
+          mute_bot_comments: notificationSettings.mute_bot_comments,
+          group_similar: notificationSettings.group_similar,
+        },
+        
+        // Daily digest settings
+        notification_schedule: {
+          digest_enabled: notificationSettings.digest_enabled,
+          digest_time: notificationSettings.digest_time
+        }
+      };
+      
+      // Save settings to API
+      const response = await fetch(`/api/users/${user?.id}/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save notification settings');
+      }
+      
+      toast({
+        title: 'Settings saved',
+        description: 'Your notification preferences have been updated.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save notification settings.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveKeywordSettings = async () => {
+    setIsSavingKeywords(true);
+    
+    try {
+      // Format settings for API
+      const settings = {
+        keyword_notification_preferences: {
+          enabled: keywordSettings.enabled,
+          keywords: keywordSettings.keywords
+        }
+      };
+      
+      // Save settings to API
+      const response = await fetch(`/api/users/${user?.id}/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save keyword settings');
+      }
+      
+      toast({
+        title: 'Settings saved',
+        description: 'Your keyword notification preferences have been updated.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error saving keyword settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save keyword settings.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsSavingKeywords(false);
+    }
   };
 
   const saveSettings = async () => {
@@ -198,7 +446,7 @@ export default function Settings() {
       setSaving(true);
       
       // Save notification settings
-      await axios.put(`/api/users/${user?.id}/settings`, notificationSettings);
+      await saveNotificationSettings();
       
       // Save repository settings
       const enabledRepos = repositories
@@ -248,94 +496,360 @@ export default function Settings() {
             </div>
           ) : (
             <>
-              <div className="card mb-6">
-                <h3 className="text-xl font-semibold mb-4">Notification Preferences</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        name="pull_requests"
-                        checked={notificationSettings.pull_requests}
-                        onChange={handleNotificationChange}
-                        className="h-4 w-4 text-primary-600 rounded"
-                      />
-                      <span>Pull Requests</span>
-                    </label>
+              <div className="mb-6 mt-8 bg-white dark:bg-gray-800 shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
+                    Advanced Notification Preferences
+                  </h3>
+                  <div className="mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+                    <p>Configure when you want to be notified based on your relationship to a pull request.</p>
                   </div>
                   
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        name="reviews"
-                        checked={notificationSettings.reviews}
-                        onChange={handleNotificationChange}
-                        className="h-4 w-4 text-primary-600 rounded"
-                      />
-                      <span>Reviews</span>
-                    </label>
-                  </div>
-                  
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        name="comments"
-                        checked={notificationSettings.comments}
-                        onChange={handleNotificationChange}
-                        className="h-4 w-4 text-primary-600 rounded"
-                      />
-                      <span>Comments</span>
-                    </label>
-                  </div>
-                  
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        name="issues"
-                        checked={notificationSettings.issues}
-                        onChange={handleNotificationChange}
-                        className="h-4 w-4 text-primary-600 rounded"
-                      />
-                      <span>Issues</span>
-                    </label>
-                  </div>
-                </div>
-                
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <h4 className="font-medium mb-2">Daily Digest</h4>
-                  
-                  <div className="flex items-center mb-4">
-                    <label className="flex items-center space-x-2 mr-6">
-                      <input
-                        type="checkbox"
-                        name="digest_enabled"
-                        checked={notificationSettings.digest_enabled}
-                        onChange={handleNotificationChange}
-                        className="h-4 w-4 text-primary-600 rounded"
-                      />
-                      <span>Enable daily digest</span>
-                    </label>
+                  <div className="mt-5 space-y-6">
+                    {/* When you're a reviewer */}
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">When you're a reviewer</h4>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            id="reviewer-review-requested"
+                            name="reviewer_review_requested"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.reviewer_review_requested}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="reviewer-review-requested" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Review is requested
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="reviewer-commented"
+                            name="reviewer_commented"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.reviewer_commented}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="reviewer-commented" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Someone comments on the PR
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="reviewer-merged"
+                            name="reviewer_merged"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.reviewer_merged}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="reviewer-merged" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            PR is merged
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="reviewer-closed"
+                            name="reviewer_closed"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.reviewer_closed}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="reviewer-closed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            PR is closed without merging
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="reviewer-check-failed"
+                            name="reviewer_check_failed"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.reviewer_check_failed}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="reviewer-check-failed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            CI checks fail
+                          </label>
+                        </div>
+                      </div>
+                    </div>
                     
-                    <div className="flex items-center">
-                      <span className="mr-2">Time:</span>
-                      <input
-                        type="time"
-                        name="digest_time"
-                        value={notificationSettings.digest_time}
-                        onChange={handleNotificationChange}
-                        disabled={!notificationSettings.digest_enabled}
-                        className="border rounded p-1"
-                      />
+                    {/* When you're the author */}
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">When you're the author</h4>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            id="author-reviewed"
+                            name="author_reviewed"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.author_reviewed}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="author-reviewed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Someone reviews your PR
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="author-commented"
+                            name="author_commented"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.author_commented}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="author-commented" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Someone comments on your PR
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="author-check-failed"
+                            name="author_check_failed"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.author_check_failed}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="author-check-failed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            CI checks fail
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="author-check-succeeded"
+                            name="author_check_succeeded"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            defaultChecked={notificationSettings.author_check_succeeded}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="author-check-succeeded" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            CI checks succeed
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Issues */}
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Issues</h4>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            id="issues"
+                            name="issues"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            checked={notificationSettings.issues}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="issues" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Receive notifications about issues
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Noise reduction */}
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Noise reduction</h4>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            id="mute-own-activity"
+                            name="mute_own_activity"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            checked={notificationSettings.mute_own_activity}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="mute-own-activity" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Mute notifications for your own activity
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="mute-bot-comments"
+                            name="mute_bot_comments"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            checked={notificationSettings.mute_bot_comments}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="mute-bot-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Mute notifications from bot comments
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="group-similar"
+                            name="group_similar"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            checked={notificationSettings.group_similar}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="group-similar" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Group similar notifications
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Daily Digest */}
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Daily Digest</h4>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            id="digest-enabled"
+                            name="digest_enabled"
+                            type="checkbox"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            checked={notificationSettings.digest_enabled}
+                            onChange={handleNotificationChange}
+                          />
+                          <label htmlFor="digest-enabled" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Enable daily digest
+                          </label>
+                        </div>
+                        {notificationSettings.digest_enabled && (
+                          <div className="mt-3">
+                            <label htmlFor="digest-time" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Time:
+                            </label>
+                            <div className="mt-1">
+                              <input
+                                type="time"
+                                name="digest_time"
+                                id="digest-time"
+                                className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600"
+                                value={notificationSettings.digest_time}
+                                onChange={handleNotificationChange}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
-                  <p className="text-sm text-gray-500">
-                    The daily digest will send a summary of all activity at the specified time.
-                  </p>
+                  <div className="mt-5">
+                    <button
+                      type="button"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      onClick={saveNotificationSettings}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save Preferences'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Keyword Notifications */}
+              <div className="mb-6 mt-8 bg-white dark:bg-gray-800 shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
+                    AI-Powered Keyword Notifications
+                  </h3>
+                  <div className="mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+                    <p>Get notified when pull requests contain content matching your keywords of interest.</p>
+                  </div>
+                  
+                  <div className="mt-5 space-y-4">
+                    <div className="flex items-center">
+                      <input
+                        id="keyword-notifications-enabled"
+                        name="keyword_notifications_enabled"
+                        type="checkbox"
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        checked={keywordSettings.enabled}
+                        onChange={handleKeywordToggle}
+                      />
+                      <label htmlFor="keyword-notifications-enabled" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                        Enable AI-powered keyword notifications
+                      </label>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <label htmlFor="keywords" className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                        Add keywords you want to be notified about (e.g., "security", "performance", "your team name")
+                      </label>
+                      <div className="flex">
+                        <input
+                          id="keywords"
+                          type="text"
+                          className="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                          value={keywordInput}
+                          onChange={handleKeywordChange}
+                          disabled={!keywordSettings.enabled}
+                          placeholder="Enter a keyword"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addKeyword();
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-r-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+                          onClick={addKeyword}
+                          disabled={!keywordSettings.enabled || keywordInput.trim() === ''}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {keywordSettings.keywords.length > 0 && (
+                      <div className="mt-4">
+                        <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                          Current keywords:
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {keywordSettings.keywords.map((keyword, index) => (
+                            <div key={index} className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1">
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{keyword}</span>
+                              <button
+                                type="button"
+                                className="ml-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                onClick={() => removeKeyword(keyword)}
+                                disabled={!keywordSettings.enabled}
+                              >
+                                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                      <p>Our AI will analyze pull request content and notify you when it matches your keywords.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-5">
+                    <button
+                      type="button"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      onClick={saveKeywordSettings}
+                      disabled={isSavingKeywords}
+                    >
+                      {isSavingKeywords ? 'Saving...' : 'Save Keyword Settings'}
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -393,17 +907,17 @@ export default function Settings() {
                 </div>
                 
                 {repoLoading ? (
-                  <div className="flex justify-center items-center h-32">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <div className="flex justify-center items-center min-h-[300px]">
+                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary-600"></div>
                   </div>
                 ) : (
                   <>
                     {repositories.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-gray-500 min-h-[300px] flex items-center justify-center">
                         No repositories found. Add repositories to monitor them.
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto min-h-[300px]">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>

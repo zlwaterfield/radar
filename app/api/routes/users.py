@@ -621,7 +621,7 @@ def fix_github_token_format(token: str) -> str:
     # Return original token if no fix needed or if we couldn't determine how to fix it
     return token
 
-@router.get("/{user_id}/settings", response_model=NotificationSettings)
+@router.get("/{user_id}/settings", response_model=Dict[str, Any])
 async def get_user_settings(user_id: str):
     """
     Get user notification settings.
@@ -641,28 +641,47 @@ async def get_user_settings(user_id: str):
             detail="User not found"
         )
     
-    # Get user settings
-    settings = await SupabaseManager.get_user_settings(user_id)
+    try:
+        # Get user settings
+        settings = await SupabaseManager.get_user_settings(user_id)
+        
+        if not settings:
+            # Create default settings
+            from app.models.notifications import NotificationPreferences, NotificationSchedule, UserSettings
+            default_settings = UserSettings().dict()
+            
+            settings = {
+                "notification_preferences": default_settings["notification_preferences"],
+                "notification_schedule": default_settings["notification_schedule"],
+                "stats_time_window": default_settings["stats_time_window"],
+                "keyword_notification_preferences": {
+                    "enabled": False,
+                    "keywords": []
+                }
+            }
+            
+            # Save default settings
+            await SupabaseManager.create_user_settings(user_id, settings)
+        
+        # Ensure keyword notification preferences exist
+        if "keyword_notification_preferences" not in settings:
+            settings["keyword_notification_preferences"] = {
+                "enabled": False,
+                "keywords": []
+            }
+        
+        return settings
     
-    if not settings:
-        # Return default settings
-        return NotificationSettings()
-    
-    # Extract notification settings
-    notification_settings = settings.get("notification_settings", {})
-    
-    return NotificationSettings(
-        pull_requests=notification_settings.get("pull_requests", True),
-        reviews=notification_settings.get("reviews", True),
-        comments=notification_settings.get("comments", True),
-        issues=notification_settings.get("issues", True),
-        digest_enabled=notification_settings.get("digest_enabled", False),
-        digest_time=notification_settings.get("digest_time", "09:00")
-    )
+    except Exception as e:
+        logger.error(f"Error getting settings for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get settings: {str(e)}"
+        )
 
 
-@router.put("/{user_id}/settings", response_model=NotificationSettings)
-async def update_user_settings(user_id: str, settings: NotificationSettings):
+@router.post("/{user_id}/settings", response_model=Dict[str, Any])
+async def update_user_settings(user_id: str, settings: Dict[str, Any]):
     """
     Update user notification settings.
     
@@ -683,28 +702,71 @@ async def update_user_settings(user_id: str, settings: NotificationSettings):
         )
     
     try:
-        # Update user settings
-        settings_data = {
-            "notification_settings": {
-                "pull_requests": settings.pull_requests,
-                "reviews": settings.reviews,
-                "comments": settings.comments,
-                "issues": settings.issues,
-                "digest_enabled": settings.digest_enabled,
-                "digest_time": settings.digest_time
+        # Validate settings with our models
+        from app.models.notifications import NotificationPreferences, NotificationSchedule, UserSettings
+        
+        # Get current settings
+        current_settings = await SupabaseManager.get_user_settings(user_id)
+        
+        if not current_settings:
+            # Create default settings
+            default_settings = UserSettings().dict()
+            current_settings = {
+                "notification_preferences": default_settings["notification_preferences"],
+                "notification_schedule": default_settings["notification_schedule"],
+                "stats_time_window": default_settings["stats_time_window"],
+                "keyword_notification_preferences": {
+                    "enabled": False,
+                    "keywords": []
+                }
             }
-        }
         
-        updated_settings = await SupabaseManager.update_user_settings(user_id, settings_data)
+        # Ensure keyword notification preferences exist
+        if "keyword_notification_preferences" not in current_settings:
+            current_settings["keyword_notification_preferences"] = {
+                "enabled": False,
+                "keywords": []
+            }
         
-        if not updated_settings:
+        # Update with new settings
+        if "notification_preferences" in settings:
+            # Validate notification preferences
+            prefs = NotificationPreferences(**settings["notification_preferences"])
+            current_settings["notification_preferences"] = prefs.dict()
+        
+        if "notification_schedule" in settings:
+            # Validate notification schedule
+            schedule = NotificationSchedule(**settings["notification_schedule"])
+            current_settings["notification_schedule"] = schedule.dict()
+        
+        if "stats_time_window" in settings:
+            current_settings["stats_time_window"] = settings["stats_time_window"]
+            
+        if "keyword_notification_preferences" in settings:
+            # Validate keyword notification preferences
+            keyword_prefs = settings["keyword_notification_preferences"]
+            
+            # Ensure required fields
+            if "enabled" not in keyword_prefs:
+                keyword_prefs["enabled"] = False
+                
+            if "keywords" not in keyword_prefs:
+                keyword_prefs["keywords"] = []
+                
+            # Update settings
+            current_settings["keyword_notification_preferences"] = keyword_prefs
+        
+        # Update settings in database
+        success = await SupabaseManager.update_user_settings(user_id, current_settings)
+        
+        if not success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to update settings"
             )
         
         # Return updated settings
-        return settings
+        return current_settings
     
     except Exception as e:
         logger.error(f"Error updating settings for user {user_id}: {e}", exc_info=True)
@@ -712,7 +774,6 @@ async def update_user_settings(user_id: str, settings: NotificationSettings):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update settings: {str(e)}"
         )
-
 
 class UserStats(BaseModel):
     totalNotifications: int = 0
@@ -742,16 +803,33 @@ async def get_user_stats(user_id: str):
         )
     
     try:
-        # In a real implementation, this would query the database for actual stats
-        # For now, we'll return mock data
-        # TODO: Implement actual stats collection
+        # Query the events table to get actual stats
+        total_notifications = 0
+        pull_requests = 0
+        reviews = 0
+        comments = 0
         
-        # Mock stats for demonstration
+        # Get all events for this user
+        events_response = SupabaseManager.supabase.table("events").select("*").eq("user_id", user_id).execute()
+        events = events_response.data or []
+        
+        # Count different types of events
+        total_notifications = len(events)
+        
+        for event in events:
+            event_type = event.get("event_type", "")
+            if event_type == "pull_request":
+                pull_requests += 1
+            elif event_type == "review":
+                reviews += 1
+            elif event_type == "comment":
+                comments += 1
+        
         stats = UserStats(
-            totalNotifications=25,
-            pullRequests=12,
-            reviews=8,
-            comments=5
+            totalNotifications=total_notifications,
+            pullRequests=pull_requests,
+            reviews=reviews,
+            comments=comments
         )
         
         return stats

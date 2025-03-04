@@ -198,48 +198,117 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
         sender = payload.get("sender", {})
         
         # Skip if action is not interesting
-        if action not in ["opened", "closed", "reopened", "assigned", "review_requested"]:
+        if action not in ["opened", "closed", "reopened", "review_requested", "review_request_removed", "assigned", "unassigned"]:
             return
+        
+        # Import notification service
+        from app.services.notification_service import NotificationService, NotificationTrigger
+        
+        # Import OpenAI analyzer service
+        from app.services.openai_analyzer_service import OpenAIAnalyzerService
+        
+        # Determine notification trigger based on action
+        trigger = None
+        if action == "opened" or action == "reopened":
+            trigger = NotificationTrigger.REOPENED
+        elif action == "closed" and pr.get("merged"):
+            trigger = NotificationTrigger.MERGED
+        elif action == "closed" and not pr.get("merged"):
+            trigger = NotificationTrigger.CLOSED
+        elif action == "review_requested":
+            trigger = NotificationTrigger.REVIEW_REQUESTED
+        elif action == "review_request_removed":
+            trigger = NotificationTrigger.REVIEW_REQUEST_REMOVED
+        elif action == "assigned":
+            trigger = NotificationTrigger.ASSIGNED
+        elif action == "unassigned":
+            trigger = NotificationTrigger.UNASSIGNED
+        
+        if not trigger:
+            return
+        
+        # Extract content for AI analysis
+        pr_content = f"Title: {pr.get('title', '')}\nDescription: {pr.get('body', '')}"
         
         # Create message for each user
         for user in users:
-            # Check user settings
-            settings = await SupabaseManager.get_user_settings(user["id"])
-            if not settings:
-                continue
+            # Check if user should be notified based on notification preferences
+            should_notify_preferences = await NotificationService.should_notify(
+                user["id"], 
+                pr.get("id"), 
+                trigger, 
+                actor_id=sender.get("id")
+            )
             
-            # Check if user wants to receive this notification
-            notification_key = f"pull_request_{action}"
-            if action == "closed" and pr.get("merged"):
-                notification_key = "pull_request_merged"
-                
-            if not settings.get("notification_preferences", {}).get(notification_key, True):
+            # Check if user should be notified based on keyword analysis
+            should_notify_keywords, matched_keywords, match_details = await OpenAIAnalyzerService.analyze_content(
+                pr_content, user["id"]
+            )
+            
+            # Determine if notification should be sent
+            should_notify = should_notify_preferences or should_notify_keywords
+            
+            if not should_notify:
                 continue
             
             # Create Slack message
             slack_service = SlackService(token=user["slack_access_token"])
             
             # Get user's Slack channel (DM)
-            # In a real app, you would store this or get it from Slack API
             channel = f"@{user['slack_id']}"
             
             # Create message
             from app.models.slack import PullRequestMessage
             
+            # Add keyword match information if applicable
+            keyword_text = ""
+            if matched_keywords:
+                keyword_text = f"\n\n*Matched keywords:* {', '.join(matched_keywords)}"
+            
             message = PullRequestMessage(
                 channel=channel,
-                text=f"Pull Request {action}: {pr.get('title')}",
+                text=f"Pull Request {action}: {pr.get('title')}{keyword_text}",
                 pull_request_number=pr.get("number"),
                 pull_request_title=pr.get("title"),
                 pull_request_url=pr.get("html_url"),
                 repository=repository.get("full_name"),
-                action=action if action != "closed" or not pr.get("merged") else "merged",
-                user=sender.get("login"),
+                action=action,
+                user=sender.get("login"),  # GitHub username
                 blocks=[]  # Will be filled by create_pull_request_message
             )
             
             # Format message
             message = slack_service.create_pull_request_message(message)
+            
+            # Add keyword match information to the message if applicable
+            if matched_keywords:
+                # Add a section for keyword matches
+                keyword_section = {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Matched keywords:* {', '.join(matched_keywords)}"
+                    }
+                }
+                
+                # Insert before the context block (which is the last block)
+                if isinstance(message.blocks, list) and len(message.blocks) > 0:
+                    if isinstance(message.blocks[0], dict):
+                        message.blocks.insert(-1, keyword_section)
+                    else:
+                        # Convert to dict if needed
+                        from app.models.slack import SectionBlock, TextObject
+                        message.blocks.insert(-1, SectionBlock(
+                            text=TextObject(
+                                type="mrkdwn",
+                                text=f"*Matched keywords:* {', '.join(matched_keywords)}"
+                            )
+                        ))
+                
+                # Also add to attachments if present
+                if message.attachments and len(message.attachments) > 0:
+                    if "blocks" in message.attachments[0]:
+                        message.attachments[0]["blocks"].insert(-1, keyword_section)
             
             # Send message
             response = await slack_service.send_message(message)
@@ -255,6 +324,8 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
                     "pull_request_id": pr.get("id"),
                     "pull_request_number": pr.get("number"),
                     "action": action,
+                    "matched_keywords": matched_keywords if matched_keywords else None,
+                    "match_details": match_details if match_details else None
                 }
             }
             
@@ -284,15 +355,17 @@ async def process_pull_request_review_event(payload: Dict[str, Any], users: list
         if action != "submitted":
             return
         
+        # Import notification service
+        from app.services.notification_service import NotificationService
+        
         # Create message for each user
         for user in users:
-            # Check user settings
-            settings = await SupabaseManager.get_user_settings(user["id"])
-            if not settings:
-                continue
+            # Check if user should be notified
+            should_notify = await NotificationService.process_pull_request_review_event(
+                payload, user["id"], event_id
+            )
             
-            # Check if user wants to receive this notification
-            if not settings.get("notification_preferences", {}).get("pull_request_reviewed", True):
+            if not should_notify:
                 continue
             
             # Create Slack message
@@ -364,15 +437,17 @@ async def process_pull_request_review_comment_event(payload: Dict[str, Any], use
         if action != "created":
             return
         
+        # Import notification service
+        from app.services.notification_service import NotificationService
+        
         # Create message for each user
         for user in users:
-            # Check user settings
-            settings = await SupabaseManager.get_user_settings(user["id"])
-            if not settings:
-                continue
+            # Check if user should be notified
+            should_notify = await NotificationService.process_pull_request_comment_event(
+                payload, user["id"], event_id
+            )
             
-            # Check if user wants to receive this notification
-            if not settings.get("notification_preferences", {}).get("pull_request_commented", True):
+            if not should_notify:
                 continue
             
             # Create Slack message

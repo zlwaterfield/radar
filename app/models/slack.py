@@ -80,6 +80,7 @@ class SlackMessage(BaseModel):
     thread_ts: Optional[str] = None
     unfurl_links: bool = False
     unfurl_media: bool = False
+    attachments: Optional[List[Dict[str, Any]]] = None
 
 
 class PullRequestMessage(SlackMessage):

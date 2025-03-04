@@ -4,6 +4,7 @@ Supabase client and database operations for Radar.
 import logging
 from typing import Any, Dict, List, Optional, Union
 import math
+from datetime import datetime
 
 from supabase import create_client, Client
 
@@ -641,3 +642,138 @@ class SupabaseManager:
         except Exception as e:
             logger.error(f"Error getting users for repository {repo_id}: {e}")
             return []
+
+    @staticmethod
+    async def get_user_notifications_by_pr(user_id: str, pr_id: str) -> List[Dict[str, Any]]:
+        """
+        Get notifications for a user related to a specific pull request.
+        
+        Args:
+            user_id: The user ID
+            pr_id: The pull request ID
+            
+        Returns:
+            List of notifications
+        """
+        try:
+            response = SupabaseManager.supabase.table("notifications").select("*").eq("user_id", user_id).execute()
+            data = response.data or []
+            
+            # Filter notifications related to this PR
+            pr_notifications = []
+            for notification in data:
+                payload = notification.get("payload", {})
+                if payload.get("pull_request_id") == pr_id:
+                    pr_notifications.append(notification)
+            
+            return pr_notifications
+        except Exception as e:
+            logger.error(f"Error getting notifications for user {user_id} and PR {pr_id}: {e}")
+            return []
+    
+    @staticmethod
+    async def get_user_watched_prs(user_id: str) -> List[Dict[str, Any]]:
+        """
+        Get pull requests that a user is watching.
+        
+        Args:
+            user_id: The user ID
+            
+        Returns:
+            List of pull request IDs
+        """
+        try:
+            # For now, we'll consider a PR as watched if the user has received notifications for it
+            response = SupabaseManager.supabase.table("notifications").select("*").eq("user_id", user_id).execute()
+            data = response.data or []
+            
+            # Extract unique PR IDs
+            pr_ids = set()
+            for notification in data:
+                payload = notification.get("payload", {})
+                pr_id = payload.get("pull_request_id")
+                if pr_id:
+                    pr_ids.add(pr_id)
+            
+            return list(pr_ids)
+        except Exception as e:
+            logger.error(f"Error getting watched PRs for user {user_id}: {e}")
+            return []
+    
+    @staticmethod
+    async def update_user_watched_prs(user_id: str, pr_id: str, watch: bool = True) -> bool:
+        """
+        Update a user's watched pull requests.
+        
+        Args:
+            user_id: The user ID
+            pr_id: The pull request ID
+            watch: Whether to watch or unwatch the PR
+            
+        Returns:
+            Success status
+        """
+        try:
+            # Get existing watched PRs
+            user_settings = await SupabaseManager.get_user_settings(user_id)
+            
+            if not user_settings:
+                return False
+            
+            # Get watched PRs
+            watched_prs = user_settings.get("watched_prs", [])
+            
+            # Check if PR is already in watched PRs
+            pr_exists = any(pr["pull_request_id"] == pr_id for pr in watched_prs)
+            
+            if watch and not pr_exists:
+                # Add PR to watched PRs
+                watched_prs.append({
+                    "pull_request_id": pr_id,
+                    "added_at": datetime.now().isoformat(),
+                    "manual_watch": True
+                })
+                
+                # Update user settings
+                await SupabaseManager.update_user_settings(user_id, {"watched_prs": watched_prs})
+                
+                # Create notification for manual watch
+                notification_data = {
+                    "user_id": user_id,
+                    "event_id": None,  # No event for manual watch
+                    "message_type": "watch",
+                    "channel": None,
+                    "message_ts": None,
+                    "payload": {
+                        "pull_request_id": pr_id,
+                        "manual_watch": True
+                    }
+                }
+                
+                await SupabaseManager.create_notification(notification_data)
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error updating watched PRs for user {user_id}: {e}")
+            return False
+
+    @staticmethod
+    async def create_notification(notification_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Create a new notification in the database.
+        
+        Args:
+            notification_data: Notification data including user_id, event_id, message_type, etc.
+            
+        Returns:
+            Created notification data or None if failed
+        """
+        try:
+            response = SupabaseManager.supabase.table("notifications").insert(notification_data).execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+        except Exception as e:
+            logger.error(f"Error creating notification: {e}")
+            return None
