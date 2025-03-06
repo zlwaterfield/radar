@@ -75,9 +75,42 @@ A Slack application that connects to GitHub and tracks activity to notify users 
    # Edit .env with your configuration
    ```
 
-3. Build and run with Docker Compose:
+3. Create a GitHub private key file:
    ```
-   docker-compose up -d
+   # Place your GitHub App's private key in the project root
+   # Make sure the path matches GITHUB_PRIVATE_KEY_PATH in your .env file
+   touch github_private_key.pem
+   # Paste your private key content into this file
+   ```
+
+4. Build and run with Docker Compose:
+   ```
+   docker-compose up -d --build
+   ```
+
+5. Check the container logs to ensure everything is running correctly:
+   ```
+   docker-compose logs -f
+   ```
+
+6. Access the application:
+   - API: `http://localhost:8000`
+   - API Documentation: `http://localhost:8000/docs`
+
+7. To stop the containers:
+   ```
+   docker-compose down
+   ```
+
+8. For a complete reset (including volumes):
+   ```
+   docker-compose down
+   docker-compose up -d --build
+   ```
+
+9. To view container status:
+   ```
+   docker-compose ps
    ```
 
 ## Configuration
