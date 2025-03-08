@@ -1,0 +1,164 @@
+# Radar Notification System
+
+## Overview
+
+Radar's notification system is designed to provide engineers with relevant GitHub notifications while reducing noise. This document explains the technical details of how the notification system works.
+
+## Notification Model
+
+### Core Components
+
+1. **Watching Reasons**: Defines a user's relationship to a pull request
+   - Author: Created the pull request
+   - Reviewer: Requested to review the pull request
+   - Assigned: Assigned to the pull request
+   - Mentioned: Mentioned in the pull request or comments
+   - Team Mentioned: Part of a team mentioned in the pull request
+   - Subscribed: Subscribed to the repository
+   - Manual: Manually watching the pull request
+
+2. **Notification Triggers**: Events that can generate notifications
+   - Review Requested
+   - Review Request Removed
+   - Reviewed
+   - Commented
+   - Merged
+   - Closed
+   - Reopened
+   - Assigned
+   - Unassigned
+   - Labeled
+   - Unlabeled
+   - Mentioned
+   - Team Mentioned
+   - Committed
+   - Status Changed
+   - Check Failed
+   - Check Succeeded
+
+3. **User Preferences**: Configurable settings that determine which notifications a user receives
+
+## Notification Flow
+
+1. GitHub webhook receives an event
+2. Event is processed and stored in the database
+3. NotificationService determines which users should be notified based on:
+   - User's relationship to the pull request
+   - User's notification preferences
+   - Event type
+4. Notifications are created and delivered via the appropriate channels (web, Slack)
+
+## Notification Service Logic
+
+The `NotificationService` class contains the core logic for determining when to notify users:
+
+```python
+async def should_notify(cls, user_id: str, pr_id: str, trigger: NotificationTrigger, actor_id: str = None):
+    # Get user settings and watching reason
+    user_settings = await SupabaseManager.get_user_settings(user_id)
+    watching_reason = await cls.get_watching_reason(user_id, pr_id)
+    
+    # If user is the actor and they've chosen to mute own activity, don't notify
+    if actor_id == user_id and user_settings.get("notification_preferences", {}).get("mute_own_activity", True):
+        return False
+    
+    # Determine if user should be notified based on their relationship to the PR and the trigger
+    if watching_reason == WatchingReason.AUTHOR:
+        # Author notification logic
+        if trigger == NotificationTrigger.REVIEWED and user_settings.get("notification_preferences", {}).get("author_reviewed", True):
+            return True
+        if trigger == NotificationTrigger.COMMENTED and user_settings.get("notification_preferences", {}).get("author_commented", True):
+            return True
+        if trigger == NotificationTrigger.CHECK_FAILED and user_settings.get("notification_preferences", {}).get("author_check_failed", True):
+            return True
+        if trigger == NotificationTrigger.CHECK_SUCCEEDED and user_settings.get("notification_preferences", {}).get("author_check_succeeded", True):
+            return True
+    
+    elif watching_reason == WatchingReason.REVIEWER:
+        # Reviewer notification logic
+        if trigger == NotificationTrigger.REVIEW_REQUESTED and user_settings.get("notification_preferences", {}).get("reviewer_review_requested", True):
+            return True
+        if trigger == NotificationTrigger.COMMENTED and user_settings.get("notification_preferences", {}).get("reviewer_commented", True):
+            return True
+        if trigger == NotificationTrigger.MERGED and user_settings.get("notification_preferences", {}).get("reviewer_merged", True):
+            return True
+        if trigger == NotificationTrigger.CLOSED and user_settings.get("notification_preferences", {}).get("reviewer_closed", True):
+            return True
+        if trigger == NotificationTrigger.CHECK_FAILED and user_settings.get("notification_preferences", {}).get("reviewer_check_failed", True):
+            return True
+    
+    # Always notify for mentions
+    if trigger in [NotificationTrigger.MENTIONED, NotificationTrigger.TEAM_MENTIONED]:
+        return True
+    
+    return False
+```
+
+## User Preferences Structure
+
+User notification preferences are stored in the database with the following structure:
+
+```json
+{
+  "notification_preferences": {
+    "issues": true,
+    "reviewer_review_requested": true,
+    "reviewer_commented": true,
+    "reviewer_merged": true,
+    "reviewer_closed": true,
+    "reviewer_check_failed": true,
+    "author_reviewed": true,
+    "author_commented": true,
+    "author_check_failed": true,
+    "author_check_succeeded": true,
+    "mute_own_activity": true,
+    "mute_bot_comments": true,
+    "group_similar": true
+  },
+  "notification_schedule": {
+    "digest_enabled": false,
+    "digest_time": "09:00"
+  },
+  "keyword_notification_preferences": {
+    "enabled": false,
+    "keywords": []
+  }
+}
+```
+
+## Database Schema
+
+### Notifications Table
+
+| Column       | Type                  | Description                              |
+|--------------|------------------------|------------------------------------------|
+| id           | uuid                   | Unique identifier                        |
+| user_id      | uuid                   | User to notify                           |
+| event_id     | uuid                   | Related event                            |
+| message_type | character varying      | Type of message (e.g., slack, email)     |
+| channel      | character varying      | Channel ID for Slack notifications       |
+| message_ts   | character varying      | Message timestamp for Slack notifications |
+| thread_ts    | character varying      | Thread timestamp for Slack notifications  |
+| payload      | jsonb                  | Additional notification data             |
+| created_at   | timestamp with timezone | Creation timestamp                       |
+
+## AI-Powered Keyword Notifications
+
+Radar includes an AI-powered keyword notification system that:
+
+1. Analyzes pull request titles, descriptions, and comments
+2. Identifies mentions of user-specified keywords (even if not exact matches)
+3. Calculates a confidence score for each potential match
+4. Generates notifications when the confidence exceeds the user's threshold
+
+This feature helps users stay informed about topics they care about without having to manually watch every repository or pull request.
+
+## Delivery Channels
+
+Radar supports multiple notification delivery channels:
+
+1. **Web**: Notifications appear in the Recent Activity section of the dashboard
+2. **Slack**: Notifications are sent to the user's Slack workspace
+3. **Email**: Daily digest emails can be sent with a summary of notifications
+
+Each channel can be configured independently in the user's notification settings.

@@ -1,0 +1,201 @@
+# Radar Installation Guide
+
+This guide will walk you through the process of setting up Radar for your team.
+
+## Prerequisites
+
+Before installing Radar, ensure you have the following:
+
+- Python 3.9 or higher
+- Node.js 16 or higher
+- PostgreSQL 13 or higher
+- Supabase account (for database and authentication)
+- GitHub OAuth application credentials
+- Slack application credentials (optional, for Slack integration)
+
+## Backend Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-org/radar.git
+cd radar
+```
+
+### 2. Set Up Python Environment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. Configure Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```
+# Database
+DATABASE_URL=postgresql://username:password@localhost:5432/radar
+
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-supabase-key
+
+# GitHub
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+GITHUB_REDIRECT_URI=http://localhost:3000/auth/github/callback
+
+# Slack (optional)
+SLACK_CLIENT_ID=your-slack-client-id
+SLACK_CLIENT_SECRET=your-slack-client-secret
+SLACK_REDIRECT_URI=http://localhost:3000/auth/slack/callback
+SLACK_SIGNING_SECRET=your-slack-signing-secret
+
+# Application
+SECRET_KEY=your-secret-key
+```
+
+### 4. Set Up Database
+
+Create the necessary tables in your Supabase project. You can use the SQL scripts in the `db/migrations` directory.
+
+### 5. Start the Backend Server
+
+```bash
+python -m app.main
+```
+
+The backend server will start on http://localhost:8000.
+
+## Frontend Setup
+
+### 1. Navigate to the Client Directory
+
+```bash
+cd client
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Environment Variables
+
+Create a `.env.local` file in the client directory with the following variables:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+### 4. Start the Development Server
+
+```bash
+npm run dev
+```
+
+The frontend will start on http://localhost:3000.
+
+## GitHub Webhook Setup
+
+To receive GitHub events, you need to set up a webhook:
+
+1. Go to your GitHub repository or organization settings
+2. Navigate to Webhooks
+3. Add a new webhook with the following settings:
+   - Payload URL: `https://your-radar-instance.com/api/webhooks/github`
+   - Content type: `application/json`
+   - Secret: Create a secure secret and add it to your `.env` file as `GITHUB_WEBHOOK_SECRET`
+   - Events: Select "Send me everything" or customize the events you want to receive
+
+## Slack App Setup (Optional)
+
+To enable Slack integration:
+
+1. Create a new Slack app at https://api.slack.com/apps
+2. Add the following OAuth scopes:
+   - `chat:write`
+   - `chat:write.public`
+   - `users:read`
+   - `users:read.email`
+3. Enable Interactivity and set the Request URL to `https://your-radar-instance.com/api/slack/interactive`
+4. Add a slash command:
+   - Command: `/radar`
+   - Request URL: `https://your-radar-instance.com/api/slack/command`
+   - Description: "Interact with Radar"
+5. Install the app to your workspace
+
+## Production Deployment
+
+For production deployment, we recommend:
+
+- Using a production-ready WSGI server like Gunicorn for the backend
+- Building the Next.js application and serving it with a proper web server
+- Setting up HTTPS with a valid SSL certificate
+- Using a reverse proxy like Nginx to route traffic to both the frontend and backend
+- Setting up proper database backups and monitoring
+
+Example Nginx configuration:
+
+```nginx
+server {
+    listen 80;
+    server_name your-radar-instance.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name your-radar-instance.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Backend API
+    location /api/ {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+## Troubleshooting
+
+### Database Connection Issues
+
+If you're having trouble connecting to the database:
+
+1. Verify your database credentials in the `.env` file
+2. Ensure the PostgreSQL server is running
+3. Check that the database exists and the user has appropriate permissions
+
+### GitHub Authentication Issues
+
+If GitHub authentication isn't working:
+
+1. Verify your GitHub OAuth credentials
+2. Ensure the redirect URI matches exactly what's configured in your GitHub OAuth app
+3. Check that the scopes requested include `repo` and `user:email`
+
+### Slack Integration Issues
+
+If Slack integration isn't working:
+
+1. Verify your Slack app credentials
+2. Ensure all required scopes are enabled
+3. Check that the request URLs are accessible from the internet
+
+For more help, please contact support@radar.com or open an issue on our GitHub repository.
