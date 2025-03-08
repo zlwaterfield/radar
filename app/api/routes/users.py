@@ -803,21 +803,21 @@ async def get_user_stats(user_id: str):
         )
     
     try:
-        # Query the events table to get actual stats
+        # Query the notifications table to get actual stats
         total_notifications = 0
         pull_requests = 0
         reviews = 0
         comments = 0
         
-        # Get all events for this user
-        events_response = SupabaseManager.supabase.table("events").select("*").eq("user_id", user_id).execute()
-        events = events_response.data or []
+        # Get all notifications for this user
+        notifications_response = SupabaseManager.supabase.table("notifications").select("*").eq("user_id", user_id).execute()
+        notifications = notifications_response.data or []
         
-        # Count different types of events
-        total_notifications = len(events)
+        # Count different types of notifications
+        total_notifications = len(notifications)
         
-        for event in events:
-            event_type = event.get("event_type", "")
+        for notification in notifications:
+            event_type = notification.get("event_type", "")
             if event_type == "pull_request":
                 pull_requests += 1
             elif event_type == "review":
