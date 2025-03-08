@@ -264,15 +264,17 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
             keyword_text = ""
             if matched_keywords:
                 keyword_text = f"\n\n*Matched keywords:* {', '.join(matched_keywords)}"
-            
+                
+            # Use keyword_match color if notification is due to keywords
+            color_key = "keyword_match" if should_notify_keywords and not should_notify_preferences else action
+                
             message = PullRequestMessage(
                 channel=channel,
-                text=f"Pull Request {action}: {pr.get('title')}{keyword_text}",
                 pull_request_number=pr.get("number"),
                 pull_request_title=pr.get("title"),
                 pull_request_url=pr.get("html_url"),
                 repository=repository.get("full_name"),
-                action=action,
+                action=color_key,
                 user=sender.get("login"),  # GitHub username
                 blocks=[]  # Will be filled by create_pull_request_message
             )
@@ -379,7 +381,6 @@ async def process_pull_request_review_event(payload: Dict[str, Any], users: list
             
             message = PullRequestReviewMessage(
                 channel=channel,
-                text=f"Pull Request Review: {pr.get('title')}",
                 pull_request_number=pr.get("number"),
                 pull_request_title=pr.get("title"),
                 pull_request_url=pr.get("html_url"),
@@ -461,7 +462,6 @@ async def process_pull_request_review_comment_event(payload: Dict[str, Any], use
             
             message = PullRequestCommentMessage(
                 channel=channel,
-                text=f"Pull Request Comment: {pr.get('title')}",
                 pull_request_number=pr.get("number"),
                 pull_request_title=pr.get("title"),
                 pull_request_url=pr.get("html_url"),
@@ -540,7 +540,6 @@ async def process_issue_event(payload: Dict[str, Any], users: list, event_id: st
             
             message = IssueMessage(
                 channel=channel,
-                text=f"Issue {action}: {issue.get('title')}",
                 issue_number=issue.get("number"),
                 issue_title=issue.get("title"),
                 issue_url=issue.get("html_url"),
@@ -618,7 +617,6 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
             
             message = IssueCommentMessage(
                 channel=channel,
-                text=f"Issue Comment: {issue.get('title')}",
                 issue_number=issue.get("number"),
                 issue_title=issue.get("title"),
                 issue_url=issue.get("html_url"),

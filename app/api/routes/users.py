@@ -975,7 +975,7 @@ async def get_user_detailed_stats(user_id: str):
         repositories = await SupabaseManager.get_user_repositories(user_id)
         repo_stats = {}
         
-        for repo in repositories:
+        for repo in repositories.get('items', []):
             if repo.get("enabled", False):
                 repo_stats[repo["github_id"]] = {
                     "name": repo["name"],

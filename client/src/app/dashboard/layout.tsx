@@ -57,7 +57,7 @@ export default function DashboardLayout({
                 Settings
               </Link>
             </li>
-            <li>
+            {/* <li>
               <Link href="/dashboard/stats" 
                 className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
                   pathname === '/dashboard/stats' 
@@ -67,7 +67,7 @@ export default function DashboardLayout({
                 <FiBarChart2 className="mr-3 flex-shrink-0 h-5 w-5" />
                 Statistics
               </Link>
-            </li>
+            </li> */}
           </ul>
           
           {!user?.github_id && (

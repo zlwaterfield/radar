@@ -75,7 +75,7 @@ class SlackMessage(BaseModel):
     """Base model for Slack messages."""
     message_type: MessageType
     blocks: List[SlackBlock]
-    text: str  # Fallback text
+    text: Optional[str] = None
     channel: Optional[str] = None
     thread_ts: Optional[str] = None
     unfurl_links: bool = False

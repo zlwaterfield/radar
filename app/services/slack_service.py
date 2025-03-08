@@ -182,6 +182,39 @@ def handle_app_home_opened(client, event, logger):
 class SlackService:
     """Service for interacting with the Slack API."""
 
+    # Color scheme for different event types
+    EVENT_COLORS = {
+        # Pull request actions
+        "opened": "#2EB67D",       # Green
+        "reopened": "#2EB67D",     # Green
+        "closed": "#E01E5A",       # Red
+        "merged": "#4A154B",       # Purple
+        "review_requested": "#ECB22E", # Yellow
+        "review_request_removed": "#8D8D8D", # Gray
+        "assigned": "#1D9BD1",     # Blue
+        "unassigned": "#8D8D8D",   # Gray
+        
+        # Review states
+        "approved": "#2EB67D",     # Green
+        "changes_requested": "#E01E5A", # Red
+        "commented": "#1D9BD1",    # Blue
+        "dismissed": "#ECB22E",    # Yellow
+        
+        # Issue actions
+        "issue_opened": "#2EB67D", # Green
+        "issue_closed": "#E01E5A", # Red
+        "issue_reopened": "#2EB67D", # Green
+        "issue_commented": "#1D9BD1", # Blue
+        
+        # Special types
+        "keyword_match": "#36C5F0", # Bright Blue for keyword matches
+        "digest": "#4A154B",       # Purple for digest messages
+        "stats": "#ECB22E",        # Yellow for stats
+        
+        # Default
+        "default": "#1D9BD1"       # Blue
+    }
+    
     def __init__(self, token: Optional[str] = None):
         """
         Initialize the Slack service.
@@ -196,38 +229,49 @@ class SlackService:
         Send a message to Slack.
         
         Args:
-            message: The message to send
+            message: Slack message to send
             
         Returns:
-            The Slack API response
+            Slack API response
         """
-        try:
-            # Prepare message payload
-            payload = {
-                "channel": message.channel,
-                "text": message.text,
-                "thread_ts": message.thread_ts,
-                "unfurl_links": message.unfurl_links,
-                "unfurl_media": message.unfurl_media
-            }
+        # Prepare payload
+        payload = {
+            "channel": message.channel,
+            "text": message.text,
+            "unfurl_links": message.unfurl_links,
+            "unfurl_media": message.unfurl_media,
+        }
+        
+        # Add thread_ts if present
+        if message.thread_ts:
+            payload["thread_ts"] = message.thread_ts
+        
+        # Add blocks if present
+        if message.blocks:
+            payload["blocks"] = message.blocks
+        
+        # Add attachments if present
+        if message.attachments:
+            payload["attachments"] = message.attachments
             
-            # Add blocks if present
-            if message.blocks:
-                if isinstance(message.blocks[0], dict):
-                    payload["blocks"] = message.blocks
-                else:
-                    payload["blocks"] = self._convert_blocks_to_dict(message.blocks)
+        # Add app identity
+        message_type = message.message_type.value
+        
+        # Use different app names based on message type (like Toast example)
+        if message_type == "pull_request_review" and getattr(message, "review_state", "") == "approved":
+            payload["username"] = "Approved Toast"
+        elif message_type == "pull_request_comment" or message_type == "issue_comment":
+            payload["username"] = "Messenger Toast"
+        else:
+            payload["username"] = "Radar"
             
-            # Add attachments if present
-            if message.attachments:
-                payload["attachments"] = message.attachments
-            
-            # Send message
-            response = self.client.chat_postMessage(**payload)
-            return response
-        except SlackApiError as e:
-            logger.error(f"Error sending message to Slack: {e}")
-            raise
+        # Use app icon
+        payload["icon_url"] = "https://raw.githubusercontent.com/zlwaterfield/radar/main/client/public/logo.png"
+        
+        # Send message
+        response = self.client.chat_postMessage(**payload)
+        
+        return response.data
             
     async def update_message(self, channel: str, ts: str, message: SlackMessage) -> Dict[str, Any]:
         """
@@ -381,9 +425,7 @@ class SlackService:
         return [block.dict(exclude_none=True) for block in blocks]
             
     @staticmethod
-    def create_pull_request_message(
-        pr_message: PullRequestMessage
-    ) -> PullRequestMessage:
+    def create_pull_request_message(pr_message: PullRequestMessage) -> PullRequestMessage:
         """
         Create a formatted Slack message for a pull request event.
         
@@ -394,37 +436,35 @@ class SlackService:
             Formatted pull request message
         """
         # Determine color based on action
-        color = "#36a64f"  # Default green for most actions
-        if pr_message.action == "closed":
-            color = "#E01E5A"  # Red for closed
-        elif pr_message.action == "opened" or pr_message.action == "reopened":
-            color = "#2EB67D"  # Green for opened/reopened
-        elif pr_message.action == "review_requested":
-            color = "#ECB22E"  # Yellow for review requested
-            
-        # Create icon based on action
-        icon = "🔄"  # Default icon
+        color = SlackService.EVENT_COLORS.get(pr_message.action, SlackService.EVENT_COLORS["default"])
+        
+        # Determine emoji based on action
+        emoji = "🔄"  # Default
         if pr_message.action == "opened":
-            icon = "🆕"
+            emoji = "🆕"
         elif pr_message.action == "closed":
-            icon = "🚫"
-        elif pr_message.action == "reopened":
-            icon = "🔄"
-        elif pr_message.action == "review_requested":
-            icon = "👀"
+            emoji = "🚫"
         elif pr_message.action == "merged":
-            icon = "🔀"
-            
-        # Format action text
-        action_text = pr_message.action.replace("_", " ").capitalize()
-            
-        # Create blocks with attachment styling
+            emoji = "🔀"
+        elif pr_message.action == "reopened":
+            emoji = "♻️"
+        elif pr_message.action == "review_requested":
+            emoji = "👀"
+        
+        # Create message title
+        if pr_message.action == "review_requested":
+            title = f"{emoji} Review requested on PR"
+        else:
+            title = f"{emoji} PR {pr_message.action}"
+        
+        # Create blocks as dictionaries directly
         blocks = [
             {
-                "type": "section",
+                "type": "header",
                 "text": {
-                    "type": "mrkdwn",
-                    "text": f"{icon} *Pull Request {action_text}*"
+                    "type": "plain_text",
+                    "text": title,
+                    "emoji": True
                 }
             },
             {
@@ -453,14 +493,14 @@ class SlackService:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"<@{pr_message.user}> {pr_message.action} this pull request"
+                        "text": f"@{pr_message.user} {pr_message.action} this pull request"
                     }
                 ]
             }
         ]
         
-        # Update text with user mention - use empty string to avoid duplicate text
-        pr_message.text = ""
+        # Update the message blocks
+        pr_message.blocks = []
         
         # Add attachments for color
         pr_message.attachments = [
@@ -469,9 +509,6 @@ class SlackService:
                 "blocks": blocks
             }
         ]
-        
-        # Update the message blocks
-        pr_message.blocks = []
         
         return pr_message
     
@@ -488,30 +525,27 @@ class SlackService:
         Returns:
             Formatted pull request review message
         """
-        # Determine emoji and color based on review state
-        emoji = "💬"  # Default for commented
-        color = "#1D9BD1"  # Default blue for comments
+        # Determine color based on review state
+        color = SlackService.EVENT_COLORS.get(review_message.review_state, SlackService.EVENT_COLORS["default"])
         
+        # Create title based on review state
         if review_message.review_state == "approved":
-            emoji = "✅"
-            color = "#2EB67D"  # Green for approved
+            title = "✅ Approved"
         elif review_message.review_state == "changes_requested":
-            emoji = "❌"
-            color = "#E01E5A"  # Red for changes requested
-        elif review_message.review_state == "dismissed":
-            emoji = "🚫"
-            color = "#ECB22E"  # Yellow for dismissed
-            
-        # Format review state text
-        state_text = review_message.review_state.replace("_", " ").title()
-            
-        # Create blocks with attachment styling
+            title = "❌ Changes Requested"
+        elif review_message.review_state == "commented":
+            title = "💬 Review Comment"
+        else:
+            title = "🔍 Review Submitted"
+        
+        # Create blocks as dictionaries directly
         blocks = [
             {
-                "type": "section",
+                "type": "header",
                 "text": {
-                    "type": "mrkdwn",
-                    "text": f"{emoji} *Pull Request Review: {state_text}*"
+                    "type": "plain_text",
+                    "text": title,
+                    "emoji": True
                 }
             },
             {
@@ -521,9 +555,15 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
+                    "text": f"@{review_message.user} {review_message.review_state} your PR"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
                     "text": f"<{review_message.pull_request_url}|*#{review_message.pull_request_number}* {review_message.pull_request_title}>\n"
-                           f"*Repository:* `{review_message.repository}`\n"
-                           f"*Review:* {emoji} *{state_text}*"
+                           f"*Repository:* `{review_message.repository}`"
                 },
                 "accessory": {
                     "type": "button",
@@ -544,23 +584,12 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f">*Comment:*\n>{review_message.review_comment}"
+                    "text": f"*Comment:*\n{review_message.review_comment}"
                 }
             })
         
-        # Add context with user mention
-        blocks.append({
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": f"<@{review_message.user}> reviewed this pull request"
-                }
-            ]
-        })
-        
-        # Update text with user mention
-        review_message.text = ""
+        # Update the message blocks
+        review_message.blocks = []
         
         # Add attachments for color
         review_message.attachments = [
@@ -569,9 +598,6 @@ class SlackService:
                 "blocks": blocks
             }
         ]
-        
-        # Update the message blocks
-        review_message.blocks = []
         
         return review_message
     
@@ -588,8 +614,8 @@ class SlackService:
         Returns:
             Formatted pull request comment message
         """
-        # Use a consistent color for comments
-        color = "#1D9BD1"  # Blue for comments
+        # Use the commented color from our color scheme
+        color = SlackService.EVENT_COLORS["commented"]
         
         # Create blocks with attachment styling
         blocks = [
@@ -668,15 +694,10 @@ class SlackService:
         Returns:
             Formatted issue message
         """
-        # Determine color based on action
-        color = "#36a64f"  # Default green for most actions
-        if issue_message.action == "closed":
-            color = "#E01E5A"  # Red for closed
-        elif issue_message.action == "opened" or issue_message.action == "reopened":
-            color = "#2EB67D"  # Green for opened/reopened
-        elif issue_message.action == "assigned":
-            color = "#ECB22E"  # Yellow for assigned
-            
+        # Map issue action to color
+        action_color_key = f"issue_{issue_message.action}"
+        color = SlackService.EVENT_COLORS.get(action_color_key, SlackService.EVENT_COLORS["default"])
+        
         # Create icon based on action
         icon = "🔄"  # Default icon
         if issue_message.action == "opened":
@@ -761,46 +782,73 @@ class SlackService:
         Returns:
             Formatted issue comment message
         """
-        # Create header
-        header = HeaderBlock(
-            text=TextObject(
-                type="plain_text",
-                text=f"Issue Comment: {comment_message.issue_title}"
-            )
-        )
+        # Use the issue_commented color from our color scheme
+        color = SlackService.EVENT_COLORS["issue_commented"]
         
-        # Create main section
-        section = SectionBlock(
-            text=TextObject(
-                type="mrkdwn",
-                text=f"<{comment_message.issue_url}|#{comment_message.issue_number} {comment_message.issue_title}>\n"
-                     f"Repository: *{comment_message.repository}*"
-            )
-        )
+        # Create blocks as dictionaries directly instead of using Pydantic models
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Issue Comment: " + comment_message.issue_title,
+                    "emoji": True
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"<{comment_message.issue_url}|*#{comment_message.issue_number}* {comment_message.issue_title}>\n"
+                           f"*Repository:* `{comment_message.repository}`"
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Issue",
+                        "emoji": True
+                    },
+                    "url": comment_message.issue_url,
+                    "action_id": "view_issue"
+                }
+            }
+        ]
         
-        # Add comment
-        comment_section = SectionBlock(
-            text=TextObject(
-                type="mrkdwn",
-                text=f">{comment_message.comment}"
-            )
-        )
+        # Add comment content if present
+        if comment_message.comment:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Comment:*\n{comment_message.comment}"
+                }
+            })
         
-        # Create context
-        context = ContextBlock(
-            elements=[
-                TextObject(
-                    type="mrkdwn",
-                    text=f"*{comment_message.user}* commented on this issue"
-                )
+        # Add context with user mention
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"@{comment_message.user} commented on this issue"
+                }
             ]
-        )
-        
-        # Assemble blocks
-        blocks = [header, section, comment_section, DividerBlock(), context]
+        })
         
         # Update the message blocks
-        comment_message.blocks = blocks
+        comment_message.blocks = []
+        
+        # Add attachments for color
+        comment_message.attachments = [
+            {
+                "color": color,
+                "blocks": blocks
+            }
+        ]
         
         return comment_message
     
@@ -817,84 +865,115 @@ class SlackService:
         Returns:
             Formatted digest message
         """
-        # Create header
-        header = HeaderBlock(
-            text=TextObject(
-                type="plain_text",
-                text=f"{digest_message.time_period.capitalize()} Digest"
-            )
-        )
+        # Use a consistent color for digest messages
+        color = SlackService.EVENT_COLORS["digest"]
         
-        # Create intro section
-        intro = SectionBlock(
-            text=TextObject(
-                type="mrkdwn",
-                text=f"Here's your {digest_message.time_period.lower()} summary of GitHub activity:"
-            )
-        )
+        # Create blocks as dictionaries directly instead of using Pydantic models
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "📋 Daily Digest",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Your GitHub activity summary for {digest_message.date}*"
+                }
+            }
+        ]
         
-        # Assemble blocks
-        blocks = [header, intro, DividerBlock()]
-        
-        # Add pull requests section if there are any
-        if digest_message.pull_requests:
-            pr_header = SectionBlock(
-                text=TextObject(
-                    type="mrkdwn",
-                    text="*Pull Requests*"
-                )
-            )
-            blocks.append(pr_header)
+        # Add pull request section if there are any
+        if digest_message.pull_requests and len(digest_message.pull_requests) > 0:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Pull Requests*"
+                }
+            })
             
             for pr in digest_message.pull_requests:
-                pr_section = SectionBlock(
-                    text=TextObject(
-                        type="mrkdwn",
-                        text=f"<{pr['url']}|#{pr['number']} {pr['title']}>\n"
-                             f"Repository: *{pr['repository']}*\n"
-                             f"Status: {pr['status']}"
-                    )
-                )
-                blocks.append(pr_section)
-            
-            blocks.append(DividerBlock())
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"<{pr['url']}|*#{pr['number']}* {pr['title']}>\n"
+                               f"*Repository:* `{pr['repository']}`\n"
+                               f"*Status:* {pr['status']}"
+                    }
+                })
         
-        # Add issues section if there are any
-        if digest_message.issues:
-            issue_header = SectionBlock(
-                text=TextObject(
-                    type="mrkdwn",
-                    text="*Issues*"
-                )
-            )
-            blocks.append(issue_header)
+        # Add reviews section if there are any
+        if digest_message.reviews and len(digest_message.reviews) > 0:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Reviews*"
+                }
+            })
             
-            for issue in digest_message.issues:
-                issue_section = SectionBlock(
-                    text=TextObject(
-                        type="mrkdwn",
-                        text=f"<{issue['url']}|#{issue['number']} {issue['title']}>\n"
-                             f"Repository: *{issue['repository']}*\n"
-                             f"Status: {issue['status']}"
-                    )
-                )
-                blocks.append(issue_section)
+            for review in digest_message.reviews:
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"<{review['url']}|*#{review['pr_number']}* {review['pr_title']}>\n"
+                               f"*Repository:* `{review['repository']}`\n"
+                               f"*Review:* {review['state']}"
+                    }
+                })
+        
+        # Add mentions section if there are any
+        if digest_message.mentions and len(digest_message.mentions) > 0:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Mentions*"
+                }
+            })
             
-            blocks.append(DividerBlock())
+            for mention in digest_message.mentions:
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"<{mention['url']}|*{mention['type']}* in {mention['repository']}>\n"
+                               f"*By:* {mention['by']}\n"
+                               f"*Content:* {mention['content']}"
+                    }
+                })
         
         # Add footer
-        footer = ContextBlock(
-            elements=[
-                TextObject(
-                    type="mrkdwn",
-                    text=f"Generated at {digest_message.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}"
-                )
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "This is your daily digest of GitHub activity. To change your digest settings, visit your Radar settings."
+                }
             ]
-        )
-        blocks.append(footer)
+        })
         
         # Update the message blocks
-        digest_message.blocks = blocks
+        digest_message.blocks = []
+        
+        # Add attachments for color
+        digest_message.attachments = [
+            {
+                "color": color,
+                "blocks": blocks
+            }
+        ]
         
         return digest_message
     
@@ -911,82 +990,113 @@ class SlackService:
         Returns:
             Formatted stats message
         """
-        # Create header
-        header = HeaderBlock(
-            text=TextObject(
-                type="plain_text",
-                text=f"GitHub Stats (Last {stats_message.time_window} Days)"
-            )
-        )
+        # Use a consistent color for stats messages
+        color = SlackService.EVENT_COLORS["stats"]
         
-        # Create intro section
-        intro = SectionBlock(
-            text=TextObject(
-                type="mrkdwn",
-                text=f"Here's a summary of your GitHub activity over the last {stats_message.time_window} days:"
-            )
-        )
+        # Create blocks as dictionaries directly instead of using Pydantic models
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "📊 GitHub Activity Stats",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Your GitHub activity stats as of {stats_message.date}*"
+                }
+            }
+        ]
         
-        # Create stats sections
-        stats_sections = []
+        # Add pull request stats
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Pull Requests*"
+            }
+        })
         
-        if "pull_requests" in stats_message.stats:
-            pr_stats = stats_message.stats["pull_requests"]
-            pr_section = SectionBlock(
-                text=TextObject(
-                    type="mrkdwn",
-                    text=f"*Pull Requests*\n"
-                         f"• Opened: {pr_stats.get('opened', 0)}\n"
-                         f"• Closed: {pr_stats.get('closed', 0)}\n"
-                         f"• Merged: {pr_stats.get('merged', 0)}\n"
-                         f"• Reviews: {pr_stats.get('reviews', 0)}\n"
-                         f"• Comments: {pr_stats.get('comments', 0)}"
-                )
-            )
-            stats_sections.append(pr_section)
+        blocks.append({
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Open:* {stats_message.stats.get('pull_requests_open', 0)}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Closed:* {stats_message.stats.get('pull_requests_closed', 0)}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Merged:* {stats_message.stats.get('pull_requests_merged', 0)}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Total:* {stats_message.stats.get('pull_requests_total', 0)}"
+                }
+            ]
+        })
         
-        if "issues" in stats_message.stats:
-            issue_stats = stats_message.stats["issues"]
-            issue_section = SectionBlock(
-                text=TextObject(
-                    type="mrkdwn",
-                    text=f"*Issues*\n"
-                         f"• Opened: {issue_stats.get('opened', 0)}\n"
-                         f"• Closed: {issue_stats.get('closed', 0)}\n"
-                         f"• Comments: {issue_stats.get('comments', 0)}"
-                )
-            )
-            stats_sections.append(issue_section)
+        # Add review stats
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Reviews*"
+            }
+        })
         
-        if "repositories" in stats_message.stats:
-            repo_stats = stats_message.stats["repositories"]
-            repo_section = SectionBlock(
-                text=TextObject(
-                    type="mrkdwn",
-                    text=f"*Repositories*\n"
-                         f"• Active: {repo_stats.get('active', 0)}\n"
-                         f"• Commits: {repo_stats.get('commits', 0)}"
-                )
-            )
-            stats_sections.append(repo_section)
+        blocks.append({
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Approved:* {stats_message.stats.get('reviews_approved', 0)}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Changes Requested:* {stats_message.stats.get('reviews_changes_requested', 0)}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Commented:* {stats_message.stats.get('reviews_commented', 0)}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Total:* {stats_message.stats.get('reviews_total', 0)}"
+                }
+            ]
+        })
         
         # Add footer
-        footer = ContextBlock(
-            elements=[
-                TextObject(
-                    type="mrkdwn",
-                    text=f"Generated at {stats_message.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}"
-                )
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "These stats are based on your GitHub activity tracked by Radar. For more details, visit your Radar dashboard."
+                }
             ]
-        )
-        
-        # Assemble blocks
-        blocks = [header, intro, DividerBlock()]
-        blocks.extend(stats_sections)
-        blocks.append(DividerBlock())
-        blocks.append(footer)
+        })
         
         # Update the message blocks
-        stats_message.blocks = blocks
+        stats_message.blocks = []
+        
+        # Add attachments for color
+        stats_message.attachments = [
+            {
+                "color": color,
+                "blocks": blocks
+            }
+        ]
         
         return stats_message
