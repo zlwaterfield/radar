@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FiAlertTriangle } from 'react-icons/fi';
 
 export default function AuthError() {
   const router = useRouter();
-  const { provider, error } = router.query;
+  const searchParams = useSearchParams();
+  const provider = searchParams.get('provider');
+  const error = searchParams.get('error');
 
   useEffect(() => {
     // Redirect to home after a delay

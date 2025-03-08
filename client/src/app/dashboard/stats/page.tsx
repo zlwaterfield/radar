@@ -1,5 +1,7 @@
+'use client'
+
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
@@ -62,7 +64,7 @@ export default function Stats() {
   }
 
   return (
-    <Layout title="Statistics">
+    <div>
       {!user?.github_id ? (
         <div className="card bg-yellow-50 border border-yellow-200">
           <div className="flex items-start">
@@ -167,6 +169,6 @@ export default function Stats() {
           <p className="text-center py-4 text-gray-500">No statistics available</p>
         </div>
       )}
-    </Layout>
+    </div>
   );
 }

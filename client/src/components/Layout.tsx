@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { FiHome, FiSettings, FiGithub, FiLogOut, FiBarChart2, FiBell } from 'react-icons/fi';
 
@@ -79,9 +79,9 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar' }) => {
                   </div>
                   <ul className="space-y-1">
                     <li>
-                      <Link href="/connect-github" 
+                      <Link href="/auth/github" 
                         className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
-                          router.pathname === '/connect-github' 
+                          router.pathname === '/auth/github' 
                             ? 'bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400 font-medium' 
                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}>

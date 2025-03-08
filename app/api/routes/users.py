@@ -621,6 +621,100 @@ def fix_github_token_format(token: str) -> str:
     # Return original token if no fix needed or if we couldn't determine how to fix it
     return token
 
+class UserNotification(BaseModel):
+    id: str
+    event_type: str
+    title: str
+    description: str
+    repository: Optional[str] = None
+    pull_request_number: Optional[int] = None
+    pull_request_title: Optional[str] = None
+    created_at: str
+
+
+@router.get("/{user_id}/notifications/recent", response_model=List[UserNotification])
+async def get_user_recent_notifications(user_id: str, limit: int = 10):
+    """
+    Get recent notifications for a user.
+    
+    Args:
+        user_id: User ID
+        limit: Maximum number of notifications to return (default: 10)
+        
+    Returns:
+        List of recent notifications
+    """
+    # Check if user exists
+    user = await SupabaseManager.get_user(user_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    try:
+        # Query the notifications table to get recent notifications
+        notifications_response = SupabaseManager.supabase.table("notifications").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()
+        notifications = notifications_response.data or []
+        
+        # Format notifications for the frontend
+        formatted_notifications = []
+        for notification in notifications:
+            payload = notification.get("payload", {})
+            event_type = payload.get("event_type", "unknown")
+            
+            # Create a notification object with default values
+            notification_obj = {
+                "id": notification.get("id"),
+                "event_type": event_type,
+                "title": "Notification",
+                "description": "You have a new notification",
+                "repository": payload.get("repository_name"),
+                "pull_request_number": payload.get("pull_request_number"),
+                "pull_request_title": payload.get("pull_request_title"),
+                "created_at": notification.get("created_at")
+            }
+            
+            # Customize title and description based on event type
+            if event_type == "pull_request":
+                action = payload.get("action", "updated")
+                pr_number = payload.get("pull_request_number")
+                pr_title = payload.get("pull_request_title", "")
+                repo_name = payload.get("repository_name", "")
+                
+                notification_obj["title"] = f"Pull Request #{pr_number}"
+                notification_obj["description"] = f"PR was {action}: {pr_title}"
+                
+            elif event_type == "review":
+                pr_number = payload.get("pull_request_number")
+                pr_title = payload.get("pull_request_title", "")
+                repo_name = payload.get("repository_name", "")
+                reviewer = payload.get("reviewer", "Someone")
+                
+                notification_obj["title"] = f"Review on PR #{pr_number}"
+                notification_obj["description"] = f"{reviewer} reviewed: {pr_title}"
+                
+            elif event_type == "comment":
+                pr_number = payload.get("pull_request_number")
+                pr_title = payload.get("pull_request_title", "")
+                commenter = payload.get("commenter", "Someone")
+                
+                notification_obj["title"] = f"Comment on PR #{pr_number}"
+                notification_obj["description"] = f"{commenter} commented: {pr_title}"
+            
+            formatted_notifications.append(notification_obj)
+        
+        return formatted_notifications
+    
+    except Exception as e:
+        logger.error(f"Error getting recent notifications for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get recent notifications: {str(e)}"
+        )
+
+
 @router.get("/{user_id}/settings", response_model=Dict[str, Any])
 async def get_user_settings(user_id: str):
     """
@@ -776,8 +870,8 @@ async def update_user_settings(user_id: str, settings: Dict[str, Any]):
         )
 
 class UserStats(BaseModel):
-    totalNotifications: int = 0
-    pullRequests: int = 0
+    total_notifications: int = 0
+    pull_requests: int = 0
     reviews: int = 0
     comments: int = 0
 
@@ -826,8 +920,8 @@ async def get_user_stats(user_id: str):
                 comments += 1
         
         stats = UserStats(
-            totalNotifications=total_notifications,
-            pullRequests=pull_requests,
+            total_notifications=total_notifications,
+            pull_requests=pull_requests,
             reviews=reviews,
             comments=comments
         )

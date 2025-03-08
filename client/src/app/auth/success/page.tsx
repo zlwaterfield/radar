@@ -1,11 +1,16 @@
+"use client"
+
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { FiCheckCircle } from 'react-icons/fi';
 
 export default function AuthSuccess() {
   const router = useRouter();
-  const { provider, user_id } = router.query;
+  const searchParams = useSearchParams();
+  
+  const provider = searchParams.get('provider');
+  const user_id = searchParams.get('user_id');
 
   useEffect(() => {
     if (user_id) {
