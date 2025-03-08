@@ -60,7 +60,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar' }) => {
                     Settings
                   </Link>
                 </li>
-                <li>
+                {/* <li>
                   <Link href="/stats" 
                     className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
                       router.pathname === '/stats' 
@@ -70,7 +70,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar' }) => {
                     <FiBarChart2 className="mr-3 flex-shrink-0 h-5 w-5" />
                     Statistics
                   </Link>
-                </li>
+                </li> */}
               </ul>
               
               {!user?.github_id && (

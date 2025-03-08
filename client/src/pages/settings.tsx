@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 import { FiGithub, FiSave, FiRefreshCw } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import RepositoryTable from '@/components/RepositoryTable';
 
 interface Repository {
   id: string;
@@ -88,6 +89,8 @@ export default function Settings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const [togglingRepos, setTogglingRepos] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -210,13 +213,7 @@ export default function Settings() {
       }
     } catch (error) {
       console.error('Error fetching user settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load notification settings.',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      toast.error('Failed to load notification settings.');
     }
   };
 
@@ -239,6 +236,13 @@ export default function Settings() {
       
       const newEnabledState = !repo.enabled;
       
+      // Set toggling state for this repo
+      setTogglingRepos(prev => {
+        const newSet = new Set(prev);
+        newSet.add(repoId);
+        return newSet;
+      });
+      
       // Update UI optimistically
       setRepositories(prevRepositories => 
         prevRepositories.map(r => 
@@ -257,6 +261,13 @@ export default function Settings() {
       // Revert UI if there was an error
       fetchRepositories();
       toast.error('Failed to update repository status');
+    } finally {
+      // Remove toggling state for this repo
+      setTogglingRepos(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(repoId);
+        return newSet;
+      });
     }
   };
 
@@ -374,22 +385,10 @@ export default function Settings() {
         throw new Error('Failed to save notification settings');
       }
       
-      toast({
-        title: 'Settings saved',
-        description: 'Your notification preferences have been updated.',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      toast.success('Your notification preferences have been updated.');
     } catch (error) {
       console.error('Error saving notification settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save notification settings.',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      toast.error('Failed to save notification settings.');
     } finally {
       setIsSaving(false);
     }
@@ -420,22 +419,10 @@ export default function Settings() {
         throw new Error('Failed to save keyword settings');
       }
       
-      toast({
-        title: 'Settings saved',
-        description: 'Your keyword notification preferences have been updated.',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      toast.success('Your keyword notification preferences have been updated.');
     } catch (error) {
       console.error('Error saving keyword settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save keyword settings.',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      toast.error('Failed to save keyword settings.');
     } finally {
       setIsSavingKeywords(false);
     }
@@ -917,60 +904,12 @@ export default function Settings() {
                         No repositories found. Add repositories to monitor them.
                       </div>
                     ) : (
-                      <div className="overflow-x-auto min-h-[300px]">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {repositories.map((repo) => (
-                              <tr key={repo.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    {repo.owner_avatar_url && (
-                                      <img className="h-8 w-8 rounded-full mr-3" src={repo.owner_avatar_url} alt={repo.owner_name || ''} />
-                                    )}
-                                    <div>
-                                      <div className="text-sm font-medium text-gray-900">{repo.name}</div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {repo.organization || repo.owner_name || '-'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <label className="inline-flex items-center cursor-pointer">
-                                      <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={repo.enabled}
-                                        onChange={() => toggleRepository(repo.id)}
-                                      />
-                                      <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                                      <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                        {repo.enabled ? 'Enabled' : 'Disabled'}
-                                      </span>
-                                    </label>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                  {/* <button
-                                    onClick={() => removeRepository(repo.id)}
-                                    className="text-red-600 hover:text-red-900"
-                                  >
-                                    Remove
-                                  </button> */}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="overflow-x-auto">
+                        <RepositoryTable 
+                          repositories={repositories}
+                          togglingRepos={togglingRepos}
+                          toggleRepository={toggleRepository}
+                        />
                       </div>
                     )}
                     

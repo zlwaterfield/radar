@@ -11,6 +11,7 @@
   "dependencies": {
     "autoprefixer": "^10.4.17",
     "axios": "^1.6.7",
+    "date-fns": "^4.1.0",
     "js-cookie": "^3.0.5",
     "next": "14.1.0",
     "postcss": "^8.4.35",
