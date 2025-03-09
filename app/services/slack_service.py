@@ -788,22 +788,17 @@ class SlackService:
         # Create blocks as dictionaries directly instead of using Pydantic models
         blocks = [
             {
-                "type": "header",
+                "type": "section",
                 "text": {
-                    "type": "plain_text",
-                    "text": "Issue Comment: " + comment_message.issue_title,
-                    "emoji": True
+                    "type": "mrkdwn",
+                    "text": f"@{comment_message.user} commented on this issue"
                 }
-            },
-            {
-                "type": "divider"
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{comment_message.issue_url}|*#{comment_message.issue_number}* {comment_message.issue_title}>\n"
-                           f"*Repository:* `{comment_message.repository}`"
+                    "text": f"<{comment_message.issue_url}|*#{comment_message.issue_number}* {comment_message.issue_title}>"
                 },
                 "accessory": {
                     "type": "button",
@@ -824,17 +819,17 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Comment:*\n{comment_message.comment}"
+                    "text": f"{comment_message.comment}"
                 }
             })
         
-        # Add context with user mention
+        # Add repository info in the footer
         blocks.append({
             "type": "context",
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": f"@{comment_message.user} commented on this issue"
+                    "text": f"Repository: `{comment_message.repository}`"
                 }
             ]
         })
