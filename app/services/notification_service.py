@@ -315,16 +315,10 @@ class NotificationService:
             if not settings:
                 return False
             
-            # Convert to our model
-            preferences = NotificationPreferences(**settings.get("notification_preferences", {}))
-            
             # Get user
             user = await SupabaseManager.get_user(user_id)
             if not user:
                 return False
-            
-            # Determine watching reasons
-            watching_reasons = await cls.determine_watching_reasons(user_id, pr)
             
             # Check if user should be notified
             return cls.should_notify(
@@ -386,12 +380,8 @@ class NotificationService:
             # Check if user is mentioned in the comment
             github_username = user.get("github_login")
             if github_username and comment.get("body") and f"@{github_username}" in comment.get("body"):
-                # User is mentioned, add to watching reasons
-                watching_reasons = await cls.determine_watching_reasons(user_id, pr)
-                watching_reasons.add(WatchingReason.MENTIONED)
-            else:
-                # User is not mentioned, use regular watching reasons
-                watching_reasons = await cls.determine_watching_reasons(user_id, pr)
+                # User is mentioned, always notify
+                return True
             
             # Check if user should be notified
             return cls.should_notify(
@@ -453,47 +443,29 @@ class NotificationService:
             github_username = user.get("github_login")
             
             # Check if user is mentioned in the comment
-            is_mentioned_in_comment = False
             comment_body = comment.get("body", "")
             if comment_body and f"@{github_username}" in comment_body:
-                is_mentioned_in_comment = True
+                # User is mentioned, always notify
+                return True
             
             # Check if this is the user's own activity
             is_own_activity = sender.get("login") == github_username
-            
-            # Check if this is a bot comment
-            is_bot_comment = sender.get("type") == "Bot"
             
             # Don't notify for own activity if muted
             if is_own_activity and preferences.mute_own_activity:
                 return False
             
             # Don't notify for bot comments if muted
-            if is_bot_comment and preferences.mute_bot_comments:
+            if sender.get("type") == "Bot" and preferences.mute_bot_comments:
                 return False
             
-            # Always notify if mentioned in the comment
-            if is_mentioned_in_comment:
-                return True
-            
-            # Notify if user is the author and has enabled issue notifications
-            if WatchingReason.AUTHOR in watching_reasons and preferences.issues:
-                return True
-            
-            # Notify if user is assigned and has enabled issue notifications
-            if WatchingReason.ASSIGNED in watching_reasons and preferences.issues:
-                return True
-            
-            # Notify if user is mentioned in the issue description
-            if WatchingReason.MENTIONED in watching_reasons:
-                return True
-            
-            # Notify if user is a reviewer and has enabled issue notifications
-            if WatchingReason.REVIEWER in watching_reasons and preferences.issues:
-                return True
-
-            # Default: don't notify
-            return False
+            # Check if user should be notified using the same logic as PR comments
+            return cls.should_notify(
+                user_id,
+                {**payload, **{"pull_request": payload.get("issue", {})}},
+                NotificationTrigger.COMMENTED,
+                actor_id=sender.get("id")
+            )
             
         except Exception as e:
             logger.error(f"Error processing issue comment event: {e}", exc_info=True)

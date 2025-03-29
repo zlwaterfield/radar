@@ -43,9 +43,6 @@ class NotificationTrigger(str, Enum):
 class NotificationPreferences(BaseModel):
     """User notification preferences."""
     
-    # Basic notification types
-    issues: bool = True
-    
     # Reviewer notifications
     reviewer_review_requested: bool = True
     reviewer_commented: bool = True
@@ -62,7 +59,6 @@ class NotificationPreferences(BaseModel):
     # Noise reduction
     mute_own_activity: bool = True
     mute_bot_comments: bool = True
-    group_similar: bool = True
     
     # Daily digest
     digest_enabled: bool = False

@@ -25,7 +25,6 @@ interface NotificationSettings {
   pull_requests: boolean;
   reviews: boolean;
   comments: boolean;
-  issues: boolean;
   digest_enabled: boolean;
   digest_time: string;
   reviewer_review_requested: boolean;
@@ -39,7 +38,6 @@ interface NotificationSettings {
   author_check_succeeded: boolean;
   mute_own_activity: boolean;
   mute_bot_comments: boolean;
-  group_similar: boolean;
 }
 
 interface KeywordSettings {
@@ -59,7 +57,6 @@ export default function Settings() {
     pull_requests: true,
     reviews: true,
     comments: true,
-    issues: true,
     digest_enabled: false,
     digest_time: '09:00',
     reviewer_review_requested: true,
@@ -73,7 +70,6 @@ export default function Settings() {
     author_check_succeeded: true,
     mute_own_activity: true,
     mute_bot_comments: true,
-    group_similar: true,
   });
 
   const [keywordSettings, setKeywordSettings] = useState<KeywordSettings>({
@@ -171,8 +167,6 @@ export default function Settings() {
         
         setNotificationSettings(prev => ({
           ...prev,
-          // Basic settings
-          issues: prefs.issues ?? prev.issues,
           
           // Reviewer notifications
           reviewer_review_requested: prefs.reviewer_review_requested ?? prev.reviewer_review_requested,
@@ -190,7 +184,6 @@ export default function Settings() {
           // Noise reduction
           mute_own_activity: prefs.mute_own_activity ?? prev.mute_own_activity,
           mute_bot_comments: prefs.mute_bot_comments ?? prev.mute_bot_comments,
-          group_similar: prefs.group_similar ?? prev.group_similar,
         }));
       }
       
@@ -346,8 +339,6 @@ export default function Settings() {
       // Format settings for API
       const settings = {
         notification_preferences: {
-          // Basic settings
-          issues: notificationSettings.issues,
           
           // Reviewer notifications
           reviewer_review_requested: notificationSettings.reviewer_review_requested,
@@ -365,7 +356,6 @@ export default function Settings() {
           // Noise reduction
           mute_own_activity: notificationSettings.mute_own_activity,
           mute_bot_comments: notificationSettings.mute_bot_comments,
-          group_similar: notificationSettings.group_similar,
         },
         
         // Daily digest settings
@@ -626,26 +616,6 @@ export default function Settings() {
                     </div>
                   </div>
                   
-                  {/* Issues */}
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Issues</h4>
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center">
-                        <input
-                          id="issues"
-                          name="issues"
-                          type="checkbox"
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                          checked={notificationSettings.issues}
-                          onChange={handleNotificationChange}
-                        />
-                        <label htmlFor="issues" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                          Receive notifications about issues
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  
                   {/* Noise reduction */}
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-gray-100">Noise reduction</h4>
@@ -674,19 +644,6 @@ export default function Settings() {
                         />
                         <label htmlFor="mute-bot-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                           Mute notifications from bot comments
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          id="group-similar"
-                          name="group_similar"
-                          type="checkbox"
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                          checked={notificationSettings.group_similar}
-                          onChange={handleNotificationChange}
-                        />
-                        <label htmlFor="group-similar" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                          Group similar notifications
                         </label>
                       </div>
                     </div>
