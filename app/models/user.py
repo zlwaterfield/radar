@@ -21,6 +21,7 @@ class UserCreate(UserBase):
     slack_access_token: str
     slack_refresh_token: Optional[str] = None
     github_id: Optional[str] = None
+    github_login: Optional[str] = None
     github_access_token: Optional[str] = None
     github_refresh_token: Optional[str] = None
 
@@ -30,6 +31,7 @@ class UserUpdate(UserBase):
     slack_access_token: Optional[str] = None
     slack_refresh_token: Optional[str] = None
     github_id: Optional[str] = None
+    github_login: Optional[str] = None
     github_access_token: Optional[str] = None
     github_refresh_token: Optional[str] = None
 
@@ -42,6 +44,7 @@ class UserInDB(UserBase):
     slack_access_token: str
     slack_refresh_token: Optional[str] = None
     github_id: Optional[str] = None
+    github_login: Optional[str] = None
     github_access_token: Optional[str] = None
     github_refresh_token: Optional[str] = None
     created_at: datetime
@@ -56,6 +59,7 @@ class User(UserBase):
     slack_id: str
     slack_team_id: str
     github_id: Optional[str] = None
+    github_login: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

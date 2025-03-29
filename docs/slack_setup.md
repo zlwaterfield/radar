@@ -144,8 +144,8 @@ To test if your App Home is working:
 Add the following environment variables to your `.env` file:
 
 ```
-SLACK_CLIENT_ID=your_client_id
-SLACK_CLIENT_SECRET=your_client_secret
+SLACK_APP_CLIENT_ID=your_client_id
+SLACK_APP_CLIENT_SECRET=your_client_secret
 SLACK_SIGNING_SECRET=your_signing_secret
 SLACK_BOT_TOKEN=xoxb-your-bot-token
 ```
@@ -153,7 +153,7 @@ SLACK_BOT_TOKEN=xoxb-your-bot-token
 ### Token Types and Their Uses
 
 - **SLACK_BOT_TOKEN**: Starts with `xoxb-` and contains all the permissions your bot needs to interact with Slack workspaces (posting messages, reading channels, etc.).
-- **SLACK_CLIENT_ID** and **SLACK_CLIENT_SECRET**: Used for OAuth flows when users install your app.
+- **SLACK_APP_CLIENT_ID** and **SLACK_APP_CLIENT_SECRET**: Used for OAuth flows when users install your app.
 - **SLACK_SIGNING_SECRET**: Used to verify that requests are coming from Slack.
 
 ## Step 5: Setting Up ngrok for Local Development

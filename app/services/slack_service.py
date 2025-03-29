@@ -26,6 +26,7 @@ from app.models.slack import (
     ContextBlock,
     HeaderBlock
 )
+from app.db.supabase import SupabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,6 @@ logger = logging.getLogger(__name__)
 slack_app = App(
     token=settings.SLACK_BOT_TOKEN,  # Use the bot token directly for single workspace
     signing_secret=settings.SLACK_SIGNING_SECRET,
-    process_before_response=False
 )
 
 # Create a request handler for FastAPI
@@ -59,21 +59,23 @@ def handle_message(body, say):
     if body.get("event", {}).get("channel_type") == "im":
         say("I received your message! I'm Radar, here to help you track GitHub activity.")
 
-@slack_app.event("app_home_opened")
-def handle_app_home_opened(client, event, logger):
+# Note: app_home_opened events are also handled directly in the slack_events route
+async def publish_home_view(user_id: str):
     """
     Handle the app_home_opened event and render the app home page.
     
     Args:
-        client: Slack client
-        event: Event data
-        logger: Logger
+        user_id: Slack user ID
+        
+    Returns:
+        True if successful, False otherwise
     """
-    logger.info(f"Got app_home_opened event: {event}")
-    user_id = event["user"]
-    
     try:
-        # Call views.publish with the built-in client
+        # Create a client using the bot token
+        from slack_sdk import WebClient
+        client = WebClient(token=settings.SLACK_BOT_TOKEN)
+        
+        # First show a loading screen
         client.views_publish(
             user_id=user_id,
             view={
@@ -88,96 +90,191 @@ def handle_app_home_opened(client, event, logger):
                         }
                     },
                     {
-                        "type": "divider"
-                    },
-                    {
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "*Radar* helps you track GitHub activity and receive notifications in Slack."
+                            "text": "Loading your personalized dashboard..."
                         }
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "👋 *Get Started*\nUse the `/radar` command to configure your settings and start receiving notifications."
-                        }
-                    },
-                    {
-                        "type": "divider"
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "🔔 *Notifications*\nYou'll receive notifications for:"
-                        }
-                    },
-                    {
-                        "type": "section",
-                        "fields": [
-                            {
-                                "type": "mrkdwn",
-                                "text": "• Pull Requests"
-                            },
-                            {
-                                "type": "mrkdwn",
-                                "text": "• Reviews"
-                            },
-                            {
-                                "type": "mrkdwn",
-                                "text": "• Comments"
-                            },
-                            {
-                                "type": "mrkdwn",
-                                "text": "• Issues"
-                            }
-                        ]
-                    },
-                    {
-                        "type": "divider"
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "⚙️ *Commands*"
-                        }
-                    },
-                    {
-                        "type": "section",
-                        "fields": [
-                            {
-                                "type": "mrkdwn",
-                                "text": "• `/radar help` - Show help information"
-                            },
-                            {
-                                "type": "mrkdwn",
-                                "text": "• `/radar settings` - Configure your settings"
-                            },
-                            {
-                                "type": "mrkdwn",
-                                "text": "• `/radar stats` - View your GitHub stats"
-                            }
-                        ]
-                    },
-                    {
-                        "type": "context",
-                        "elements": [
-                            {
-                                "type": "mrkdwn",
-                                "text": "🔍 Need help? Use `/radar help` or message this bot directly."
-                            }
-                        ]
                     }
                 ]
             }
         )
-        logger.info(f"Published home view for user {user_id}")
+        logger.info(f"Published loading home view for user {user_id}")
+        
+        # Check if user exists in our database
+        user = await SupabaseManager.get_user_by_slack_id(user_id)
+        logger.info(f"User found: {user is not None}")
+        
+        # Prepare the home view blocks
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Welcome to Radar! 📡",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "divider"
+            }
+        ]
+        
+        if user:
+            # User has an account - show a simplified view with a button to open dashboard
+            blocks.extend([
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Hello, <@{user_id}>!* Your Radar account is connected and active."
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Radar helps you track GitHub activity and receive notifications in Slack. View your dashboard to see your notifications and manage your settings."
+                    }
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Open Dashboard",
+                                "emoji": True
+                            },
+                            "style": "primary",
+                            "url": f"{settings.FRONTEND_URL}/dashboard"
+                        }
+                    ]
+                },
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "⚙️ *Available Commands*"
+                    }
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {
+                            "type": "mrkdwn",
+                            "text": "• `/radar help` - Show help information"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": "• `/radar settings` - Open settings page"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": "• `/radar status` - Check your connection status"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": "• `/radar repos` - List your repositories"
+                        }
+                    ]
+                }
+            ])
+        else:
+            # User doesn't have an account - show welcome message and setup button
+            blocks.extend([
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Radar* helps you track GitHub activity and receive notifications in Slack."
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "👋 *Get Started*\nIt looks like you haven't set up your Radar account yet. Connect your GitHub account to start receiving notifications."
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "With Radar, you'll receive notifications for:"
+                    }
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {
+                            "type": "mrkdwn",
+                            "text": "• Pull Requests"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": "• Reviews"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": "• Comments"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": "• Issues"
+                        }
+                    ]
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Create Account",
+                                "emoji": True
+                            },
+                            "style": "primary",
+                            "url": f"{settings.FRONTEND_URL}"
+                        }
+                    ]
+                }
+            ])
+        
+        # Add footer
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "🔍 Need help? Use `/radar help` or message this bot directly."
+                }
+            ]
+        })
+        
+        # Update the home view with the full content
+        client.views_publish(
+            user_id=user_id,
+            view={
+                "type": "home",
+                "blocks": blocks
+            }
+        )
+        logger.info(f"Published full home view for user {user_id}")
+        return True
+        
     except Exception as e:
-        logger.error(f"Error publishing home view: {e}")
+        logger.error(f"Error handling app_home_opened: {e}", exc_info=True)
+        return False
 
+@slack_app.event("app_home_opened")
+async def handle_app_home_opened_event(payload, client, event):
+    await publish_home_view(payload["user"])
 
 class SlackService:
     """Service for interacting with the Slack API."""
@@ -403,8 +500,8 @@ class SlackService:
         """
         try:
             response = self.client.oauth_v2_access(
-                client_id=settings.SLACK_CLIENT_ID,
-                client_secret=settings.SLACK_CLIENT_SECRET,
+                client_id=settings.SLACK_APP_CLIENT_ID,
+                client_secret=settings.SLACK_APP_CLIENT_SECRET,
                 code=code
             )
             return response
@@ -425,7 +522,9 @@ class SlackService:
         return [block.dict(exclude_none=True) for block in blocks]
             
     @staticmethod
-    def create_pull_request_message(pr_message: PullRequestMessage) -> PullRequestMessage:
+    def create_pull_request_message(
+        pr_message: PullRequestMessage
+    ) -> PullRequestMessage:
         """
         Create a formatted Slack message for a pull request event.
         
@@ -435,36 +534,34 @@ class SlackService:
         Returns:
             Formatted pull request message
         """
-        # Determine color based on action
+        # Map PR action to color
         color = SlackService.EVENT_COLORS.get(pr_message.action, SlackService.EVENT_COLORS["default"])
         
-        # Determine emoji based on action
-        emoji = "🔄"  # Default
+        # Create icon based on action
+        icon = "🔄"  # Default icon
         if pr_message.action == "opened":
-            emoji = "🆕"
+            icon = "🆕"
         elif pr_message.action == "closed":
-            emoji = "🚫"
-        elif pr_message.action == "merged":
-            emoji = "🔀"
+            icon = "🚫"
         elif pr_message.action == "reopened":
-            emoji = "♻️"
+            icon = "🔄"
+        elif pr_message.action == "merged":
+            icon = "🔀"
         elif pr_message.action == "review_requested":
-            emoji = "👀"
-        
-        # Create message title
-        if pr_message.action == "review_requested":
-            title = f"{emoji} Review requested on PR"
-        else:
-            title = f"{emoji} PR {pr_message.action}"
-        
-        # Create blocks as dictionaries directly
+            icon = "👀"
+        elif pr_message.action == "assigned":
+            icon = "👤"
+            
+        # Format action text
+        action_text = pr_message.action.replace("_", " ").capitalize()
+            
+        # Create blocks with attachment styling
         blocks = [
             {
-                "type": "header",
+                "type": "section",
                 "text": {
-                    "type": "plain_text",
-                    "text": title,
-                    "emoji": True
+                    "type": "mrkdwn",
+                    "text": f"{icon} *Pull Request {action_text}*"
                 }
             },
             {
@@ -474,8 +571,9 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{pr_message.pull_request_url}|*#{pr_message.pull_request_number}* {pr_message.pull_request_title}>\n"
-                           f"*Repository:* `{pr_message.repository}`"
+                    "text": f"<{pr_message.pull_request_url}|*PR #{pr_message.pull_request_number}* {pr_message.pull_request_title}>\n"
+                           f"*Repository:* `{pr_message.repository}`\n"
+                           f"*Type:* Pull Request"
                 },
                 "accessory": {
                     "type": "button",
@@ -493,7 +591,7 @@ class SlackService:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"@{pr_message.user} {pr_message.action} this pull request"
+                        "text": f"<@{pr_message.user}> {pr_message.action} this pull request"
                     }
                 ]
             }
@@ -525,27 +623,30 @@ class SlackService:
         Returns:
             Formatted pull request review message
         """
-        # Determine color based on review state
-        color = SlackService.EVENT_COLORS.get(review_message.review_state, SlackService.EVENT_COLORS["default"])
+        # Map review state to color
+        color = SlackService.EVENT_COLORS.get(review_message.state, SlackService.EVENT_COLORS["default"])
         
-        # Create title based on review state
-        if review_message.review_state == "approved":
-            title = "✅ Approved"
-        elif review_message.review_state == "changes_requested":
-            title = "❌ Changes Requested"
-        elif review_message.review_state == "commented":
-            title = "💬 Review Comment"
-        else:
-            title = "🔍 Review Submitted"
-        
-        # Create blocks as dictionaries directly
+        # Create icon based on review state
+        icon = "💬"  # Default icon
+        if review_message.state == "approved":
+            icon = "✅"
+        elif review_message.state == "changes_requested":
+            icon = "❌"
+        elif review_message.state == "commented":
+            icon = "💬"
+        elif review_message.state == "dismissed":
+            icon = "🚫"
+            
+        # Format state text
+        state_text = review_message.state.replace("_", " ").capitalize()
+            
+        # Create blocks with attachment styling
         blocks = [
             {
-                "type": "header",
+                "type": "section",
                 "text": {
-                    "type": "plain_text",
-                    "text": title,
-                    "emoji": True
+                    "type": "mrkdwn",
+                    "text": f"{icon} *Pull Request Review: {state_text}*"
                 }
             },
             {
@@ -555,15 +656,9 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"@{review_message.user} {review_message.review_state} your PR"
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"<{review_message.pull_request_url}|*#{review_message.pull_request_number}* {review_message.pull_request_title}>\n"
-                           f"*Repository:* `{review_message.repository}`"
+                    "text": f"<{review_message.pull_request_url}|*PR #{review_message.pull_request_number}* {review_message.pull_request_title}>\n"
+                           f"*Repository:* `{review_message.repository}`\n"
+                           f"*Type:* Pull Request"
                 },
                 "accessory": {
                     "type": "button",
@@ -633,8 +728,8 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{comment_message.pull_request_url}|*#{comment_message.pull_request_number}* {comment_message.pull_request_title}>\n"
-                           f"*Repository:* `{comment_message.repository}`"
+                    "text": f"<{comment_message.pull_request_url}|*PR #{comment_message.pull_request_number}* {comment_message.pull_request_title}>\n"
+                           f"*Repository:* `{comment_message.repository}`\n"
                 },
                 "accessory": {
                     "type": "button",
@@ -651,7 +746,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f">*Comment:*\n>{comment_message.comment}"
+                    "text": comment_message.comment
                 }
             },
             {
@@ -711,6 +806,22 @@ class SlackService:
             
         # Format action text
         action_text = issue_message.action.replace("_", " ").capitalize()
+        
+        # Check if this is a pull request by examining the URL
+        # GitHub pull request URLs contain '/pull/' while issue URLs contain '/issues/'
+        is_pull_request = '/pull/' in issue_message.issue_url
+        
+        # Set the appropriate title and type based on whether it's a PR or issue
+        if is_pull_request:
+            title = f"{icon} *Pull Request {action_text}*"
+            item_prefix = "PR"
+            view_text = "View PR"
+            context_text = f"<@{issue_message.user}> {issue_message.action} this pull request"
+        else:
+            title = f"{icon} *GitHub Issue {action_text}*"
+            item_prefix = "Issue"
+            view_text = "View Issue"
+            context_text = f"<@{issue_message.user}> {issue_message.action} this issue"
             
         # Create blocks with attachment styling
         blocks = [
@@ -718,7 +829,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"{icon} *Issue {action_text}*"
+                    "text": title
                 }
             },
             {
@@ -728,14 +839,14 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{issue_message.issue_url}|*#{issue_message.issue_number}* {issue_message.issue_title}>\n"
-                           f"*Repository:* `{issue_message.repository}`"
+                    "text": f"<{issue_message.issue_url}|*{item_prefix} #{issue_message.issue_number}* {issue_message.issue_title}>\n"
+                           f"*Repository:* `{issue_message.repository}`\n"
                 },
                 "accessory": {
                     "type": "button",
                     "text": {
                         "type": "plain_text",
-                        "text": "View Issue",
+                        "text": view_text,
                         "emoji": True
                     },
                     "url": issue_message.issue_url,
@@ -747,7 +858,7 @@ class SlackService:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"<@{issue_message.user}> {issue_message.action} this issue"
+                        "text": context_text
                     }
                 ]
             }
@@ -785,26 +896,46 @@ class SlackService:
         # Use the issue_commented color from our color scheme
         color = SlackService.EVENT_COLORS["issue_commented"]
         
-        # Create blocks as dictionaries directly instead of using Pydantic models
+        # Check if this is a pull request by examining the URL
+        # GitHub pull request URLs contain '/pull/' while issue URLs contain '/issues/'
+        is_pull_request = '/pull/' in comment_message.issue_url
+        
+        # Set the appropriate title and type based on whether it's a PR or issue
+        if is_pull_request:
+            title = "💬 *Pull Request Comment*"
+            item_prefix = "PR"
+            view_text = "View PR"
+            context_text = f"<@{comment_message.user}> commented on this pull request"
+        else:
+            title = "💬 *Issue Comment*"
+            item_prefix = "Issue"
+            view_text = "View Issue"
+            context_text = f"<@{comment_message.user}> commented on this issue"
+        
+        # Create blocks as dictionaries directly
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"@{comment_message.user} commented on this issue"
+                    "text": title
                 }
+            },
+            {
+                "type": "divider"
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{comment_message.issue_url}|*#{comment_message.issue_number}* {comment_message.issue_title}>"
+                    "text": f"<{comment_message.issue_url}|*{item_prefix} #{comment_message.issue_number}* {comment_message.issue_title}>\n"
+                           f"*Repository:* `{comment_message.repository}`\n"
                 },
                 "accessory": {
                     "type": "button",
                     "text": {
                         "type": "plain_text",
-                        "text": "View Issue",
+                        "text": view_text,
                         "emoji": True
                     },
                     "url": comment_message.issue_url,
@@ -813,29 +944,29 @@ class SlackService:
             }
         ]
         
-        # Add comment content if present
+        # Add comment content if available
         if comment_message.comment:
             blocks.append({
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"{comment_message.comment}"
+                    "text": comment_message.comment
                 }
             })
         
-        # Add repository info in the footer
+        # Add context about who commented
         blocks.append({
             "type": "context",
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": f"Repository: `{comment_message.repository}`"
+                    "text": context_text
                 }
             ]
         })
         
-        # Update the message blocks
-        comment_message.blocks = []
+        # Update text with user mention
+        comment_message.text = ""
         
         # Add attachments for color
         comment_message.attachments = [
@@ -844,6 +975,9 @@ class SlackService:
                 "blocks": blocks
             }
         ]
+        
+        # Update the message blocks
+        comment_message.blocks = []
         
         return comment_message
     
@@ -863,7 +997,7 @@ class SlackService:
         # Use a consistent color for digest messages
         color = SlackService.EVENT_COLORS["digest"]
         
-        # Create blocks as dictionaries directly instead of using Pydantic models
+        # Create blocks as dictionaries directly
         blocks = [
             {
                 "type": "header",
@@ -988,7 +1122,7 @@ class SlackService:
         # Use a consistent color for stats messages
         color = SlackService.EVENT_COLORS["stats"]
         
-        # Create blocks as dictionaries directly instead of using Pydantic models
+        # Create blocks as dictionaries directly
         blocks = [
             {
                 "type": "header",

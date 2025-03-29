@@ -193,3 +193,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT
+
+
+TODO
+- auth - use jwt for more security

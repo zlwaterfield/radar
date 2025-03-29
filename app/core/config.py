@@ -45,8 +45,8 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     # Slack settings
-    SLACK_CLIENT_ID: str
-    SLACK_CLIENT_SECRET: str
+    SLACK_APP_CLIENT_ID: str
+    SLACK_APP_CLIENT_SECRET: str
     SLACK_SIGNING_SECRET: str
     SLACK_BOT_TOKEN: Optional[str] = None
     SLACK_APP_TOKEN: Optional[str] = None

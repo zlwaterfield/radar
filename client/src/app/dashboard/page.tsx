@@ -30,6 +30,8 @@ export default function Dashboard() {
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
   const [error, setError] = useState('');
   const [notificationsError, setNotificationsError] = useState('');
+  const [repositories, setRepositories] = useState<{ total: number, enabledCount: number }>({ total: 0, enabledCount: 0 });
+  const [isLoadingRepos, setIsLoadingRepos] = useState(true);
 
   const fetchStats = async () => {
     if (!user?.id) return;
@@ -63,15 +65,42 @@ export default function Dashboard() {
     }
   };
 
+  const fetchRepositories = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setIsLoadingRepos(true);
+      const response = await axios.get(`/api/settings/user/${user.id}/repositories`, {
+        params: {
+          page: 1,
+          page_size: 1 // We only need the count, not the actual repos
+        }
+      });
+      
+      if (response.data) {
+        const total = response.data.total || 0;
+        // Count enabled repositories
+        const enabledCount = response.data.items?.filter((repo: any) => repo.enabled).length || 0;
+        setRepositories({ total, enabledCount });
+      }
+    } catch (err) {
+      console.error('Error fetching repositories:', err);
+    } finally {
+      setIsLoadingRepos(false);
+    }
+  };
+
   const refreshData = () => {
     fetchStats();
     fetchRecentNotifications();
+    fetchRepositories();
   };
 
   useEffect(() => {
     if (user?.id) {
       fetchStats();
       fetchRecentNotifications();
+      fetchRepositories();
     }
   }, [user?.id]);
 
@@ -111,10 +140,10 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Welcome, {user?.name || 'User'}!</h1>
         <button 
           onClick={refreshData}
-          disabled={isLoading || isLoadingNotifications}
+          disabled={isLoading || isLoadingNotifications || isLoadingRepos}
           className="flex items-center px-3 py-2 bg-primary-50 text-primary-600 rounded-md hover:bg-primary-100 transition-colors disabled:opacity-50"
         >
-          <FiRefreshCw className={`mr-2 h-4 w-4 ${isLoading || isLoadingNotifications ? 'animate-spin' : ''}`} />
+          <FiRefreshCw className={`mr-2 -ml-1 h-4 w-4 ${isLoading || isLoadingNotifications || isLoadingRepos ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
@@ -130,6 +159,24 @@ export default function Dashboard() {
                 Connect your GitHub account to start receiving notifications.
                 <Link href="/auth/github" className="ml-2 font-medium underline">
                   Connect now
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {user?.github_id && !isLoadingRepos && repositories.total > 0 && repositories.enabledCount === 0 && (
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <FiAlertCircle className="h-5 w-5 text-blue-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700">
+                You haven't enabled any repositories for notifications yet. Enable repositories in your settings to start receiving notifications.
+                <Link href="/dashboard/settings" className="ml-2 font-medium underline">
+                  Go to settings
                 </Link>
               </p>
             </div>

@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.db.supabase import SupabaseManager
-from app.services.slack_service import slack_app, slack_handler, SlackService
+from app.services.slack_service import slack_handler, publish_home_view, SlackService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -33,7 +33,32 @@ async def slack_events(request: Request):
     body = await request.body()
     print(body)
     
-    # Let the slack_handler process the request
+    # Parse the body to check for event type
+    try:
+        body_json = json.loads(body)
+        
+        # Log event details for debugging
+        if body_json.get("type") == "event_callback":
+            event = body_json.get("event", {})
+            event_type = event.get("type")
+            print(f"Received Slack event: {event_type}")
+            
+            # Special handling for app_home_opened events
+            if event_type == "app_home_opened":
+                print("Processing app_home_opened event directly...")
+                
+                # Get user ID from the event
+                user_id = event.get("user")
+                
+                # Use the publish_home_view function from slack_service
+                await publish_home_view(user_id)
+                
+                # Return a success response to Slack
+                return JSONResponse(content={"ok": True})
+    except Exception as e:
+        logger.error(f"Error parsing Slack event: {e}", exc_info=True)
+    
+    # Let the slack_handler process the request for other event types
     return await slack_handler.handle(request)
 
 
@@ -135,7 +160,7 @@ async def process_radar_command(text: str, user_id: str, channel_id: str, respon
             "text": "Radar Commands:\n"
                    "• `/radar help` - Show this help message\n"
                    "• `/radar status` - Check your connection status\n"
-                   "• `/radar settings` - Open settings modal\n"
+                   "• `/radar settings` - Open settings page\n"
                    "• `/radar repos` - List your connected repositories\n"
                    "• `/radar connect` - Connect to GitHub\n"
                    "• `/radar disconnect` - Disconnect from GitHub"
@@ -157,140 +182,38 @@ async def process_radar_command(text: str, user_id: str, channel_id: str, respon
         return JSONResponse(content={"text": status_text})
     
     elif args[0] == "settings":
-        # Open settings modal
-        slack_service = SlackService(token=user["slack_access_token"])
+        # Check if user exists
+        if not user:
+            return JSONResponse(content={
+                "text": "You need to connect your GitHub account first. Please visit our app homepage to set up your account."
+            })
         
-        # Get user settings
-        settings = await SupabaseManager.get_user_settings(user["id"])
-        
-        # Create modal view
-        view = {
-            "type": "modal",
-            "callback_id": "settings_modal",
-            "title": {"type": "plain_text", "text": "Radar Settings"},
-            "submit": {"type": "plain_text", "text": "Save"},
-            "close": {"type": "plain_text", "text": "Cancel"},
+        return JSONResponse(content={
             "blocks": [
                 {
                     "type": "section",
-                    "text": {"type": "mrkdwn", "text": "*Notification Preferences*"}
-                },
-                {
-                    "type": "divider"
-                },
-                {
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": "*Pull Requests*"},
-                    "accessory": {
-                        "type": "checkboxes",
-                        "action_id": "pr_notifications",
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "Opened"},
-                                "value": "pull_request_opened"
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Closed"},
-                                "value": "pull_request_closed"
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Merged"},
-                                "value": "pull_request_merged"
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Reviewed"},
-                                "value": "pull_request_reviewed"
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Commented"},
-                                "value": "pull_request_commented"
-                            }
-                        ],
-                        "initial_options": get_initial_checkbox_options(settings, "pr_notifications")
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Radar Settings*\nManage your notification preferences and account settings in the Radar web app."
                     }
                 },
                 {
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": "*Issues*"},
-                    "accessory": {
-                        "type": "checkboxes",
-                        "action_id": "issue_notifications",
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "Opened"},
-                                "value": "issue_opened"
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Open Settings",
+                                "emoji": True
                             },
-                            {
-                                "text": {"type": "plain_text", "text": "Closed"},
-                                "value": "issue_closed"
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Commented"},
-                                "value": "issue_commented"
-                            }
-                        ],
-                        "initial_options": get_initial_checkbox_options(settings, "issue_notifications")
-                    }
-                },
-                {
-                    "type": "divider"
-                },
-                {
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": "*Digest Settings*"}
-                },
-                {
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": "Receive digest notifications"},
-                    "accessory": {
-                        "type": "radio_buttons",
-                        "action_id": "digest_enabled",
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "Enabled"},
-                                "value": "true"
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Disabled"},
-                                "value": "false"
-                            }
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "Enabled" if settings.get("digest_settings", {}).get("enabled", True) else "Disabled"},
-                            "value": "true" if settings.get("digest_settings", {}).get("enabled", True) else "false"
+                            "style": "primary",
+                            "url": f"{settings.FRONTEND_URL}/dashboard/settings"
                         }
-                    }
-                },
-                {
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": "Digest frequency"},
-                    "accessory": {
-                        "type": "static_select",
-                        "action_id": "digest_frequency",
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "Daily"},
-                                "value": "daily"
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Weekly"},
-                                "value": "weekly"
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Monthly"},
-                                "value": "monthly"
-                            }
-                        ],
-                        "initial_option": get_initial_select_option(settings, "digest_frequency")
-                    }
+                    ]
                 }
             ]
-        }
-        
-        # Open modal
-        await slack_service.open_modal(trigger_id, view)
-        
-        return Response(status_code=200)
+        })
     
     elif args[0] == "repos":
         # List repositories
@@ -356,6 +279,7 @@ async def process_radar_command(text: str, user_id: str, channel_id: str, respon
         # Update user
         await SupabaseManager.update_user(user["id"], {
             "github_id": None,
+            "github_login": None,
             "github_access_token": None,
             "github_refresh_token": None
         })

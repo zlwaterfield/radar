@@ -30,7 +30,7 @@ async def slack_login():
         Redirect to Slack OAuth page
     """
     params = {
-        "client_id": settings.SLACK_CLIENT_ID,
+        "client_id": settings.SLACK_APP_CLIENT_ID,
         "scope": "chat:write,chat:write.public,commands,users:read,users:read.email,team:read,im:history,im:read,im:write,app_mentions:read",
         "redirect_uri": f"https://zach.ngrok.dev/api/auth/slack/callback",
     }
@@ -268,6 +268,7 @@ async def github_callback(code: str, state: str):
             user_data = {
                 "github_id": str(github_user["id"]),
                 "github_access_token": access_token,
+                "github_login": github_user["login"]
             }
             
             if refresh_token:

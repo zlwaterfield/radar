@@ -298,34 +298,117 @@ class GitHubService:
             List of pull requests
         """
         try:
-            prs = []
-            for pr in self.client.get_repo(repo_full_name).get_pulls(state=state):
-                prs.append({
+            # Get repository
+            repo = self.client.get_repo(repo_full_name)
+            
+            # Get pull requests
+            pull_requests = []
+            for pr in repo.get_pulls(state=state):
+                pull_requests.append({
                     "id": pr.id,
                     "number": pr.number,
                     "title": pr.title,
-                    "body": pr.body,
-                    "html_url": pr.html_url,
                     "state": pr.state,
-                    "user": {
-                        "id": pr.user.id,
-                        "login": pr.user.login,
-                        "avatar_url": pr.user.avatar_url,
-                        "html_url": pr.user.html_url,
-                    },
+                    "html_url": pr.html_url,
                     "created_at": pr.created_at.isoformat(),
                     "updated_at": pr.updated_at.isoformat(),
                     "closed_at": pr.closed_at.isoformat() if pr.closed_at else None,
                     "merged_at": pr.merged_at.isoformat() if pr.merged_at else None,
+                    "user": {
+                        "id": pr.user.id,
+                        "login": pr.user.login,
+                        "avatar_url": pr.user.avatar_url,
+                        "html_url": pr.user.html_url
+                    },
+                    "body": pr.body,
+                    "draft": pr.draft,
                     "merged": pr.merged,
                     "mergeable": pr.mergeable,
-                    "draft": pr.draft,
+                    "mergeable_state": pr.mergeable_state,
+                    "comments": pr.comments,
+                    "review_comments": pr.review_comments,
+                    "commits": pr.commits,
+                    "additions": pr.additions,
+                    "deletions": pr.deletions,
+                    "changed_files": pr.changed_files
                 })
             
-            return prs
-        except GithubException as e:
-            logger.error(f"GitHub API error: {e}", exc_info=True)
-            raise
+            return pull_requests
+        except Exception as e:
+            logger.error(f"Error getting pull requests for {repo_full_name}: {e}")
+            return []
+    
+    def get_pull_request(self, repo_full_name: str, pr_number: int) -> Optional[Dict[str, Any]]:
+        """
+        Get a specific pull request by repository and PR number.
+        
+        Args:
+            repo_full_name: Repository full name (owner/repo)
+            pr_number: Pull request number
+            
+        Returns:
+            Pull request data or None if not found
+        """
+        try:
+            # Get repository
+            repo = self.client.get_repo(repo_full_name)
+            
+            # Get pull request
+            pr = repo.get_pull(pr_number)
+            
+            # Get requested reviewers
+            requested_reviewers = []
+            for reviewer in pr.get_review_requests()[0]:  # Returns (users, teams)
+                requested_reviewers.append({
+                    "id": reviewer.id,
+                    "login": reviewer.login,
+                    "avatar_url": reviewer.avatar_url,
+                    "html_url": reviewer.html_url
+                })
+            
+            # Get assignees
+            assignees = []
+            for assignee in pr.assignees:
+                assignees.append({
+                    "id": assignee.id,
+                    "login": assignee.login,
+                    "avatar_url": assignee.avatar_url,
+                    "html_url": assignee.html_url
+                })
+            
+            return {
+                "id": pr.id,
+                "number": pr.number,
+                "title": pr.title,
+                "state": pr.state,
+                "html_url": pr.html_url,
+                "created_at": pr.created_at.isoformat(),
+                "updated_at": pr.updated_at.isoformat(),
+                "closed_at": pr.closed_at.isoformat() if pr.closed_at else None,
+                "merged_at": pr.merged_at.isoformat() if pr.merged_at else None,
+                "user": {
+                    "id": pr.user.id,
+                    "login": pr.user.login,
+                    "avatar_url": pr.user.avatar_url,
+                    "html_url": pr.user.html_url
+                },
+                "body": pr.body,
+                "draft": pr.draft,
+                "merged": pr.merged,
+                "mergeable": pr.mergeable,
+                "mergeable_state": pr.mergeable_state,
+                "comments": pr.comments,
+                "review_comments": pr.review_comments,
+                "commits": pr.commits,
+                "additions": pr.additions,
+                "deletions": pr.deletions,
+                "changed_files": pr.changed_files,
+                "requested_reviewers": requested_reviewers,
+                "assignees": assignees
+            }
+        except Exception as e:
+            logger.error(f"Error getting pull request {pr_number} for {repo_full_name}: {e}")
+            return None
     
     def get_issues(self, repo_full_name: str, state: str = "all") -> List[Dict[str, Any]]:
         """

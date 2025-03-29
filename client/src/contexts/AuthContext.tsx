@@ -55,6 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       fetchUser(userId);
     } else {
       setLoading(false);
+      router.push('/');
     }
   }, []);
   

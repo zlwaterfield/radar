@@ -49,6 +49,7 @@ CREATE TABLE users (
     slack_access_token VARCHAR NOT NULL,
     slack_refresh_token VARCHAR,
     github_id VARCHAR UNIQUE,
+    github_login VARCHAR,
     github_access_token VARCHAR,
     github_refresh_token VARCHAR,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

@@ -5,25 +5,13 @@ This module handles incoming webhooks from GitHub.
 """
 import hashlib
 import hmac
-import json
 import logging
 from typing import Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Header
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Header
 
 from app.core.config import settings
 from app.db.supabase import SupabaseManager
-from app.models.github import (
-    EventType,
-    ActionType,
-    GitHubEvent,
-    PullRequestEvent,
-    PullRequestReviewEvent,
-    PullRequestReviewCommentEvent,
-    IssueEvent,
-    IssueCommentEvent,
-    PushEvent,
-)
 from app.services.slack_service import SlackService
 
 router = APIRouter()
@@ -196,7 +184,7 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
         pr = payload.get("pull_request", {})
         repository = payload.get("repository", {})
         sender = payload.get("sender", {})
-        
+
         # Skip if action is not interesting
         if action not in ["opened", "closed", "reopened", "review_requested", "review_request_removed", "assigned", "unassigned"]:
             return
@@ -235,7 +223,7 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
             # Check if user should be notified based on notification preferences
             should_notify_preferences = await NotificationService.should_notify(
                 user["id"], 
-                pr.get("id"), 
+                pr, 
                 trigger, 
                 actor_id=sender.get("id")
             )
@@ -586,8 +574,8 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
     """
     try:
         action = payload.get("action")
-        comment = payload.get("comment", {})
         issue = payload.get("issue", {})
+        comment = payload.get("comment", {})
         repository = payload.get("repository", {})
         sender = payload.get("sender", {})
         
@@ -595,15 +583,17 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
         if action != "created":
             return
         
+        # Import notification service
+        from app.services.notification_service import NotificationService
+        
         # Create message for each user
         for user in users:
-            # Check user settings
-            settings = await SupabaseManager.get_user_settings(user["id"])
-            if not settings:
-                continue
+            # Check if user should be notified
+            should_notify = await NotificationService.process_issue_comment_event(
+                user["id"], payload, event_id
+            )
             
-            # Check if user wants to receive this notification
-            if not settings.get("notification_preferences", {}).get("issue_commented", True):
+            if not should_notify:
                 continue
             
             # Create Slack message

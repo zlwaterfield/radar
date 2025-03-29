@@ -16,16 +16,16 @@ class NotificationService:
     """Service for handling notifications."""
     
     @staticmethod
-    async def determine_watching_reasons(user_id: str, pr_data: Dict[str, Any]) -> Set[WatchingReason]:
+    async def determine_watching_reasons(user_id: str, data: Dict[str, Any]) -> Set[WatchingReason]:
         """
-        Determine the reasons why a user is watching a pull request.
+        Determine the reasons why a user is watching a PR or issue
         
         Args:
             user_id: User ID
-            pr_data: Pull request data
+            data: PR or issue data
             
         Returns:
-            Set of watching reasons
+        Set of watching reasons
         """
         watching_reasons = set()
         
@@ -38,45 +38,73 @@ class NotificationService:
         if not github_username:
             return watching_reasons
         
+        # Determine if this is a PR or an issue
+        is_pr = False
+        
+        # Check for direct PR indicators
+        if "head" in data or "requested_reviewers" in data:
+            is_pr = True
+        # Check for PR in issue (issue comment case)
+        elif "issue" in data and "pull_request" in data.get("issue", {}):
+            is_pr = True
+        # Check for pull_request field directly
+        elif "pull_request" in data:
+            is_pr = True
+        # Check URL for PR pattern as fallback
+        elif "html_url" in data and "/pull/" in data.get("html_url", ""):
+            is_pr = True
+        
         # Check if user is the author
-        if pr_data.get("user", {}).get("login") == github_username:
+        if data.get("user", {}).get("login") == github_username:
             watching_reasons.add(WatchingReason.AUTHOR)
         
-        # Check if user is a reviewer
-        requested_reviewers = pr_data.get("requested_reviewers", [])
-        for reviewer in requested_reviewers:
-            if reviewer.get("login") == github_username:
-                watching_reasons.add(WatchingReason.REVIEWER)
-                break
+        if is_pr:
+            # For issue comments on PRs, we need to fetch the full PR data
+            pr_data = data
+            
+            # If this is an issue comment on a PR, we need to fetch the PR details
+            if "issue" in data and "pull_request" in data.get("issue", {}):
+                try:
+                    # Extract repository and PR number
+                    repository = data.get("repository", {}).get("full_name")
+                    pr_number = data.get("issue", {}).get("number")
+                    
+                    if repository and pr_number:
+                        # Get user's GitHub token
+                        github_token = user.get("github_access_token")
+                        
+                        if github_token:
+                            # Fetch PR details from GitHub
+                            from app.services.github_service import GitHubService
+                            github_service = GitHubService(token=github_token)
+                            pr_details = github_service.get_pull_request(repository, pr_number)
+                            
+                            if pr_details:
+                                pr_data = pr_details
+                except Exception as e:
+                    logger.error(f"Error fetching PR details: {e}")
+            
+            # Check if user is a reviewer
+            requested_reviewers = pr_data.get("requested_reviewers", [])
+            for reviewer in requested_reviewers:
+                if reviewer.get("login") == github_username:
+                    watching_reasons.add(WatchingReason.REVIEWER)
+                    break
         
-        # Check if user is assigned
-        assignees = pr_data.get("assignees", [])
+        # Check if user is assigned (works for both PRs and issues)
+        assignees = data.get("assignees", [])
         for assignee in assignees:
             if assignee.get("login") == github_username:
                 watching_reasons.add(WatchingReason.ASSIGNED)
                 break
         
-        # Check if user is mentioned in the PR description
-        body = pr_data.get("body", "")
+        # Check if user is mentioned in the PR/issue description
+        body = data.get("body", "")
         if body and f"@{github_username}" in body:
             watching_reasons.add(WatchingReason.MENTIONED)
         
         # Check if user's team is mentioned
         # This would require additional logic to get user's teams
-        # For now, we'll skip this
-        
-        # Check if user is subscribed
-        # This would require checking the database for manual subscriptions
-        # Let's check if we have a record of the user interacting with this PR
-        pr_id = pr_data.get("id")
-        if pr_id:
-            notifications = await SupabaseManager.get_user_notifications_by_pr(user_id, pr_id)
-            if notifications and len(notifications) > 0:
-                watching_reasons.add(WatchingReason.SUBSCRIBED)
-        
-        # Check for manual watching (user explicitly chose to watch this PR)
-        # This would require a new table to track watched PRs
-        # For now, we'll skip this
         
         return watching_reasons
     
@@ -84,7 +112,7 @@ class NotificationService:
     async def should_notify(
         cls,
         user_id: str, 
-        pr_id: str, 
+        pr_data: Dict[str, Any], 
         trigger: NotificationTrigger, 
         actor_id: str = None
     ) -> bool:
@@ -93,7 +121,7 @@ class NotificationService:
         
         Args:
             user_id: User ID
-            pr_id: Pull request ID
+            pr_data: Pull request data dictionary
             trigger: Notification trigger
             actor_id: ID of the user who triggered the notification
             
@@ -112,8 +140,8 @@ class NotificationService:
                 preferences = NotificationPreferences(**preferences_data)
             
             # Get watching reasons for this PR
-            watching_reasons = await NotificationService.determine_watching_reasons(user_id, {"id": pr_id})
-            
+            watching_reasons = await NotificationService.determine_watching_reasons(user_id, pr_data)
+
             # If the user isn't watching the PR, don't notify
             if not watching_reasons:
                 return False
@@ -245,7 +273,7 @@ class NotificationService:
             # Check if user should be notified
             return cls.should_notify(
                 user_id,
-                pr.get("id"),
+                pr,
                 trigger,
                 actor_id=sender.get("id")
             )
@@ -300,7 +328,7 @@ class NotificationService:
             # Check if user should be notified
             return cls.should_notify(
                 user_id,
-                pr.get("id"),
+                pr,
                 NotificationTrigger.REVIEWED,
                 actor_id=sender.get("id")
             )
@@ -367,11 +395,105 @@ class NotificationService:
             # Check if user should be notified
             return cls.should_notify(
                 user_id,
-                pr.get("id"),
+                pr,
                 NotificationTrigger.COMMENTED,
                 actor_id=sender.get("id")
             )
             
         except Exception as e:
             logger.error(f"Error processing pull request comment event: {e}", exc_info=True)
+            return False
+
+    @classmethod
+    async def process_issue_comment_event(
+        cls,
+        user_id: str,
+        payload: Dict[str, Any],
+        event_id: str
+    ) -> bool:
+        """
+        Process an issue comment event and determine if a user should be notified.
+        
+        Args:
+            user_id: User ID
+            payload: Event payload
+            event_id: Event ID
+            
+        Returns:
+            True if the user should be notified, False otherwise
+        """
+        try:
+            # Extract data from payload
+            comment = payload.get("comment", {})
+            sender = payload.get("sender", {})
+            
+            # Get user settings
+            settings = await SupabaseManager.get_user_settings(user_id)
+            if not settings:
+                # Use default settings
+                preferences = NotificationPreferences()
+            else:
+                # Use user settings
+                preferences_data = settings.get("notification_preferences", {})
+                preferences = NotificationPreferences(**preferences_data)
+            
+            # Get watching reasons for this issue
+            watching_reasons = await cls.determine_watching_reasons(user_id, payload)
+            
+            # If the user isn't watching the issue, don't notify
+            if not watching_reasons:
+                return False
+            
+            # Get GitHub username for the user
+            user = await SupabaseManager.get_user(user_id)
+            if not user or not user.get("github_login"):
+                return False
+            
+            github_username = user.get("github_login")
+            
+            # Check if user is mentioned in the comment
+            is_mentioned_in_comment = False
+            comment_body = comment.get("body", "")
+            if comment_body and f"@{github_username}" in comment_body:
+                is_mentioned_in_comment = True
+            
+            # Check if this is the user's own activity
+            is_own_activity = sender.get("login") == github_username
+            
+            # Check if this is a bot comment
+            is_bot_comment = sender.get("type") == "Bot"
+            
+            # Don't notify for own activity if muted
+            if is_own_activity and preferences.mute_own_activity:
+                return False
+            
+            # Don't notify for bot comments if muted
+            if is_bot_comment and preferences.mute_bot_comments:
+                return False
+            
+            # Always notify if mentioned in the comment
+            if is_mentioned_in_comment:
+                return True
+            
+            # Notify if user is the author and has enabled issue notifications
+            if WatchingReason.AUTHOR in watching_reasons and preferences.issues:
+                return True
+            
+            # Notify if user is assigned and has enabled issue notifications
+            if WatchingReason.ASSIGNED in watching_reasons and preferences.issues:
+                return True
+            
+            # Notify if user is mentioned in the issue description
+            if WatchingReason.MENTIONED in watching_reasons:
+                return True
+            
+            # Notify if user is a reviewer and has enabled issue notifications
+            if WatchingReason.REVIEWER in watching_reasons and preferences.issues:
+                return True
+
+            # Default: don't notify
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error processing issue comment event: {e}", exc_info=True)
             return False
