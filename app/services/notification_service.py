@@ -140,7 +140,7 @@ class NotificationService:
                 preferences = NotificationPreferences(**preferences_data)
             
             # Get watching reasons for this PR
-            watching_reasons = await NotificationService.determine_watching_reasons(user_id, pr_data)
+            watching_reasons = await cls.determine_watching_reasons(user_id, pr_data)
 
             # If the user isn't watching the PR, don't notify
             if not watching_reasons:
@@ -207,80 +207,81 @@ class NotificationService:
     @classmethod
     async def process_pull_request_event(
         cls,
-        payload: Dict[str, Any],
         user_id: str,
+        payload: Dict[str, Any],
         event_id: str
-    ) -> bool:
+    ) -> Tuple[bool, List[str], Dict[str, Any]]:
         """
-        Process a pull request event and determine if the user should be notified.
+        Process a pull request event and determine if a user should be notified.
         
         Args:
-            payload: Event payload
             user_id: User ID
+            payload: Event payload
             event_id: Event ID
             
         Returns:
-            True if the user should be notified, False otherwise
+            Tuple containing:
+            - bool: True if the user should be notified, False otherwise
+            - List[str]: List of matched keywords if any
+            - Dict[str, Any]: Match details if any
         """
         try:
+            # Extract data from payload
             action = payload.get("action")
             pr = payload.get("pull_request", {})
             sender = payload.get("sender", {})
             
-            # Map action to trigger
+            # Skip if action is not interesting
+            if action not in ["opened", "closed", "reopened", "review_requested", "review_request_removed", "assigned", "unassigned"]:
+                return False, [], {}
+            
+            # Import OpenAI analyzer service
+            from app.services.openai_analyzer_service import OpenAIAnalyzerService
+            
+            # Determine notification trigger based on action
             trigger = None
-            if action == "review_requested":
+            if action == "opened" or action == "reopened":
+                trigger = NotificationTrigger.REOPENED
+            elif action == "closed" and pr.get("merged"):
+                trigger = NotificationTrigger.MERGED
+            elif action == "closed" and not pr.get("merged"):
+                trigger = NotificationTrigger.CLOSED
+            elif action == "review_requested":
                 trigger = NotificationTrigger.REVIEW_REQUESTED
             elif action == "review_request_removed":
                 trigger = NotificationTrigger.REVIEW_REQUEST_REMOVED
-            elif action == "closed" and pr.get("merged"):
-                trigger = NotificationTrigger.MERGED
-            elif action == "closed":
-                trigger = NotificationTrigger.CLOSED
-            elif action == "reopened":
-                trigger = NotificationTrigger.REOPENED
             elif action == "assigned":
                 trigger = NotificationTrigger.ASSIGNED
             elif action == "unassigned":
                 trigger = NotificationTrigger.UNASSIGNED
-            elif action == "labeled":
-                trigger = NotificationTrigger.LABELED
-            elif action == "unlabeled":
-                trigger = NotificationTrigger.UNLABELED
-            else:
-                # For other actions, we don't have a specific trigger
-                return False
             
             if not trigger:
-                return False
+                return False, [], {}
             
-            # Get user settings
-            settings = await SupabaseManager.get_user_settings(user_id)
-            if not settings:
-                return False
-            
-            # Convert to our model
-            preferences = NotificationPreferences(**settings.get("notification_preferences", {}))
-            
-            # Get user
-            user = await SupabaseManager.get_user(user_id)
-            if not user:
-                return False
-            
-            # Determine watching reasons
-            watching_reasons = await cls.determine_watching_reasons(user_id, pr)
-            
-            # Check if user should be notified
-            return cls.should_notify(
-                user_id,
-                pr,
-                trigger,
+            # Check if user should be notified based on notification preferences
+            should_notify_preferences = await cls.should_notify(
+                user_id, 
+                pr, 
+                trigger, 
                 actor_id=sender.get("id")
             )
             
+            # Extract content for AI analysis
+            pr_content = f"Title: {pr.get('title', '')}\nDescription: {pr.get('body', '')}"
+            
+            # Check if user should be notified based on keyword analysis
+            should_notify_keywords, matched_keywords, match_details = await OpenAIAnalyzerService.analyze_content(
+                pr_content, user_id
+            )
+            
+            # Determine if notification should be sent
+            should_notify = should_notify_preferences or should_notify_keywords
+            
+            return should_notify, matched_keywords, match_details
+            
         except Exception as e:
             logger.error(f"Error processing pull request event: {e}", exc_info=True)
-            return False
+            return False, [], {}
     
     @classmethod
     async def process_pull_request_review_event(
@@ -496,4 +497,127 @@ class NotificationService:
             
         except Exception as e:
             logger.error(f"Error processing issue comment event: {e}", exc_info=True)
+            return False
+
+    @classmethod
+    async def process_issue_event(
+        cls,
+        user_id: str,
+        payload: Dict[str, Any],
+        event_id: str
+    ) -> bool:
+        """
+        Process an issue event and determine if a user should be notified.
+        
+        Args:
+            user_id: User ID
+            payload: Event payload
+            event_id: Event ID
+            
+        Returns:
+            True if the user should be notified, False otherwise
+        """
+        try:
+            # Extract data from payload
+            action = payload.get("action")
+            issue = payload.get("issue", {})
+            sender = payload.get("sender", {})
+            
+            # Skip if action is not interesting
+            if action not in ["opened", "closed", "reopened", "assigned"]:
+                return False
+            
+            # Get user settings
+            settings = await SupabaseManager.get_user_settings(user_id)
+            if not settings:
+                # Use default settings
+                preferences = NotificationPreferences()
+            else:
+                # Use user settings
+                preferences_data = settings.get("notification_preferences", {})
+                preferences = NotificationPreferences(**preferences_data)
+            
+            # Get watching reasons for this issue
+            watching_reasons = await cls.determine_watching_reasons(user_id, issue)
+            
+            # If the user isn't watching the issue, don't notify
+            if not watching_reasons:
+                return False
+            
+            # Check if this is the user's own activity
+            user = await SupabaseManager.get_user(user_id)
+            if not user:
+                return False
+                
+            github_username = user.get("github_login")
+            is_own_activity = sender.get("login") == github_username
+            
+            # Don't notify for own activity if muted
+            if is_own_activity and preferences.mute_own_activity:
+                return False
+            
+            # Check notification preference for this action
+            notification_key = f"issue_{action}"
+            should_notify = preferences.issues and getattr(preferences, notification_key, True)
+            
+            # Always notify if mentioned
+            if WatchingReason.MENTIONED in watching_reasons:
+                should_notify = True
+            
+            return should_notify
+            
+        except Exception as e:
+            logger.error(f"Error processing issue event: {e}", exc_info=True)
+            return False
+
+    @classmethod
+    async def process_push_event(
+        cls,
+        user_id: str,
+        payload: Dict[str, Any],
+        event_id: str
+    ) -> bool:
+        """
+        Process a push event and determine if a user should be notified.
+        
+        Args:
+            user_id: User ID
+            payload: Event payload
+            event_id: Event ID
+            
+        Returns:
+            True if the user should be notified, False otherwise
+        """
+        try:
+            # Extract data from payload
+            sender = payload.get("sender", {})
+            
+            # Get user settings
+            settings = await SupabaseManager.get_user_settings(user_id)
+            if not settings:
+                # Use default settings
+                preferences = NotificationPreferences()
+            else:
+                # Use user settings
+                preferences_data = settings.get("notification_preferences", {})
+                preferences = NotificationPreferences(**preferences_data)
+            
+            # Check if this is the user's own activity
+            user = await SupabaseManager.get_user(user_id)
+            if not user:
+                return False
+                
+            github_username = user.get("github_login")
+            is_own_activity = sender.get("login") == github_username
+            
+            # Don't notify for own activity if muted
+            if is_own_activity and preferences.mute_own_activity:
+                return False
+            
+            # For now, we'll skip implementing push event notifications
+            # This would require additional logic to determine if the push is relevant to the user
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error processing push event: {e}", exc_info=True)
             return False
