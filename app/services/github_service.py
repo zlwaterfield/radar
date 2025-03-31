@@ -83,17 +83,17 @@ class GitHubService:
             with open(settings.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
                 private_key = key_file.read()
             
-            # Create JWT
+            # Create JWT payload with integer timestamps
+            now = int(datetime.utcnow().timestamp())
+            payload = {
+                "iat": now,
+                "exp": now + 600,  # 10 minutes expiration
+                "iss": settings.GITHUB_APP_ID
+            }
+            
             import jwt
             from cryptography.hazmat.backends import default_backend
             from cryptography.hazmat.primitives import serialization
-            
-            now = datetime.utcnow()
-            payload = {
-                "iat": int(now.timestamp()),
-                "exp": int((now + timedelta(minutes=10)).timestamp()),
-                "iss": settings.GITHUB_APP_ID
-            }
             
             private_key_bytes = private_key.encode()
             private_key_obj = serialization.load_pem_private_key(
@@ -116,7 +116,8 @@ class GitHubService:
                 # Get installation token
                 headers = {
                     "Authorization": f"Bearer {jwt_token}",
-                    "Accept": "application/vnd.github.v3+json"
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28"
                 }
                 
                 # Use requests instead of httpx for synchronous HTTP requests
@@ -154,6 +155,7 @@ class GitHubService:
             print(f"User name: {user.name}")
             print(f"User plan: {user.plan}")
             print(f"User created at: {user.created_at}")
+            print(f"User updated at: {user.updated_at}")
             return True
         except GithubException as e:
             error_message = str(e)
@@ -219,36 +221,31 @@ class GitHubService:
             List of repositories
         """
         try:
+            # Get repositories
             repos = []
-            try:
-                user = self.client.get_user()
-                print(f"Getting repositories for GitHub user: {user.login}")
-                for repo in user.get_repos():
-                    repos.append({
-                        "id": repo.id,
-                        "name": repo.name,
-                        "full_name": repo.full_name,
-                        "description": repo.description,
-                        "html_url": repo.html_url,
-                        "private": repo.private,
-                        "fork": repo.fork,
-                        "owner": {
-                            "id": repo.owner.id,
-                            "login": repo.owner.login,
-                            "avatar_url": repo.owner.avatar_url,
-                            "html_url": repo.owner.html_url,
-                            "type": repo.owner.type,
-                        }
-                    })
-                return repos
-            except GithubException as e:
-                print(f"GitHub API error in get_repositories: {e}")
-                if e.status == 401:
-                    print("Authentication error: Token may be invalid or expired")
-                raise
+            
+            # Get user repositories (including private ones)
+            for repo in self.client.get_user().get_repos():
+                repo_data = {
+                    "id": repo.id,
+                    "name": repo.name,
+                    "full_name": repo.full_name,
+                    "description": repo.description,
+                    "html_url": repo.html_url,
+                    "private": repo.private,
+                    "fork": repo.fork,
+                    "owner": {
+                        "login": repo.owner.login,
+                        "avatar_url": repo.owner.avatar_url,
+                        "html_url": repo.owner.html_url
+                    }
+                }
+                repos.append(repo_data)
+            
+            return repos
         except Exception as e:
-            logger.error(f"GitHub API error: {e}", exc_info=True)
-            raise
+            logger.error(f"Error getting repositories: {e}")
+            return []
     
     def get_repository(self, repo_full_name: str) -> Dict[str, Any]:
         """
@@ -601,3 +598,185 @@ class GitHubService:
         expected_signature = mac.hexdigest()
         
         return hmac.compare_digest(signature, expected_signature)
+
+    def get_app_installations(self, github_login: str) -> List[Dict[str, Any]]:
+        """
+        Get GitHub App installations for a user.
+        
+        Args:
+            github_login: GitHub username
+            
+        Returns:
+            List of installations
+        """
+        try:
+            # Create JWT for GitHub App
+            with open(settings.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
+                private_key = key_file.read()
+            
+            # Create JWT payload with integer timestamps
+            now = int(datetime.utcnow().timestamp())
+            payload = {
+                "iat": now,
+                "exp": now + 600,  # 10 minutes expiration
+                "iss": settings.GITHUB_APP_ID
+            }
+            
+            from cryptography.hazmat.backends import default_backend
+            from cryptography.hazmat.primitives import serialization
+            
+            private_key_bytes = private_key.encode()
+            private_key_obj = serialization.load_pem_private_key(
+                private_key_bytes,
+                password=None,
+                backend=default_backend()
+            )
+            
+            jwt_token = jwt.encode(
+                payload,
+                private_key_obj,
+                algorithm="RS256"
+            )
+            
+            if isinstance(jwt_token, bytes):
+                jwt_token = jwt_token.decode("utf-8")
+            
+            # Get installations for the app
+            headers = {
+                "Authorization": f"Bearer {jwt_token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+            
+            # First try to get user's installations
+            response = requests.get(
+                f"https://api.github.com/users/{github_login}/installation",
+                headers=headers
+            )
+            
+            if response.status_code == 200:
+                return [response.json()]
+            
+            # If that fails, get all installations and filter by user
+            response = requests.get(
+                "https://api.github.com/app/installations",
+                headers=headers
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"GitHub API error getting installations: {response.text}")
+                return []
+            
+            installations = response.json()
+            
+            # Filter installations for the user
+            user_installations = []
+            for installation in installations:
+                if installation.get("account", {}).get("login") == github_login:
+                    user_installations.append(installation)
+            
+            return user_installations
+        except Exception as e:
+            logger.error(f"Error getting GitHub App installations: {e}")
+            return []
+    
+    def get_installation_repositories(self, installation_id: int) -> List[Dict[str, Any]]:
+        """
+        Get repositories that a GitHub App installation has access to.
+        
+        Args:
+            installation_id: GitHub App installation ID
+            
+        Returns:
+            List of repositories
+        """
+        try:
+            # Create JWT for GitHub App
+            with open(settings.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
+                private_key = key_file.read()
+            
+            # Create JWT payload with integer timestamps
+            now = int(datetime.utcnow().timestamp())
+            payload = {
+                "iat": now,
+                "exp": now + 600,  # 10 minutes expiration
+                "iss": settings.GITHUB_APP_ID
+            }
+            
+            from cryptography.hazmat.backends import default_backend
+            from cryptography.hazmat.primitives import serialization
+            
+            private_key_bytes = private_key.encode()
+            private_key_obj = serialization.load_pem_private_key(
+                private_key_bytes,
+                password=None,
+                backend=default_backend()
+            )
+            
+            jwt_token = jwt.encode(
+                payload,
+                private_key_obj,
+                algorithm="RS256"
+            )
+            
+            if isinstance(jwt_token, bytes):
+                jwt_token = jwt_token.decode("utf-8")
+            
+            # Get installation token
+            headers = {
+                "Authorization": f"Bearer {jwt_token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+            
+            response = requests.post(
+                f"https://api.github.com/app/installations/{installation_id}/access_tokens",
+                headers=headers
+            )
+            
+            if response.status_code != 201:
+                logger.error(f"GitHub API error getting installation token: {response.text}")
+                return []
+            
+            installation_token = response.json()["token"]
+            
+            # Use the installation token to get repositories
+            headers = {
+                "Authorization": f"Bearer {installation_token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+            
+            response = requests.get(
+                "https://api.github.com/installation/repositories",
+                headers=headers
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"GitHub API error getting installation repositories: {response.text}")
+                return []
+            
+            repositories = response.json().get("repositories", [])
+            
+            repos = []
+            for repo in repositories:
+                repo_data = {
+                    "id": repo["id"],
+                    "name": repo["name"],
+                    "full_name": repo["full_name"],
+                    "description": repo.get("description", ""),
+                    "html_url": repo["html_url"],
+                    "private": repo["private"],
+                    "fork": repo.get("fork", False),
+                    "owner": {
+                        "login": repo["owner"]["login"],
+                        "avatar_url": repo["owner"]["avatar_url"],
+                        "html_url": repo["owner"]["html_url"]
+                    }
+                }
+                repos.append(repo_data)
+            
+            return repos
+        except Exception as e:
+            logger.error(f"Error getting installation repositories: {e}")
+            return []

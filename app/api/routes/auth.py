@@ -156,7 +156,7 @@ async def github_login(user_id: str, reconnect: bool = False):
     params = {
         "client_id": settings.GITHUB_CLIENT_ID,
         "redirect_uri": f"https://zach.ngrok.dev/api/auth/github/callback",
-        "scope": "repo user:email read:org admin:org",
+        # "scope": "repo user:email read:org admin:org",
         "state": user_id,  # Use state to store user_id
     }
     
@@ -178,7 +178,7 @@ async def github_callback(code: str, state: str):
         state: State parameter containing user_id
         
     Returns:
-        Redirect to frontend with auth token
+        Redirect to GitHub App installation page
     """
     try:
         # Get user ID from state
@@ -283,9 +283,13 @@ async def github_callback(code: str, state: str):
                     detail="Failed to update user with GitHub info"
                 )
             
-            # Redirect to frontend with success message
-            frontend_url = f"{settings.FRONTEND_URL}/auth/success?provider=github&user_id={user_id}"
-            return RedirectResponse(url=frontend_url)
+            # Redirect to GitHub App installation page instead of frontend
+            app_name = "radar-notifier-dev"  # Your GitHub App's name/slug
+            params = {
+                "state": user_id,  # Pass user_id as state to track the user
+            }
+            installation_url = f"https://github.com/apps/{app_name}/installations/new?{urlencode(params)}"
+            return RedirectResponse(url=installation_url)
             
     except Exception as e:
         logger.error(f"Error in GitHub callback: {e}", exc_info=True)

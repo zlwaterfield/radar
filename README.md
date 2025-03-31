@@ -196,6 +196,7 @@ MIT
 
 
 TODO
+- github connection 
 - auth - use jwt for more security
 - improve notification logic for issues (comments / reactions)
 - messages updates - changed comment, title, description, merged/closed and no longer relevant

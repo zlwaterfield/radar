@@ -777,3 +777,40 @@ class SupabaseManager:
         except Exception as e:
             logger.error(f"Error creating notification: {e}")
             return None
+
+    @staticmethod
+    async def record_digest(
+        user_id: str,
+        message_ts: str,
+        pull_request_count: int = 0,
+        issue_count: int = 0
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Record a sent digest notification in the database.
+        
+        Args:
+            user_id: The user ID
+            message_ts: The Slack message timestamp
+            pull_request_count: Number of pull requests in the digest
+            issue_count: Number of issues in the digest
+            
+        Returns:
+            Created digest record or None if failed
+        """
+        try:
+            digest_data = {
+                "user_id": user_id,
+                "sent_at": datetime.utcnow().isoformat(),
+                "message_ts": message_ts,
+                "pull_request_count": pull_request_count,
+                "issue_count": issue_count
+            }
+            
+            response = SupabaseManager.supabase.table("user_digests").insert(digest_data).execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+        except Exception as e:
+            logger.error(f"Error recording digest for user {user_id}: {e}")
+            return None

@@ -80,6 +80,10 @@ CREATE TABLE user_settings (
         "second_digest_time": null,
         "second_digest_enabled": false
     }'::jsonb,
+    keyword_notification_preferences JSONB DEFAULT '{
+        "enabled": false,
+        "keywords": []
+    }'::jsonb,
     stats_time_window INTEGER DEFAULT 14,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -133,6 +137,17 @@ CREATE TABLE notifications (
     message_ts VARCHAR,
     thread_ts VARCHAR,
     payload JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create user_digests table to track sent digest notifications
+CREATE TABLE user_digests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    message_ts VARCHAR,
+    pull_request_count INTEGER DEFAULT 0,
+    issue_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -227,187 +227,187 @@ class TaskService:
         except Exception as e:
             logger.error(f"Error sending digest notification to user {user_id}: {e}", exc_info=True)
     
-    @classmethod
-    async def schedule_stats_notifications(cls):
-        """
-        Schedule stats notifications for all users.
+    # @classmethod
+    # async def schedule_stats_notifications(cls):
+    #     """
+    #     Schedule stats notifications for all users.
         
-        This method schedules weekly stats notifications for all users
-        based on their notification preferences.
-        """
-        try:
-            # Get all users
-            users = await SupabaseManager.get_all_users()
+    #     This method schedules weekly stats notifications for all users
+    #     based on their notification preferences.
+    #     """
+    #     try:
+    #         # Get all users
+    #         users = await SupabaseManager.get_all_users()
             
-            # Clear existing stats jobs
-            for job in cls._scheduler.get_jobs():
-                if job.id.startswith("stats_"):
-                    job.remove()
+    #         # Clear existing stats jobs
+    #         for job in cls._scheduler.get_jobs():
+    #             if job.id.startswith("stats_"):
+    #                 job.remove()
             
-            # Schedule new stats jobs
-            for user in users:
-                user_id = user["id"]
+    #         # Schedule new stats jobs
+    #         for user in users:
+    #             user_id = user["id"]
                 
-                # Schedule job for Monday at 10:00 AM
-                cls._scheduler.add_job(
-                    cls.send_stats_notification,
-                    CronTrigger(
-                        day_of_week="mon",
-                        hour=10,
-                        minute=0
-                    ),
-                    id=f"stats_{user_id}",
-                    args=[user_id],
-                    replace_existing=True
-                )
+    #             # Schedule job for Monday at 10:00 AM
+    #             cls._scheduler.add_job(
+    #                 cls.send_stats_notification,
+    #                 CronTrigger(
+    #                     day_of_week="mon",
+    #                     hour=10,
+    #                     minute=0
+    #                 ),
+    #                 id=f"stats_{user_id}",
+    #                 args=[user_id],
+    #                 replace_existing=True
+    #             )
                 
-                logger.info(f"Scheduled stats notification for user {user_id} at 10:00 on Monday")
+    #             logger.info(f"Scheduled stats notification for user {user_id} at 10:00 on Monday")
         
-        except Exception as e:
-            logger.error(f"Error scheduling stats notifications: {e}", exc_info=True)
+    #     except Exception as e:
+    #         logger.error(f"Error scheduling stats notifications: {e}", exc_info=True)
     
-    @classmethod
-    async def send_stats_notification(cls, user_id: str):
-        """
-        Send stats notification to a user.
+    # @classmethod
+    # async def send_stats_notification(cls, user_id: str):
+    #     """
+    #     Send stats notification to a user.
         
-        Args:
-            user_id: User ID
-        """
-        try:
-            # Get user
-            user = await SupabaseManager.get_user(user_id)
+    #     Args:
+    #         user_id: User ID
+    #     """
+    #     try:
+    #         # Get user
+    #         user = await SupabaseManager.get_user(user_id)
             
-            if not user:
-                logger.warning(f"User not found for stats notification: {user_id}")
-                return
+    #         if not user:
+    #             logger.warning(f"User not found for stats notification: {user_id}")
+    #             return
             
-            # Get user settings
-            settings = await SupabaseManager.get_user_settings(user_id)
+    #         # Get user settings
+    #         settings = await SupabaseManager.get_user_settings(user_id)
             
-            if not settings:
-                logger.warning(f"Settings not found for user {user_id}")
-                return
+    #         if not settings:
+    #             logger.warning(f"Settings not found for user {user_id}")
+    #             return
             
-            # Get stats time window
-            time_window = settings.get("stats_time_window", 14)  # Default to 2 weeks
+    #         # Get stats time window
+    #         time_window = settings.get("stats_time_window", 14)  # Default to 2 weeks
             
-            # Get repositories
-            repositories = await SupabaseManager.get_user_repositories(user_id)
+    #         # Get repositories
+    #         repositories = await SupabaseManager.get_user_repositories(user_id)
             
-            if not repositories:
-                logger.warning(f"No repositories found for user {user_id}")
-                return
+    #         if not repositories:
+    #             logger.warning(f"No repositories found for user {user_id}")
+    #             return
             
-            # Calculate stats
-            since = datetime.utcnow() - timedelta(days=time_window)
+    #         # Calculate stats
+    #         since = datetime.utcnow() - timedelta(days=time_window)
             
-            stats = {
-                "pull_requests": {
-                    "opened": 0,
-                    "closed": 0,
-                    "merged": 0
-                },
-                "issues": {
-                    "opened": 0,
-                    "closed": 0
-                },
-                "comments": 0,
-                "reviews": 0,
-                "repositories": {}
-            }
+    #         stats = {
+    #             "pull_requests": {
+    #                 "opened": 0,
+    #                 "closed": 0,
+    #                 "merged": 0
+    #             },
+    #             "issues": {
+    #                 "opened": 0,
+    #                 "closed": 0
+    #             },
+    #             "comments": 0,
+    #             "reviews": 0,
+    #             "repositories": {}
+    #         }
             
-            for repo in repositories:
-                repo_name = repo["full_name"]
-                stats["repositories"][repo_name] = {
-                    "pull_requests": {
-                        "opened": 0,
-                        "closed": 0,
-                        "merged": 0
-                    },
-                    "issues": {
-                        "opened": 0,
-                        "closed": 0
-                    },
-                    "comments": 0,
-                    "reviews": 0
-                }
+    #         for repo in repositories:
+    #             repo_name = repo["full_name"]
+    #             stats["repositories"][repo_name] = {
+    #                 "pull_requests": {
+    #                     "opened": 0,
+    #                     "closed": 0,
+    #                     "merged": 0
+    #                 },
+    #                 "issues": {
+    #                     "opened": 0,
+    #                     "closed": 0
+    #                 },
+    #                 "comments": 0,
+    #                 "reviews": 0
+    #             }
                 
-                # Get pull requests
-                repo_prs = await SupabaseManager.get_repository_pull_requests(
-                    repo["id"],
-                    since=since
-                )
+    #             # Get pull requests
+    #             repo_prs = await SupabaseManager.get_repository_pull_requests(
+    #                 repo["id"],
+    #                 since=since
+    #             )
                 
-                for pr in repo_prs:
-                    if pr["created_at"] >= since.isoformat():
-                        stats["pull_requests"]["opened"] += 1
-                        stats["repositories"][repo_name]["pull_requests"]["opened"] += 1
+    #             for pr in repo_prs:
+    #                 if pr["created_at"] >= since.isoformat():
+    #                     stats["pull_requests"]["opened"] += 1
+    #                     stats["repositories"][repo_name]["pull_requests"]["opened"] += 1
                     
-                    if pr["closed_at"] and pr["closed_at"] >= since.isoformat():
-                        stats["pull_requests"]["closed"] += 1
-                        stats["repositories"][repo_name]["pull_requests"]["closed"] += 1
+    #                 if pr["closed_at"] and pr["closed_at"] >= since.isoformat():
+    #                     stats["pull_requests"]["closed"] += 1
+    #                     stats["repositories"][repo_name]["pull_requests"]["closed"] += 1
                     
-                    if pr["merged_at"] and pr["merged_at"] >= since.isoformat():
-                        stats["pull_requests"]["merged"] += 1
-                        stats["repositories"][repo_name]["pull_requests"]["merged"] += 1
+    #                 if pr["merged_at"] and pr["merged_at"] >= since.isoformat():
+    #                     stats["pull_requests"]["merged"] += 1
+    #                     stats["repositories"][repo_name]["pull_requests"]["merged"] += 1
                 
-                # Get issues
-                repo_issues = await SupabaseManager.get_repository_issues(
-                    repo["id"],
-                    since=since
-                )
+    #             # Get issues
+    #             repo_issues = await SupabaseManager.get_repository_issues(
+    #                 repo["id"],
+    #                 since=since
+    #             )
                 
-                for issue in repo_issues:
-                    if issue["created_at"] >= since.isoformat():
-                        stats["issues"]["opened"] += 1
-                        stats["repositories"][repo_name]["issues"]["opened"] += 1
+    #             for issue in repo_issues:
+    #                 if issue["created_at"] >= since.isoformat():
+    #                     stats["issues"]["opened"] += 1
+    #                     stats["repositories"][repo_name]["issues"]["opened"] += 1
                     
-                    if issue["closed_at"] and issue["closed_at"] >= since.isoformat():
-                        stats["issues"]["closed"] += 1
-                        stats["repositories"][repo_name]["issues"]["closed"] += 1
+    #                 if issue["closed_at"] and issue["closed_at"] >= since.isoformat():
+    #                     stats["issues"]["closed"] += 1
+    #                     stats["repositories"][repo_name]["issues"]["closed"] += 1
                 
-                # Get comments
-                repo_comments = await SupabaseManager.get_repository_comments(
-                    repo["id"],
-                    since=since
-                )
+    #             # Get comments
+    #             repo_comments = await SupabaseManager.get_repository_comments(
+    #                 repo["id"],
+    #                 since=since
+    #             )
                 
-                stats["comments"] += len(repo_comments)
-                stats["repositories"][repo_name]["comments"] += len(repo_comments)
+    #             stats["comments"] += len(repo_comments)
+    #             stats["repositories"][repo_name]["comments"] += len(repo_comments)
                 
-                # Get reviews
-                repo_reviews = await SupabaseManager.get_repository_reviews(
-                    repo["id"],
-                    since=since
-                )
+    #             # Get reviews
+    #             repo_reviews = await SupabaseManager.get_repository_reviews(
+    #                 repo["id"],
+    #                 since=since
+    #             )
                 
-                stats["reviews"] += len(repo_reviews)
-                stats["repositories"][repo_name]["reviews"] += len(repo_reviews)
+    #             stats["reviews"] += len(repo_reviews)
+    #             stats["repositories"][repo_name]["reviews"] += len(repo_reviews)
             
-            # Skip if no activity
-            if (stats["pull_requests"]["opened"] == 0 and
-                stats["pull_requests"]["closed"] == 0 and
-                stats["pull_requests"]["merged"] == 0 and
-                stats["issues"]["opened"] == 0 and
-                stats["issues"]["closed"] == 0 and
-                stats["comments"] == 0 and
-                stats["reviews"] == 0):
-                logger.info(f"No activity found for user {user_id} in the last {time_window} days")
-                return
+    #         # Skip if no activity
+    #         if (stats["pull_requests"]["opened"] == 0 and
+    #             stats["pull_requests"]["closed"] == 0 and
+    #             stats["pull_requests"]["merged"] == 0 and
+    #             stats["issues"]["opened"] == 0 and
+    #             stats["issues"]["closed"] == 0 and
+    #             stats["comments"] == 0 and
+    #             stats["reviews"] == 0):
+    #             logger.info(f"No activity found for user {user_id} in the last {time_window} days")
+    #             return
             
-            # Send stats message
-            slack_service = SlackService(token=user["slack_access_token"])
-            await slack_service.send_stats(
-                channel=user["slack_id"],  # Send as DM
-                time_window=time_window,
-                stats=stats
-            )
+    #         # Send stats message
+    #         slack_service = SlackService(token=user["slack_access_token"])
+    #         await slack_service.send_stats(
+    #             channel=user["slack_id"],  # Send as DM
+    #             time_window=time_window,
+    #             stats=stats
+    #         )
             
-            logger.info(f"Sent stats notification to user {user_id} for the last {time_window} days")
+    #         logger.info(f"Sent stats notification to user {user_id} for the last {time_window} days")
         
-        except Exception as e:
-            logger.error(f"Error sending stats notification to user {user_id}: {e}", exc_info=True)
+    #     except Exception as e:
+    #         logger.error(f"Error sending stats notification to user {user_id}: {e}", exc_info=True)
     
     @classmethod
     def add_job(cls, func: Callable[..., Awaitable[None]], trigger, **kwargs):

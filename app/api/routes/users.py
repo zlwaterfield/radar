@@ -318,7 +318,6 @@ async def update_user_repositories(user_id: str, data):
 
 @router.post("/{user_id}/repositories/refresh", response_model=Dict[str, Any])
 async def refresh_user_repositories(user_id: str):
-    print('refreshing user repositories', user_id)
     """
     Refresh user repositories from GitHub.
     
@@ -331,8 +330,6 @@ async def refresh_user_repositories(user_id: str):
     # Check if user exists
     user = await SupabaseManager.get_user(user_id)
 
-    print('user', user)
-    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -342,13 +339,9 @@ async def refresh_user_repositories(user_id: str):
     # Check if user has GitHub token
     github_access_token = user.get("github_access_token")
 
-    print('github_access_token', github_access_token)
-    print('github_access_token type:', type(github_access_token))
-    print('github_access_token length:', len(github_access_token) if github_access_token else 0)
     # Check if token starts with expected format (usually "gho_" for OAuth tokens)
     if github_access_token and len(github_access_token) > 4:
         prefix = github_access_token[:4]
-        print('github_access_token prefix:', prefix)
         
         # Check if token has the expected format
         if prefix != 'ghu_' and prefix != 'gho_' and prefix != 'ghp_' and len(github_access_token) > 30:
@@ -383,12 +376,9 @@ async def refresh_user_repositories(user_id: str):
             detail="User does not have GitHub token"
         )
     
-    print('github_access_token', github_access_token)
     try:
         # Check token directly with GitHub API
-        print("Checking token directly with GitHub API...")
         token_check_result = await check_github_token(github_access_token)
-        print(f"Direct token check valid: {token_check_result.get('valid')}")
         
         # If direct check failed, try with a different authorization format
         if not token_check_result.get('valid'):
@@ -401,32 +391,21 @@ async def refresh_user_repositories(user_id: str):
                         "Accept": "application/vnd.github.v3+json"
                     }
                 )
-                print(f"Bearer auth check status: {response.status_code}")
                 if response.status_code == 200:
                     print("Bearer auth successful!")
         
         # Create GitHub service
         github_service = GitHubService(token=github_access_token)
         
-        # Test token with a simple API call
-        print("Testing GitHub token with a simple API call...")
-        token_test_result = github_service.test_token()
-        print(f"Token test result: {token_test_result}")
-        
         # Validate token before proceeding
-        print("Validating GitHub token...")
         is_valid = github_service.validate_token()
-        print(f"Token validation result: {is_valid}")
         
         # If validation fails, try different token formats
         if not is_valid and github_access_token:
-            print("Token validation failed, trying different token formats...")
             formats_result = github_service.try_token_formats(github_access_token)
-            print(f"Token formats result: {formats_result}")
             
             # If we found a working format, the github_service object has been updated with a working client
             if formats_result:
-                print("Found a working token format!")
                 is_valid = True
         
         if not is_valid:
@@ -462,19 +441,43 @@ async def refresh_user_repositories(user_id: str):
                     detail="GitHub token is invalid and no refresh token is available"
                 )
         
-        # Get repositories
-        print("Fetching GitHub repositories...")
-        repositories = github_service.get_repositories()
-        print(f"Fetched {len(repositories)} repositories")
-
-        print('repositories', repositories)
+        # Get GitHub username
+        github_login = user.get("github_login")
+        if not github_login:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User does not have GitHub login information"
+            )
+            
+        # Get GitHub App installations for the user
+        installations = github_service.get_app_installations(github_login)
+        
+        if not installations:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No GitHub App installations found for this user. Please install the GitHub App first."
+            )
+        
+        # Get repositories from all installations
+        repositories = []
+        for installation in installations:
+            installation_id = installation.get("id")
+            if installation_id:
+                # Get repositories for this installation
+                installation_repos = github_service.get_installation_repositories(installation_id)
+                repositories.extend(installation_repos)
+        
+        if not repositories:
+            return {
+                "status": "success",
+                "message": "No repositories found for the GitHub App installation",
+                "count": 0,
+            }
         
         # Clear existing repositories
-        print("Clearing existing repositories...")
         await SupabaseManager.clear_user_repositories(user_id)
         
         # Add repositories
-        print("Adding repositories...")
         for repo in repositories:
             await SupabaseManager.add_user_repository(
                 user_id=user_id,

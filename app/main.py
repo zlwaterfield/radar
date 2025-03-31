@@ -68,7 +68,7 @@ async def startup_event():
     # Schedule digest notifications
     task_service = TaskService()
     await task_service.schedule_digest_notifications()
-    await task_service.schedule_stats_notifications()
+    # await task_service.schedule_stats_notifications()
     
     logger.info("Scheduled background tasks")
 
