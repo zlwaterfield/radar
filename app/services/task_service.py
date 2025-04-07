@@ -1,18 +1,17 @@
 """
 Task service for Radar.
 
-This module provides a service for handling background tasks and scheduled jobs.
+This module provides a service for handling background tasks and scheduled jobs. 
+Currently this is using APScheduler, but in the future we may use a more robust 
+task scheduler.
 """
 import logging
-import asyncio
 from datetime import datetime, time, timedelta
-from typing import Dict, List, Optional, Any, Callable, Awaitable
+from typing import Callable, Awaitable
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
 
-from app.core.config import settings
 from app.db.supabase import SupabaseManager
 from app.services.slack_service import SlackService
 from app.models.slack import DigestMessage, MessageType

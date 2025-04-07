@@ -4,23 +4,17 @@ Settings routes for Radar.
 This module handles user settings and preferences.
 """
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request, status
 
-from app.core.config import settings
 from app.db.supabase import SupabaseManager
 from app.models.settings import (
     UserSettings,
-    NotificationPreferences,
-    DigestSettings,
     RepositorySettings,
     UpdateSettingsRequest,
     PaginatedRepositoriesResponse,
-    PaginationParams,
-    RepositoryFilterParams
 )
-from github import Github, GithubException
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

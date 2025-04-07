@@ -15,7 +15,7 @@ export default function ConnectGithub() {
       if (!isAuthenticated) {
         router.push('/');
       } else if (user?.github_id) {
-        router.push('/dashboard');
+        router.push('/settings/notifications');
       }
     }
   }, [isAuthenticated, loading, router, user]);

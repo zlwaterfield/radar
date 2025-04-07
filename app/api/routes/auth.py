@@ -7,14 +7,13 @@ import logging
 from typing import Dict, Any, Optional
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import RedirectResponse
 import httpx
 
 from app.core.config import settings
 from app.db.supabase import SupabaseManager
-from app.models.auth import SlackOAuthResponse, GitHubOAuthResponse
-from app.models.user import UserCreate, UserUpdate, User
+from app.models.user import User
 from app.services.slack_service import SlackService
 
 router = APIRouter()

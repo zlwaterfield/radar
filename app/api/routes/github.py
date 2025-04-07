@@ -4,15 +4,12 @@ GitHub routes for Radar.
 This module handles GitHub API interactions.
 """
 import logging
-from typing import Dict, List, Optional, Any
-import json
+from typing import Dict, List, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, status
 import httpx
 
-from app.core.config import settings
 from app.db.supabase import SupabaseManager
-from app.models.github import Repository, Organization
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

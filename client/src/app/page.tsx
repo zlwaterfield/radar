@@ -12,7 +12,7 @@ export default function Home() {
 
   useEffect(() => {
     if (isAuthenticated && !loading) {
-      router.push('/dashboard');
+      router.push('/settings/notifications');
     }
   }, [isAuthenticated, loading, router]);
 

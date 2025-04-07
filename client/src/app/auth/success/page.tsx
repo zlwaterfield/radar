@@ -19,7 +19,7 @@ export default function AuthSuccess() {
       
       // Redirect to dashboard after a short delay
       const timer = setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/settings/notifications');
       }, 2000);
       
       return () => clearTimeout(timer);

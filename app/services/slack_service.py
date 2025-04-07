@@ -2,13 +2,12 @@
 Slack service for interacting with the Slack API.
 """
 import logging
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-from slack_bolt import App, BoltContext
+from slack_bolt import App
 from slack_bolt.adapter.fastapi import SlackRequestHandler
-from slack_bolt.authorization import AuthorizeResult
 
 from app.core.config import settings
 from app.models.slack import (
@@ -20,11 +19,6 @@ from app.models.slack import (
     IssueCommentMessage,
     DigestMessage,
     StatsMessage,
-    TextObject,
-    SectionBlock,
-    DividerBlock,
-    ContextBlock,
-    HeaderBlock
 )
 from app.db.supabase import SupabaseManager
 
@@ -148,7 +142,7 @@ async def publish_home_view(user_id: str):
                                 "emoji": True
                             },
                             "style": "primary",
-                            "url": f"{settings.FRONTEND_URL}/dashboard"
+                            "url": f"{settings.FRONTEND_URL}/settings/notifications"
                         }
                     ]
                 },

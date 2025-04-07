@@ -189,13 +189,10 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
         if action not in ["opened", "closed", "reopened", "review_requested", "review_request_removed", "assigned", "unassigned"]:
             return
         
-        # Import notification service
         from app.services.notification_service import NotificationService
-        
-        # Import OpenAI analyzer service
+        from app.models.slack import PullRequestMessage
         from app.services.openai_analyzer_service import OpenAIAnalyzerService
         
-        # Create message for each user
         for user in users:
             # Check if user should be notified
             should_notify, matched_keywords, match_details = await NotificationService.process_pull_request_event(
@@ -205,22 +202,15 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
             if not should_notify:
                 continue
             
-            # Create Slack message
             slack_service = SlackService(token=user["slack_access_token"])
             
             # Get user's Slack channel (DM)
             channel = f"@{user['slack_id']}"
             
-            # Create message
-            from app.models.slack import PullRequestMessage
-            
             # Add keyword match information if applicable
             keyword_text = ""
             if matched_keywords:
                 keyword_text = f"\n\n*Matched keywords:* {', '.join(matched_keywords)}"
-                
-            # Use keyword_match color if notification is due to keywords
-            color_key = "keyword_match" if matched_keywords and not match_details.get("preferences_match", False) else action
                 
             message = PullRequestMessage(
                 channel=channel,
@@ -233,14 +223,9 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
                 keyword_text=keyword_text,
                 blocks=[]  # Will be filled by create_pull_request_message
             )
-            
-            # Format message
             message = slack_service.create_pull_request_message(message)
-            
-            # Send message
             response = await slack_service.send_message(message)
             
-            # Store notification in database
             notification_data = {
                 "user_id": user["id"],
                 "event_id": event_id,
@@ -253,7 +238,6 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
                     "action": action
                 }
             }
-            
             await SupabaseManager.create_notification(notification_data)
             
     except Exception as e:
@@ -280,10 +264,9 @@ async def process_pull_request_review_event(payload: Dict[str, Any], users: list
         if action != "submitted":
             return
         
-        # Import notification service
         from app.services.notification_service import NotificationService
+        from app.models.slack import PullRequestReviewMessage
         
-        # Create message for each user
         for user in users:
             # Check if user should be notified
             should_notify = await NotificationService.process_pull_request_review_event(
@@ -293,14 +276,10 @@ async def process_pull_request_review_event(payload: Dict[str, Any], users: list
             if not should_notify:
                 continue
             
-            # Create Slack message
             slack_service = SlackService(token=user["slack_access_token"])
             
             # Get user's Slack channel (DM)
             channel = f"@{user['slack_id']}"
-            
-            # Create message
-            from app.models.slack import PullRequestReviewMessage
             
             message = PullRequestReviewMessage(
                 channel=channel,
@@ -313,14 +292,9 @@ async def process_pull_request_review_event(payload: Dict[str, Any], users: list
                 user=sender.get("login"),
                 blocks=[]  # Will be filled by create_pull_request_review_message
             )
-            
-            # Format message
             message = slack_service.create_pull_request_review_message(message)
-            
-            # Send message
             response = await slack_service.send_message(message)
             
-            # Store notification in database
             notification_data = {
                 "user_id": user["id"],
                 "event_id": event_id,
@@ -334,7 +308,6 @@ async def process_pull_request_review_event(payload: Dict[str, Any], users: list
                     "review_state": review.get("state"),
                 }
             }
-            
             await SupabaseManager.create_notification(notification_data)
             
     except Exception as e:
@@ -361,8 +334,8 @@ async def process_pull_request_review_comment_event(payload: Dict[str, Any], use
         if action != "created":
             return
         
-        # Import notification service
         from app.services.notification_service import NotificationService
+        from app.models.slack import PullRequestCommentMessage
         
         # Create message for each user
         for user in users:
@@ -374,14 +347,10 @@ async def process_pull_request_review_comment_event(payload: Dict[str, Any], use
             if not should_notify:
                 continue
             
-            # Create Slack message
             slack_service = SlackService(token=user["slack_access_token"])
             
             # Get user's Slack channel (DM)
             channel = f"@{user['slack_id']}"
-            
-            # Create message
-            from app.models.slack import PullRequestCommentMessage
             
             message = PullRequestCommentMessage(
                 channel=channel,
@@ -394,14 +363,9 @@ async def process_pull_request_review_comment_event(payload: Dict[str, Any], use
                 user=sender.get("login"),
                 blocks=[]  # Will be filled by create_pull_request_comment_message
             )
-            
-            # Format message
             message = slack_service.create_pull_request_comment_message(message)
-            
-            # Send message
             response = await slack_service.send_message(message)
-            
-            # Store notification in database
+
             notification_data = {
                 "user_id": user["id"],
                 "event_id": event_id,
@@ -414,7 +378,6 @@ async def process_pull_request_review_comment_event(payload: Dict[str, Any], use
                     "comment_id": comment.get("id"),
                 }
             }
-            
             await SupabaseManager.create_notification(notification_data)
             
     except Exception as e:
@@ -440,10 +403,9 @@ async def process_issue_event(payload: Dict[str, Any], users: list, event_id: st
         if action not in ["opened", "closed", "reopened", "assigned"]:
             return
         
-        # Import notification service
         from app.services.notification_service import NotificationService
+        from app.models.slack import IssueMessage
         
-        # Create message for each user
         for user in users:
             # Check if user should be notified
             should_notify = await NotificationService.process_issue_event(
@@ -453,14 +415,10 @@ async def process_issue_event(payload: Dict[str, Any], users: list, event_id: st
             if not should_notify:
                 continue
             
-            # Create Slack message
             slack_service = SlackService(token=user["slack_access_token"])
             
             # Get user's Slack channel (DM)
             channel = f"@{user['slack_id']}"
-            
-            # Create message
-            from app.models.slack import IssueMessage
             
             message = IssueMessage(
                 channel=channel,
@@ -472,14 +430,9 @@ async def process_issue_event(payload: Dict[str, Any], users: list, event_id: st
                 user=sender.get("login"),
                 blocks=[]  # Will be filled by create_issue_message
             )
-            
-            # Format message
             message = slack_service.create_issue_message(message)
-            
-            # Send message
             response = await slack_service.send_message(message)
             
-            # Store notification in database
             notification_data = {
                 "user_id": user["id"],
                 "event_id": event_id,
@@ -492,7 +445,6 @@ async def process_issue_event(payload: Dict[str, Any], users: list, event_id: st
                     "action": action
                 }
             }
-            
             await SupabaseManager.create_notification(notification_data)
             
     except Exception as e:
@@ -519,10 +471,9 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
         if action != "created":
             return
         
-        # Import notification service
         from app.services.notification_service import NotificationService
+        from app.models.slack import IssueCommentMessage
         
-        # Create message for each user
         for user in users:
             # Check if user should be notified
             should_notify = await NotificationService.process_issue_comment_event(
@@ -532,14 +483,10 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
             if not should_notify:
                 continue
             
-            # Create Slack message
             slack_service = SlackService(token=user["slack_access_token"])
             
             # Get user's Slack channel (DM)
             channel = f"@{user['slack_id']}"
-            
-            # Create message
-            from app.models.slack import IssueCommentMessage
             
             message = IssueCommentMessage(
                 channel=channel,
@@ -552,14 +499,9 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
                 user=sender.get("login"),
                 blocks=[]  # Will be filled by create_issue_comment_message
             )
-            
-            # Format message
             message = slack_service.create_issue_comment_message(message)
-            
-            # Send message
             response = await slack_service.send_message(message)
             
-            # Store notification in database
             notification_data = {
                 "user_id": user["id"],
                 "event_id": event_id,
@@ -572,7 +514,6 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
                     "comment_id": comment.get("id"),
                 }
             }
-            
             await SupabaseManager.create_notification(notification_data)
             
     except Exception as e:
@@ -588,6 +529,4 @@ async def process_push_event(payload: Dict[str, Any], users: list, event_id: str
         users: List of users watching the repository
         event_id: Event ID in database
     """
-    # For simplicity, we'll skip implementing push event notifications
-            # This would be similar to the other event handlers
     pass

@@ -83,17 +83,17 @@ class GitHubService:
             with open(settings.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
                 private_key = key_file.read()
             
-            # Create JWT payload with integer timestamps
-            now = int(datetime.utcnow().timestamp())
-            payload = {
-                "iat": now,
-                "exp": now + 600,  # 10 minutes expiration
-                "iss": settings.GITHUB_APP_ID
-            }
-            
+            # Create JWT
             import jwt
             from cryptography.hazmat.backends import default_backend
             from cryptography.hazmat.primitives import serialization
+            
+            now = datetime.utcnow()
+            payload = {
+                "iat": int(now.timestamp()),
+                "exp": int((now + timedelta(minutes=10)).timestamp()),
+                "iss": settings.GITHUB_APP_ID
+            }
             
             private_key_bytes = private_key.encode()
             private_key_obj = serialization.load_pem_private_key(
@@ -116,8 +116,7 @@ class GitHubService:
                 # Get installation token
                 headers = {
                     "Authorization": f"Bearer {jwt_token}",
-                    "Accept": "application/vnd.github+json",
-                    "X-GitHub-Api-Version": "2022-11-28"
+                    "Accept": "application/vnd.github.v3+json"
                 }
                 
                 # Use requests instead of httpx for synchronous HTTP requests

@@ -1,0 +1,284 @@
+'use client'
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
+
+interface KeywordSettings {
+  enabled: boolean;
+  keywords: string[];
+  threshold?: number;
+}
+
+export default function KeywordsSettings() {
+  const { user, isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+  const [isSavingKeywords, setIsSavingKeywords] = useState(false);
+  const [keywordSettings, setKeywordSettings] = useState<KeywordSettings>({
+    enabled: false,
+    keywords: [],
+    threshold: 0.7
+  });
+  const [keywordInput, setKeywordInput] = useState('');
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchUserSettings();
+    }
+  }, [isAuthenticated, user]);
+
+  const fetchUserSettings = async () => {
+    try {
+      if (!user?.id) return;
+      
+      const response = await fetch(`/api/users/${user.id}/settings`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user settings');
+      }
+      
+      const data = await response.json();
+      
+      // Update keyword notification settings
+      if (data.keyword_notification_preferences) {
+        const keywordPrefs = data.keyword_notification_preferences;
+        
+        setKeywordSettings({
+          enabled: keywordPrefs.enabled ?? false,
+          keywords: keywordPrefs.keywords ?? [],
+          threshold: keywordPrefs.threshold ?? 0.7
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user settings:', error);
+      toast.error('Failed to load keyword settings.');
+    }
+  };
+
+  const handleKeywordToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { checked } = e.target;
+    setKeywordSettings(prev => ({
+      ...prev,
+      enabled: checked
+    }));
+  };
+
+  const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    setKeywordInput(value);
+  };
+
+  const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    setKeywordSettings(prev => ({
+      ...prev,
+      threshold: value
+    }));
+  };
+
+  const addKeyword = () => {
+    if (keywordInput.trim() === '') return;
+    
+    setKeywordSettings(prev => ({
+      ...prev,
+      keywords: [...prev.keywords, keywordInput.trim()]
+    }));
+    
+    setKeywordInput('');
+  };
+
+  const removeKeyword = (keyword: string) => {
+    setKeywordSettings(prev => ({
+      ...prev,
+      keywords: prev.keywords.filter(k => k !== keyword)
+    }));
+  };
+
+  const saveKeywordSettings = async () => {
+    setIsSavingKeywords(true);
+    
+    try {
+      // Format settings for API
+      const settings = {
+        keyword_notification_preferences: {
+          enabled: keywordSettings.enabled,
+          keywords: keywordSettings.keywords,
+          threshold: keywordSettings.threshold
+        }
+      };
+      
+      // Save settings to API
+      const response = await fetch(`/api/users/${user?.id}/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save keyword settings');
+      }
+      
+      toast.success('Your keyword notification preferences have been updated.');
+    } catch (error) {
+      console.error('Error saving keyword settings:', error);
+      toast.error('Failed to save keyword settings.');
+    } finally {
+      setIsSavingKeywords(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+      <div className="px-6 py-6">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Keyword Notifications
+        </h3>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Get notified when pull requests contain content matching your keywords of interest.
+        </p>
+        
+        <div className="mt-6 space-y-6">
+          <div className="flex items-center">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer"
+                checked={keywordSettings.enabled}
+                onChange={handleKeywordToggle}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+              <span className="ms-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Enable AI-powered keyword notifications
+              </span>
+            </label>
+          </div>
+          
+          <div className="space-y-3">
+            <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Add keywords you want to be notified about
+            </label>
+            <div className="flex max-w-md">
+              <input
+                id="keywords"
+                type="text"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                value={keywordInput}
+                onChange={handleKeywordChange}
+                disabled={!keywordSettings.enabled}
+                placeholder="e.g., security, performance, team name"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addKeyword();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-r-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={addKeyword}
+                disabled={!keywordSettings.enabled || keywordInput.trim() === ''}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+          
+          {keywordSettings.keywords.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Current keywords:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {keywordSettings.keywords.map((keyword, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-md px-3 py-1.5 border border-gray-200 dark:border-gray-600"
+                  >
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{keyword}</span>
+                    <button
+                      type="button"
+                      className="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none transition-colors"
+                      onClick={() => removeKeyword(keyword)}
+                      disabled={!keywordSettings.enabled}
+                      aria-label={`Remove ${keyword}`}
+                    >
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <div className="max-w-md">
+            <div className="flex justify-between items-center">
+              <label htmlFor="threshold" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Matching threshold
+              </label>
+              <span className="text-sm font-medium text-primary-600 dark:text-primary-400">
+                {keywordSettings.threshold?.toFixed(1)}
+              </span>
+            </div>
+            <div className="mt-2">
+              <input
+                id="threshold"
+                type="range"
+                min="0.1"
+                max="1"
+                step="0.1"
+                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                value={keywordSettings.threshold}
+                onChange={handleThresholdChange}
+                disabled={!keywordSettings.enabled}
+                style={{
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
+                  height: '8px',
+                  borderRadius: '4px',
+                  outline: 'none',
+                  opacity: keywordSettings.enabled ? '1' : '0.5',
+                  transition: 'opacity 0.2s'
+                }}
+              />
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                <span>Loose matching</span>
+                <span>Exact matching</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="pt-4">
+            <button
+              type="button"
+              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={saveKeywordSettings}
+              disabled={isSavingKeywords}
+            >
+              {isSavingKeywords ? 'Saving...' : 'Save Preferences'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

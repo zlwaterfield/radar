@@ -1,9 +1,8 @@
 import React, { ReactNode } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { FiHome, FiSettings, FiGithub, FiLogOut, FiBarChart2, FiBell } from 'react-icons/fi';
+import { FiLogOut, FiBell } from 'react-icons/fi';
 
 interface LayoutProps {
   children: ReactNode;
@@ -32,67 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar' }) => {
                 Radar
               </h1>
             </div>
-            <nav className="mt-4 flex-grow">
-              <div className="px-4 mb-3">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Main</p>
-              </div>
-              <ul className="space-y-1">
-                <li>
-                  <Link href="/dashboard" 
-                    className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
-                      router.pathname === '/dashboard' 
-                        ? 'bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400 font-medium' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}>
-                    <FiHome className="mr-3 flex-shrink-0 h-5 w-5" />
-                    Dashboard
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/settings" 
-                    className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
-                      router.pathname === '/settings' 
-                        ? 'bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400 font-medium' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}>
-                    <FiSettings className="mr-3 flex-shrink-0 h-5 w-5" />
-                    Settings
-                  </Link>
-                </li>
-                {/* <li>
-                  <Link href="/stats" 
-                    className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
-                      router.pathname === '/stats' 
-                        ? 'bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400 font-medium' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}>
-                    <FiBarChart2 className="mr-3 flex-shrink-0 h-5 w-5" />
-                    Statistics
-                  </Link>
-                </li> */}
-              </ul>
-              
-              {!user?.github_id && (
-                <>
-                  <div className="px-4 mt-6 mb-3">
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Integrations</p>
-                  </div>
-                  <ul className="space-y-1">
-                    <li>
-                      <Link href="/auth/github" 
-                        className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
-                          router.pathname === '/auth/github' 
-                            ? 'bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400 font-medium' 
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}>
-                        <FiGithub className="mr-3 flex-shrink-0 h-5 w-5" />
-                        Connect GitHub
-                      </Link>
-                    </li>
-                  </ul>
-                </>
-              )}
-            </nav>
+            
             <div className="p-4 border-t border-gray-100 dark:border-gray-800">
               <div className="flex items-center mb-3">
                 <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center mr-2">

@@ -197,13 +197,12 @@ MIT
 
 TODO
 - github connection 
-- auth - use jwt for more security
 - improve notification logic for issues (comments / reactions)
-- messages updates - changed comment, title, description, merged/closed and no longer relevant
-- digest
 - keyword notifications
 - status (current prs, reviews for home page)
-- dashboard home page fixes
 - better align notifications for author / reviewer / assignee
 - billing
 - posthog (client, server, errors)
+- auth - use jwt for more security
+- messages updates - changed comment, title, description, merged/closed and no longer relevant
+- digest

@@ -7,12 +7,12 @@ import logging
 import json
 from typing import Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Form, Header
+from fastapi import APIRouter, Request, Response, Form
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.db.supabase import SupabaseManager
-from app.services.slack_service import slack_handler, publish_home_view, SlackService
+from app.services.slack_service import slack_handler, publish_home_view
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -208,7 +208,7 @@ async def process_radar_command(text: str, user_id: str, channel_id: str, respon
                                 "emoji": True
                             },
                             "style": "primary",
-                            "url": f"{settings.FRONTEND_URL}/dashboard/settings"
+                            "url": f"{settings.FRONTEND_URL}/settings/notifications"
                         }
                     ]
                 }
