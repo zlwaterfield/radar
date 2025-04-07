@@ -196,11 +196,11 @@ MIT
 
 
 TODO
-- github connection 
 - improve notification logic for issues (comments / reactions)
 - keyword notifications
-- status (current prs, reviews for home page)
 - better align notifications for author / reviewer / assignee
+- github connection 
+- status (current prs, reviews for home page)
 - billing
 - posthog (client, server, errors)
 - auth - use jwt for more security
