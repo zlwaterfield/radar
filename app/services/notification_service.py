@@ -76,6 +76,7 @@ class NotificationService:
                         if github_token:
                             # Fetch PR details from GitHub
                             from app.services.github_service import GitHubService
+                            print("Fetching PR details from GitHub...", github_token)
                             github_service = GitHubService(token=github_token)
                             pr_details = github_service.get_pull_request(repository, pr_number)
                             
@@ -157,6 +158,10 @@ class NotificationService:
                     return True
                 if trigger == NotificationTrigger.COMMENTED and preferences.author_commented:
                     return True
+                if trigger == NotificationTrigger.MERGED and preferences.author_merged:
+                    return True
+                if trigger == NotificationTrigger.CLOSED and preferences.author_closed:
+                    return True
                 if trigger == NotificationTrigger.CHECK_FAILED and preferences.author_check_failed:
                     return True
                 if trigger == NotificationTrigger.CHECK_SUCCEEDED and preferences.author_check_succeeded:
@@ -174,6 +179,28 @@ class NotificationService:
                     return True
                 if trigger == NotificationTrigger.CHECK_FAILED and preferences.reviewer_check_failed:
                     return True
+                if trigger == NotificationTrigger.CHECK_SUCCEEDED and preferences.reviewer_check_succeeded:
+                    return True
+            
+            if WatchingReason.ASSIGNED in watching_reasons:
+                # User is assigned
+                if trigger == NotificationTrigger.ASSIGNED and preferences.assignee_assigned:
+                    return True
+                if trigger == NotificationTrigger.UNASSIGNED and preferences.assignee_unassigned:
+                    return True
+                if trigger == NotificationTrigger.COMMENTED and preferences.assignee_commented:
+                    return True
+                if trigger == NotificationTrigger.MERGED and preferences.assignee_merged:
+                    return True
+                if trigger == NotificationTrigger.CLOSED and preferences.assignee_closed:
+                    return True
+                if trigger == NotificationTrigger.CHECK_FAILED and preferences.assignee_check_failed:
+                    return True
+                if trigger == NotificationTrigger.CHECK_SUCCEEDED and preferences.assignee_check_succeeded:
+                    return True
+
+            if WatchingReason.MENTIONED in watching_reasons:
+                return True
             
             # Default: don't notify
             return False
@@ -240,7 +267,9 @@ class NotificationService:
             
             # Determine notification trigger based on action
             trigger = None
-            if action == "opened" or action == "reopened":
+            if action == "opened":
+                trigger = NotificationTrigger.OPENED
+            elif action == "reopened":
                 trigger = NotificationTrigger.REOPENED
             elif action == "closed" and pr.get("merged"):
                 trigger = NotificationTrigger.MERGED

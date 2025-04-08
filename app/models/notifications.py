@@ -49,12 +49,25 @@ class NotificationPreferences(BaseModel):
     reviewer_merged: bool = True
     reviewer_closed: bool = True
     reviewer_check_failed: bool = True
+    reviewer_check_succeeded: bool = True
     
     # Author notifications
     author_reviewed: bool = True
     author_commented: bool = True
+    author_merged: bool = True
+    author_closed: bool = True
     author_check_failed: bool = True
     author_check_succeeded: bool = True
+
+    # Assignee notifications
+    assignee_assigned: bool = True
+    assignee_unassigned: bool = True
+    assignee_reviewed: bool = True
+    assignee_commented: bool = True
+    assignee_merged: bool = True
+    assignee_closed: bool = True
+    assignee_check_failed: bool = True
+    assignee_check_succeeded: bool = True
     
     # Noise reduction
     mute_own_activity: bool = True

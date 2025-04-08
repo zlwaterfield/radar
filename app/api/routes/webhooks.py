@@ -185,10 +185,6 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
         repository = payload.get("repository", {})
         sender = payload.get("sender", {})
 
-        # Skip if action is not interesting
-        if action not in ["opened", "closed", "reopened", "review_requested", "review_request_removed", "assigned", "unassigned"]:
-            return
-        
         from app.services.notification_service import NotificationService
         from app.models.slack import PullRequestMessage
         from app.services.openai_analyzer_service import OpenAIAnalyzerService
