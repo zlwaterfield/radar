@@ -196,13 +196,19 @@ MIT
 
 
 TODO
-- improve notification logic for issues (comments / reactions)
-- keyword notifications
 - better align notifications for author / reviewer / assignee
-- github connection 
+- github connection - fix IAT timezone
 - status (current prs, reviews for home page)
 - billing
 - posthog (client, server, errors)
 - auth - use jwt for more security
 - messages updates - changed comment, title, description, merged/closed and no longer relevant
 - digest
+- docs
+- keyword notifications for issues / comments
+- add disussion support
+- remove unused utils
+
+
+Github docs
+https://docs.github.com/en/webhooks/webhook-events-and-payloads
