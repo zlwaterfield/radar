@@ -27,6 +27,7 @@ class NotificationTrigger(str, Enum):
     COMMENTED = "commented"
     MERGED = "merged"
     CLOSED = "closed"
+    OPENED = "opened"
     REOPENED = "reopened"
     ASSIGNED = "assigned"
     UNASSIGNED = "unassigned"

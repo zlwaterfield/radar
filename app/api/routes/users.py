@@ -335,39 +335,7 @@ async def refresh_user_repositories(user_id: str):
             detail="User not found"
         )
     
-    # Check if user has GitHub token
     github_access_token = user.get("github_access_token")
-
-    # Check if token starts with expected format (usually "gho_" for OAuth tokens)
-    if github_access_token and len(github_access_token) > 4:
-        prefix = github_access_token[:4]
-        
-        # Check if token has the expected format
-        if prefix != 'ghu_' and prefix != 'gho_' and prefix != 'ghp_' and len(github_access_token) > 30:
-            print(f"WARNING: GitHub token has unexpected prefix: {prefix}. Expected ghu_, gho_, or ghp_")
-            print("This might indicate an invalid or malformed token")
-            
-            # Try to fix the token format
-            fixed_token = fix_github_token_format(github_access_token)
-            if fixed_token != github_access_token:
-                print(f"Fixed token: {fixed_token[:4]}...{fixed_token[-4:] if len(fixed_token) > 8 else ''}")
-                print(f"Fixed token length: {len(fixed_token)}")
-                
-                # Update the token in memory for this request
-                github_access_token = fixed_token
-                
-                # Also update in the database
-                print("Updating token in database...")
-                await SupabaseManager.update_user(user_id, {"github_access_token": fixed_token})
-                print("Token updated in database")
-        
-    # Check when the token was last updated in the database
-    if user.get("updated_at"):
-        print('Token last updated at:', user.get("updated_at"))
-        
-    # Check if we have a refresh token
-    github_refresh_token = user.get("github_refresh_token")
-    print('Have refresh token:', bool(github_refresh_token))
     
     if not github_access_token:
         raise HTTPException(
@@ -381,24 +349,18 @@ async def refresh_user_repositories(user_id: str):
         
         # If direct check failed, try with a different authorization format
         if not token_check_result.get('valid'):
-            print("Direct check failed, trying with 'Bearer' prefix instead of 'token'...")
             async with httpx.AsyncClient() as client:
-                response = await client.get(
+                await client.get(
                     "https://api.github.com/user",
                     headers={
                         "Authorization": f"Bearer {github_access_token}",
                         "Accept": "application/vnd.github.v3+json"
                     }
                 )
-                if response.status_code == 200:
-                    print("Bearer auth successful!")
         
-        # Create GitHub service
         github_service = GitHubService(token=github_access_token)
-        
-        # Validate token before proceeding
         is_valid = github_service.validate_token()
-        
+
         # If validation fails, try different token formats
         if not is_valid and github_access_token:
             formats_result = github_service.try_token_formats(github_access_token)
@@ -410,25 +372,11 @@ async def refresh_user_repositories(user_id: str):
         if not is_valid:
             # Token is invalid, check if we have a refresh token
             github_refresh_token = user.get("github_refresh_token")
-            print(f"Have refresh token: {bool(github_refresh_token)}")
-            
             if github_refresh_token:
-                print("Attempting to refresh GitHub token...")
-                # Try to refresh the token
                 new_token = await refresh_github_token(github_refresh_token)
-                print(f"Token refresh successful: {bool(new_token)}")
-                
                 if new_token:
-                    print(f"New token prefix: {new_token[:4] if len(new_token) > 4 else new_token}")
-                    print(f"New token length: {len(new_token)}")
-                    
-                    # Update user with new token
-                    updated_user = await SupabaseManager.update_user(user_id, {"github_access_token": new_token})
-                    print(f"User updated with new token: {bool(updated_user)}")
-                    
-                    # Create new GitHub service with new token
+                    await SupabaseManager.update_user(user_id, {"github_access_token": new_token})
                     github_service = GitHubService(token=new_token)
-                    print("Created new GitHub service with refreshed token")
                 else:
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -454,13 +402,15 @@ async def refresh_user_repositories(user_id: str):
         if not installations:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="No GitHub App installations found for this user. Please install the GitHub App first."
+                detail="No GitHub App installations found for this user or their organizations. Please install the GitHub App first."
             )
         
         # Get repositories from all installations
         repositories = []
         for installation in installations:
             installation_id = installation.get("id")
+            account_name = installation.get("account", {}).get("login", "Unknown")
+            
             if installation_id:
                 # Get repositories for this installation
                 installation_repos = github_service.get_installation_repositories(installation_id)
@@ -473,25 +423,46 @@ async def refresh_user_repositories(user_id: str):
                 "count": 0,
             }
         
-        # Clear existing repositories
-        await SupabaseManager.clear_user_repositories(user_id)
+        # Instead of clearing and recreating all repositories, we'll track which ones we've updated
+        updated_repos = []
         
-        # Add repositories
+        # Add or update repositories
         for repo in repositories:
-            await SupabaseManager.add_user_repository(
-                user_id=user_id,
-                github_id=str(repo["id"]),
-                name=repo["name"],
-                full_name=repo["full_name"],
-                description=repo["description"] or "",
-                url=repo["html_url"],
-                is_private=repo["private"],
-                is_fork=repo["fork"],
-                owner_name=repo["owner"]["login"],
-                owner_avatar_url=repo["owner"]["avatar_url"],
-                owner_url=repo["owner"]["html_url"],
-                enabled=True  # Enable by default
-            )
+            # Check if repository already exists by GitHub ID
+            existing_repo = await SupabaseManager.get_user_repository_by_github_id(user_id, str(repo["id"]))
+            
+            repo_data = {
+                "user_id": user_id,
+                "github_id": str(repo["id"]),
+                "name": repo["name"],
+                "full_name": repo["full_name"],
+                "description": repo["description"] or "",
+                "url": repo["html_url"],
+                "is_private": repo["private"],
+                "is_fork": repo["fork"],
+                "owner_name": repo["owner"]["login"],
+                "owner_avatar_url": repo["owner"]["avatar_url"],
+                "owner_url": repo["owner"]["html_url"],
+            }
+            
+            if existing_repo:
+                # Update existing repository
+                repo_id = existing_repo["id"]
+                await SupabaseManager.update_user_repository(user_id, repo_id, repo_data)
+            else:
+                # Add new repository
+                await SupabaseManager.add_user_repository(user_id=user_id, repo_data={
+                    **repo_data,
+                    "enabled": True
+                })
+            
+            updated_repos.append(str(repo["id"]))
+        
+        # Remove repositories that no longer exist in GitHub
+        all_repos = await SupabaseManager.get_user_repositories(user_id)
+        for db_repo in all_repos["items"]:
+            if db_repo["github_id"] not in updated_repos:
+                await SupabaseManager.remove_user_repository(user_id, db_repo["id"])
         
         return {
             "status": "success",

@@ -3,12 +3,9 @@ GitHub service for Radar.
 
 This module provides a service for interacting with the GitHub API.
 """
-import base64
-import json
 import logging
-import os
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union
+from datetime import datetime
+from typing import Dict, List, Optional, Any
 
 import jwt
 import requests
@@ -36,10 +33,6 @@ class GitHubService:
         
         # Debug token format
         if token:
-            print("GitHub service init with token:", "*" * (len(token) - 8) + token[-8:] if len(token) > 8 else token)
-            print("Token length:", len(token))
-            print("Token prefix:", token[:4] if len(token) > 4 else token)
-            
             # Check if token has the expected format
             if len(token) > 4:
                 prefix = token[:4]
@@ -50,10 +43,7 @@ class GitHubService:
         
         if token:
             try:
-                # Enable debug logging for PyGithub
-                import logging
                 logging.getLogger('github').setLevel(logging.DEBUG)
-                
                 self.client = Github(token)
                 # Test the connection with a lightweight call
                 self.validate_token()
@@ -88,10 +78,10 @@ class GitHubService:
             from cryptography.hazmat.backends import default_backend
             from cryptography.hazmat.primitives import serialization
             
-            now = datetime.utcnow()
+            now = int(datetime.now().timestamp())
             payload = {
-                "iat": int(now.timestamp()),
-                "exp": int((now + timedelta(minutes=10)).timestamp()),
+                "iat": now - 30, # 30 seconds before current time
+                "exp": now + 600,  # 10 minutes expiration
                 "iss": settings.GITHUB_APP_ID
             }
             
@@ -148,19 +138,9 @@ class GitHubService:
         """
         try:
             user = self.client.get_user()
-            print(f"GitHub token validated successfully for user: {user.login}")
-            print(f"User ID: {user.id}")
-            print(f"User email: {user.email}")
-            print(f"User name: {user.name}")
-            print(f"User plan: {user.plan}")
-            print(f"User created at: {user.created_at}")
-            print(f"User updated at: {user.updated_at}")
+            print(f"User data: {user}")
             return True
         except GithubException as e:
-            error_message = str(e)
-            print(f"GitHub token validation failed: {error_message}")
-            print(f"Error status: {e.status}")
-            print(f"Error data: {e.data}")
             if e.status == 401:
                 print("Authentication error: Token may be invalid or expired")
             elif e.status == 403:
@@ -180,14 +160,12 @@ class GitHubService:
             True if token needs to be refreshed
         """
         try:
-            # Try a lightweight API call
-            user = self.client.get_user()
-            return False  # Token is valid
+            self.client.get_user()
+            return False
         except GithubException as e:
             if e.status == 401:
-                # 401 Unauthorized means the token is invalid or expired
+                print("Token needs refresh: 401 Unauthorized")
                 return True
-            # Other errors might not be related to token validity
             return False
     
     def get_user(self) -> Dict[str, Any]:
@@ -447,68 +425,6 @@ class GitHubService:
             logger.error(f"GitHub API error: {e}", exc_info=True)
             raise
     
-    def create_webhook(self, repo_full_name: str, webhook_url: str, events: List[str] = None, secret: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Create webhook for a repository.
-        
-        Args:
-            repo_full_name: Repository full name (owner/repo)
-            webhook_url: Webhook URL
-            events: List of events to trigger the webhook
-            secret: Webhook secret
-            
-        Returns:
-            Webhook data
-        """
-        try:
-            if events is None:
-                events = ["push", "pull_request", "pull_request_review", "pull_request_review_comment", "issues", "issue_comment"]
-            
-            config = {
-                "url": webhook_url,
-                "content_type": "json",
-                "insecure_ssl": "0"
-            }
-            
-            if secret:
-                config["secret"] = secret
-            
-            webhook = self.client.get_repo(repo_full_name).create_hook(
-                name="web",
-                config=config,
-                events=events,
-                active=True
-            )
-            
-            return {
-                "id": webhook.id,
-                "url": webhook.url,
-                "events": webhook.events,
-                "active": webhook.active,
-                "config": webhook.config,
-            }
-        except GithubException as e:
-            logger.error(f"GitHub API error: {e}", exc_info=True)
-            raise
-    
-    def delete_webhook(self, repo_full_name: str, webhook_id: int) -> bool:
-        """
-        Delete webhook for a repository.
-        
-        Args:
-            repo_full_name: Repository full name (owner/repo)
-            webhook_id: Webhook ID
-            
-        Returns:
-            True if successful
-        """
-        try:
-            self.client.get_repo(repo_full_name).get_hook(webhook_id).delete()
-            return True
-        except GithubException as e:
-            logger.error(f"GitHub API error: {e}", exc_info=True)
-            raise
-    
     def test_token(self) -> bool:
         """
         Test GitHub token with a simple API call.
@@ -614,12 +530,13 @@ class GitHubService:
                 private_key = key_file.read()
             
             # Create JWT payload with integer timestamps
-            now = int(datetime.utcnow().timestamp())
+            now = int(datetime.now().timestamp())
             payload = {
-                "iat": now,
+                "iat": now - 30, # 30 seconds before current time
                 "exp": now + 600,  # 10 minutes expiration
                 "iss": settings.GITHUB_APP_ID
             }
+            print(f"JWT payload: {payload}")
             
             from cryptography.hazmat.backends import default_backend
             from cryptography.hazmat.primitives import serialization
@@ -647,16 +564,7 @@ class GitHubService:
                 "X-GitHub-Api-Version": "2022-11-28"
             }
             
-            # First try to get user's installations
-            response = requests.get(
-                f"https://api.github.com/users/{github_login}/installation",
-                headers=headers
-            )
-            
-            if response.status_code == 200:
-                return [response.json()]
-            
-            # If that fails, get all installations and filter by user
+            # First get all installations for the GitHub App
             response = requests.get(
                 "https://api.github.com/app/installations",
                 headers=headers
@@ -666,17 +574,38 @@ class GitHubService:
                 logger.error(f"GitHub API error getting installations: {response.text}")
                 return []
             
-            installations = response.json()
+            all_installations = response.json()
             
-            # Filter installations for the user
-            user_installations = []
-            for installation in installations:
-                if installation.get("account", {}).get("login") == github_login:
-                    user_installations.append(installation)
+            # Get user's organizations using their personal access token
+            if self.token:
+                user_orgs = []
+                try:
+                    user_orgs_response = requests.get(
+                        "https://api.github.com/user/orgs",
+                        headers={"Authorization": f"token {self.token}"}
+                    )
+                    if user_orgs_response.status_code == 200:
+                        user_orgs = [org["login"] for org in user_orgs_response.json()]
+                except Exception as e:
+                    logger.error(f"Error getting user organizations: {e}")
             
-            return user_installations
+                # Filter installations to include those for the user and their organizations
+                user_installations = []
+                for installation in all_installations:
+                    account = installation.get("account", {})
+                    account_login = account.get("login", "")
+                    
+                    # Include if it's the user's personal installation or an org they belong to
+                    if account_login == github_login or account_login in user_orgs:
+                        user_installations.append(installation)
+                
+                return user_installations
+            else:
+                # If no token is available, just return all installations
+                # This is less accurate but better than nothing
+                return all_installations
         except Exception as e:
-            logger.error(f"Error getting GitHub App installations: {e}")
+            logger.error(f"Error getting app installations: {e}")
             return []
     
     def get_installation_repositories(self, installation_id: int) -> List[Dict[str, Any]]:
@@ -695,9 +624,9 @@ class GitHubService:
                 private_key = key_file.read()
             
             # Create JWT payload with integer timestamps
-            now = int(datetime.utcnow().timestamp())
+            now = int(datetime.now().timestamp())
             payload = {
-                "iat": now,
+                "iat": now - 30, # 30 seconds before current time
                 "exp": now + 600,  # 10 minutes expiration
                 "iss": settings.GITHUB_APP_ID
             }

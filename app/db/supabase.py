@@ -814,3 +814,26 @@ class SupabaseManager:
         except Exception as e:
             logger.error(f"Error recording digest for user {user_id}: {e}")
             return None
+
+    @staticmethod
+    async def get_user_repository_by_github_id(user_id: str, github_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a repository for a user by GitHub ID.
+        
+        Args:
+            user_id: The user ID
+            github_id: The GitHub repository ID
+            
+        Returns:
+            Repository data or None if not found
+        """
+        try:
+            response = SupabaseManager.supabase.table("user_repositories").select("*").eq("user_id", user_id).eq("github_id", github_id).execute()
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+        except Exception as e:
+            logger.error(f"Error getting repository by GitHub ID {github_id} for user {user_id}: {e}")
+            return None

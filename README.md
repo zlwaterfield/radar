@@ -197,7 +197,6 @@ MIT
 
 TODO
 - better align notifications for author / reviewer / assignee
-- github connection - fix IAT timezone
 - status (current prs, reviews for home page)
 - billing
 - posthog (client, server, errors)
