@@ -46,7 +46,7 @@ export default function SettingsLayout({
               Notifications
             </Link>
           </li>
-          <li>
+          {/* <li>
             <Link href="/settings/digest"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
                 isActive('/settings/digest')
@@ -56,7 +56,7 @@ export default function SettingsLayout({
               <FiCalendar className="mr-3 flex-shrink-0 h-5 w-5" />
               Daily Digest
             </Link>
-          </li>
+          </li> */}
           <li>
             <Link href="/settings/repositories"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
@@ -129,7 +129,7 @@ export default function SettingsLayout({
           <div className="px-6 py-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               {pathname === '/settings/notifications' && 'Notifications'}
-              {pathname === '/settings/digest' && 'Daily Digest'}
+              {/* {pathname === '/settings/digest' && 'Daily Digest'} */}
               {pathname === '/settings/repositories' && 'Repositories'}
               {pathname === '/settings/keywords' && 'Keywords'}
             </h2>

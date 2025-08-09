@@ -345,7 +345,7 @@ async def github_callback(code: str, state: str):
                 )
             
             # Redirect to GitHub App installation page instead of frontend
-            app_name = "radar-notifier-dev"  # Your GitHub App's name/slug
+            app_name = settings.GITHUB_APP_NAME
             params = {
                 "state": user_id,  # Pass user_id as state to track the user
             }

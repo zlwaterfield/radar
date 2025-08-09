@@ -54,6 +54,7 @@ class Settings(BaseSettings):
 
     # GitHub settings
     GITHUB_APP_ID: str
+    GITHUB_APP_NAME: str
     GITHUB_CLIENT_ID: str
     GITHUB_CLIENT_SECRET: str
     GITHUB_PRIVATE_KEY_PATH: str
