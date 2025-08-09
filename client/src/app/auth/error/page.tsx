@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiAlertTriangle } from 'react-icons/fi';
 
-export default function AuthError() {
+function AuthErrorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const provider = searchParams.get('provider');
@@ -39,5 +39,20 @@ export default function AuthError() {
         <p className="text-gray-600">Redirecting to home page...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthError() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="card max-w-md w-full text-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   );
 }

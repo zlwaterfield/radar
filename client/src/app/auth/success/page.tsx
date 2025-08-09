@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
 
-export default function AuthSuccess() {
+function AuthSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -100,5 +100,20 @@ export default function AuthSuccess() {
         <p className="text-gray-600">Redirecting to dashboard...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthSuccess() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="card max-w-md w-full text-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    }>
+      <AuthSuccessContent />
+    </Suspense>
   );
 }

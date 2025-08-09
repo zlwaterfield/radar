@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { FiGithub, FiCheck, FiSettings } from 'react-icons/fi';
 
-export default function ConnectGithub() {
+function ConnectGithubContent() {
   const { user, isAuthenticated, loading, connectGithub, installGithubApp, checkGithubInstallations } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -197,5 +197,17 @@ export default function ConnectGithub() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+export default function ConnectGithub() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <ConnectGithubContent />
+    </Suspense>
   );
 }

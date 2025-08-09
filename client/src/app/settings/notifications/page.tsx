@@ -216,7 +216,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Comments on PRs you're involved with
+                  Comments on PRs you&apos;re involved with
                 </label>
               </div>
               <div className="flex items-center">
@@ -229,7 +229,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-reviews" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Reviews on PRs you're involved with
+                  Reviews on PRs you&apos;re involved with
                 </label>
               </div>
               <div className="flex items-center">
@@ -288,7 +288,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="issue-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Comments on issues you're involved with
+                  Comments on issues you&apos;re involved with
                 </label>
               </div>
               <div className="flex items-center">
@@ -367,7 +367,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="mentioned-in-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  When you're mentioned in comments
+                  When you&apos;re mentioned in comments
                 </label>
               </div>
             </div>
