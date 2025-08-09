@@ -45,12 +45,12 @@ SUPABASE_KEY=your-supabase-key
 # GitHub
 GITHUB_CLIENT_ID=your-github-client-id
 GITHUB_CLIENT_SECRET=your-github-client-secret
-GITHUB_REDIRECT_URI=http://localhost:3000/auth/github/callback
+GITHUB_REDIRECT_URI=http://localhost:3002/auth/github/callback
 
 # Slack (optional)
 SLACK_APP_CLIENT_ID=your-slack-client-id
 SLACK_APP_CLIENT_SECRET=your-slack-client-secret
-SLACK_REDIRECT_URI=http://localhost:3000/auth/slack/callback
+SLACK_REDIRECT_URI=http://localhost:3002/auth/slack/callback
 SLACK_SIGNING_SECRET=your-slack-signing-secret
 
 # Application
@@ -99,7 +99,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 npm run dev
 ```
 
-The frontend will start on http://localhost:3000.
+The frontend will start on http://localhost:3002.
 
 ## GitHub Webhook Setup
 
@@ -158,7 +158,7 @@ server {
 
     # Frontend
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3002;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }

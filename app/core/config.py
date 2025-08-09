@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     # API settings
     API_HOST: str = "https://zach.ngrok.dev"
     API_PORT: int = 8000
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "http://localhost:3002"
     
     # CORS settings
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
