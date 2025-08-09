@@ -403,7 +403,13 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
             # Add keyword match information if applicable
             keyword_text = ""
             if matched_keywords:
-                keyword_text = f"\n\n*Matched keywords:* {', '.join(matched_keywords)}"
+                # Create detailed keyword match text with context
+                keyword_details = []
+                for keyword in matched_keywords:
+                    detail = match_details.get(keyword, "Match found")
+                    keyword_details.append(f"• *{keyword}*: {detail}")
+                
+                keyword_text = f"\n\n🎯 *Keyword Matches:*\n" + "\n".join(keyword_details)
                 
             message = PullRequestMessage(
                 channel=channel,
@@ -705,7 +711,13 @@ async def process_issue_event(payload: Dict[str, Any], users: list, event_id: st
             # Add keyword match information if applicable
             keyword_text = ""
             if matched_keywords:
-                keyword_text = f"\\n\\n*Matched keywords:* {', '.join(matched_keywords)}"
+                # Create detailed keyword match text with context
+                keyword_details = []
+                for keyword in matched_keywords:
+                    detail = match_details.get(keyword, "Match found")
+                    keyword_details.append(f"• *{keyword}*: {detail}")
+                
+                keyword_text = f"\\n\\n🎯 *Keyword Matches:*\\n" + "\\n".join(keyword_details)
             
             message = IssueMessage(
                 channel=channel,
@@ -857,7 +869,13 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
             # Add keyword match information if applicable
             keyword_text = ""
             if matched_keywords:
-                keyword_text = f"\\n\\n*Matched keywords:* {', '.join(matched_keywords)}"
+                # Create detailed keyword match text with context
+                keyword_details = []
+                for keyword in matched_keywords:
+                    detail = match_details.get(keyword, "Match found")
+                    keyword_details.append(f"• *{keyword}*: {detail}")
+                
+                keyword_text = f"\\n\\n🎯 *Keyword Matches:*\\n" + "\\n".join(keyword_details)
             
             message = IssueCommentMessage(
                 channel=channel,
@@ -997,7 +1015,13 @@ async def process_discussion_event(payload: Dict[str, Any], users: list, event_i
             # Add keyword match information if applicable
             keyword_text = ""
             if matched_keywords:
-                keyword_text = f"\\n\\n*Matched keywords:* {', '.join(matched_keywords)}"
+                # Create detailed keyword match text with context
+                keyword_details = []
+                for keyword in matched_keywords:
+                    detail = match_details.get(keyword, "Match found")
+                    keyword_details.append(f"• *{keyword}*: {detail}")
+                
+                keyword_text = f"\\n\\n🎯 *Keyword Matches:*\\n" + "\\n".join(keyword_details)
                 
             message = DiscussionMessage(
                 channel=channel,

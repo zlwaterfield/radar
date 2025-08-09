@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # OpenAI API configuration
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_MODEL = "GPT-5 nano"
+OPENAI_MODEL = "gpt-5-nano"  # Valid OpenAI model for chat completions
 
 class KeywordMatchRequest(BaseModel):
     """Request model for keyword matching."""
@@ -81,6 +81,8 @@ class OpenAIAnalyzerService:
             If no keywords match, return an empty list for matched_keywords.
             """
             
+            logger.debug(f"OpenAI request: content length {len(content)}, keywords: {keywords}")
+            
             # Make API request to OpenAI
             headers = {
                 "Content-Type": "application/json",
@@ -90,9 +92,9 @@ class OpenAIAnalyzerService:
             payload = {
                 "model": OPENAI_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.1,  # Low temperature for more deterministic results
-                "max_tokens": 300
             }
+            
+            logger.debug(f"OpenAI payload model: {payload['model']}")
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -102,11 +104,16 @@ class OpenAIAnalyzerService:
                     timeout=10.0  # 10 second timeout
                 )
                 
-                response.raise_for_status()
+                if response.status_code != 200:
+                    logger.error(f"OPENAI API ERROR: Status {response.status_code}, Response: {response.text}")
+                    return cls.fallback_keyword_match(content, keywords)
+                
                 response_data = response.json()
                 
                 # Extract the response content
                 content = response_data["choices"][0]["message"]["content"]
+                
+                logger.debug(f"OpenAI response received: {len(content)} characters")
                 
                 # Parse the JSON response
                 try:
@@ -257,8 +264,7 @@ class OpenAIAnalyzerService:
             keywords = keyword_prefs.get("keywords", [])
             threshold = keyword_prefs.get("threshold", 0.7)  # Default threshold
             
-            logger.warning(f"KEYWORD CHECK: User {user_id} preferences - Enabled: {keyword_notifications_enabled}, "
-                          f"Keywords: {keywords}, Threshold: {threshold}")
+            logger.info(f"Keyword check for user {user_id}: enabled={keyword_notifications_enabled}, keywords={len(keywords)}, threshold={threshold}")
             
             # Check if keyword notifications are enabled
             if not keyword_notifications_enabled:
@@ -272,15 +278,15 @@ class OpenAIAnalyzerService:
                 
             # Choose matching strategy based on threshold and OpenAI availability
             if threshold < 1.0 and threshold > 0.0:
-                # Use similarity matching when threshold is set to less than 1.0
-                logger.debug(f"Using similarity matching due to threshold: {threshold}")
+                # Use semantic AI matching for nuanced similarity (low thresholds)
+                logger.debug(f"Using OpenAI/semantic matching due to low threshold: {threshold}")
+                matched_keywords, match_details = await cls.match_keywords_with_openai(content, keywords)
+            else:
+                # Use exact/string matching for high precision (threshold >= 1.0)
+                logger.debug(f"Using exact/string matching due to high threshold: {threshold}")
                 matched_keywords, match_details = cls.similarity_keyword_match(
                     content, keywords, threshold
                 )
-            else:
-                # Use OpenAI or fallback for exact matching
-                logger.debug(f"Using OpenAI/fallback matching (threshold: {threshold})")
-                matched_keywords, match_details = await cls.match_keywords_with_openai(content, keywords)
             
             # Determine if notification should be sent
             should_notify = len(matched_keywords) > 0

@@ -236,14 +236,14 @@ class NotificationService:
             Tuple of (should_notify, matched_keywords, match_details)
         """
         try:
-            logger.warning(f"KEYWORD CHECK: should_notify_based_on_keywords called for user {user_id}, event_type: {event_type}, content pieces: {len(content_list)}")
+            logger.debug(f"Checking keywords for user {user_id}, event_type: {event_type}, content pieces: {len(content_list)}")
             
             # Import OpenAI analyzer service
             from app.services.openai_analyzer_service import OpenAIAnalyzerService
             
             # Combine all content with separators
             combined_content = "\n\n".join([content for content in content_list if content and content.strip()])
-            logger.warning(f"KEYWORD CHECK: Combined content length: {len(combined_content)}, preview: {combined_content[:100]}...")
+            logger.debug(f"Combined content length: {len(combined_content)}")
             
             if not combined_content.strip():
                 return False, [], {}
@@ -506,13 +506,12 @@ class NotificationService:
             # Check for keyword matches in comment body
             content_to_check = [comment.get("body", "")]
             
-            logger.warning(f"KEYWORD CHECK: Processing issue comment event for user {user_id}, comment length: {len(content_to_check[0])}")
-            
             should_notify_keywords, matched_keywords, match_details = await cls.should_notify_based_on_keywords(
                 user_id, content_to_check, "issue_comment"
             )
             
-            logger.warning(f"KEYWORD CHECK RESULT: User {user_id}, should_notify: {should_notify_keywords}, matched_keywords: {matched_keywords}")
+            if matched_keywords:
+                logger.info(f"Keywords matched for user {user_id} in comment: {matched_keywords}")
             
             # If we have keyword matches, always notify
             if should_notify_keywords:
@@ -612,13 +611,12 @@ class NotificationService:
                 issue.get("body", "")
             ]
             
-            logger.warning(f"KEYWORD CHECK: Processing issue event for user {user_id}, action: {action}, content length: {[len(c) for c in content_to_check]}")
-            
             should_notify_keywords, matched_keywords, match_details = await cls.should_notify_based_on_keywords(
                 user_id, content_to_check, "issue"
             )
             
-            logger.warning(f"KEYWORD CHECK RESULT: User {user_id}, should_notify: {should_notify_keywords}, matched_keywords: {matched_keywords}")
+            if matched_keywords:
+                logger.info(f"Keywords matched for user {user_id} in issue {action}: {matched_keywords}")
             
             # If we have keyword matches, always notify
             if should_notify_keywords:
