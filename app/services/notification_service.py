@@ -148,8 +148,11 @@ class NotificationService:
                 return False
             
             # Check if this is the user's own activity
-            if actor_id and actor_id == user_id and preferences.mute_own_activity:
-                return False
+            # Compare GitHub IDs instead of database user IDs
+            if actor_id and preferences.mute_own_activity:
+                user = await SupabaseManager.get_user(user_id)
+                if user and str(actor_id) == str(user.get("github_id")):
+                    return False
             
             # Check if the user should be notified based on their relationship to the PR
             if WatchingReason.AUTHOR in watching_reasons:
@@ -165,6 +168,12 @@ class NotificationService:
                 if trigger == NotificationTrigger.CHECK_FAILED and preferences.author_check_failed:
                     return True
                 if trigger == NotificationTrigger.CHECK_SUCCEEDED and preferences.author_check_succeeded:
+                    return True
+                # Authors should always be notified when someone is assigned to their PR
+                if trigger == NotificationTrigger.ASSIGNED:
+                    return True
+                # Authors should be notified when review is requested on their PR
+                if trigger == NotificationTrigger.REVIEW_REQUESTED:
                     return True
             
             if WatchingReason.REVIEWER in watching_reasons:
@@ -232,6 +241,47 @@ class NotificationService:
             return False, [], {}
     
     @classmethod
+    async def should_notify_based_on_keywords(
+        cls, 
+        user_id: str, 
+        content_list: List[str], 
+        event_type: str
+    ) -> Tuple[bool, List[str], Dict[str, Any]]:
+        """
+        Check if user should be notified based on keyword matching across multiple content pieces.
+        
+        Args:
+            user_id: User ID
+            content_list: List of content strings to analyze
+            event_type: Type of event (for logging purposes)
+            
+        Returns:
+            Tuple of (should_notify, matched_keywords, match_details)
+        """
+        try:
+            # Import OpenAI analyzer service
+            from app.services.openai_analyzer_service import OpenAIAnalyzerService
+            
+            # Combine all content with separators
+            combined_content = "\n\n".join([content for content in content_list if content and content.strip()])
+            
+            if not combined_content.strip():
+                return False, [], {}
+            
+            # Analyze content
+            should_notify, matched_keywords, match_details = await OpenAIAnalyzerService.analyze_content(combined_content, user_id)
+            
+            # Log keyword matches for monitoring
+            if should_notify and matched_keywords:
+                logger.info(f"Keyword match for user {user_id} in {event_type}: {matched_keywords}")
+            
+            return should_notify, matched_keywords, match_details
+            
+        except Exception as e:
+            logger.error(f"Error checking if user should be notified based on keywords: {e}", exc_info=True)
+            return False, [], {}
+    
+    @classmethod
     async def process_pull_request_event(
         cls,
         user_id: str,
@@ -259,7 +309,7 @@ class NotificationService:
             sender = payload.get("sender", {})
             
             # Skip if action is not interesting
-            if action not in ["opened", "closed", "reopened", "review_requested", "review_request_removed", "assigned", "unassigned"]:
+            if action not in ["opened", "closed", "reopened", "review_requested", "review_request_removed", "assigned", "unassigned", "edited"]:
                 return False, [], {}
             
             # Import OpenAI analyzer service
@@ -430,7 +480,7 @@ class NotificationService:
         user_id: str,
         payload: Dict[str, Any],
         event_id: str
-    ) -> bool:
+    ) -> Tuple[bool, List[str], Dict[str, Any]]:
         """
         Process an issue comment event and determine if a user should be notified.
         
@@ -440,11 +490,15 @@ class NotificationService:
             event_id: Event ID
             
         Returns:
-            True if the user should be notified, False otherwise
+            Tuple containing:
+            - bool: True if the user should be notified, False otherwise
+            - List[str]: List of matched keywords if any
+            - Dict[str, Any]: Match details if any
         """
         try:
             # Extract data from payload
             comment = payload.get("comment", {})
+            issue = payload.get("issue", {})
             sender = payload.get("sender", {})
             
             # Get user settings
@@ -457,48 +511,54 @@ class NotificationService:
                 preferences_data = settings.get("notification_preferences", {})
                 preferences = NotificationPreferences(**preferences_data)
             
-            # Get watching reasons for this issue
+            # Check if this is the user's own activity
+            user = await SupabaseManager.get_user(user_id)
+            if not user:
+                return False, [], {}
+                
+            github_username = user.get("github_login")
+            is_own_activity = sender.get("login") == github_username
+            
+            # Don't notify for own activity if muted
+            if is_own_activity and preferences.mute_own_activity:
+                return False, [], {}
+            
+            # Check for keyword matches in comment body
+            content_to_check = [comment.get("body", "")]
+            
+            should_notify_keywords, matched_keywords, match_details = await cls.should_notify_based_on_keywords(
+                user_id, content_to_check, "issue_comment"
+            )
+            
+            # If we have keyword matches, always notify
+            if should_notify_keywords:
+                return True, matched_keywords, match_details
+            
+            # Get watching reasons for this issue (only check if no keyword matches)
             watching_reasons = await cls.determine_watching_reasons(user_id, payload)
             
             # If the user isn't watching the issue, don't notify
             if not watching_reasons:
-                return False
-            
-            # Get GitHub username for the user
-            user = await SupabaseManager.get_user(user_id)
-            if not user or not user.get("github_login"):
-                return False
-            
-            github_username = user.get("github_login")
+                return False, [], {}
             
             # Check if user is mentioned in the comment
             comment_body = comment.get("body", "")
             if comment_body and f"@{github_username}" in comment_body:
                 # User is mentioned, always notify
-                return True
+                return True, [], {}
             
-            # Check if this is the user's own activity
-            is_own_activity = sender.get("login") == github_username
+            # Check notification preferences for issue comments
+            should_notify_preferences = preferences.issue_comments
             
-            # Don't notify for own activity if muted
-            if is_own_activity and preferences.mute_own_activity:
-                return False
+            # Always notify if mentioned
+            if WatchingReason.MENTIONED in watching_reasons:
+                should_notify_preferences = True
             
-            # Don't notify for bot comments if muted
-            if sender.get("type") == "Bot" and preferences.mute_bot_comments:
-                return False
-            
-            # Check if user should be notified using the same logic as PR comments
-            return cls.should_notify(
-                user_id,
-                {**payload, **{"pull_request": payload.get("issue", {})}},
-                NotificationTrigger.COMMENTED,
-                actor_id=sender.get("id")
-            )
+            return should_notify_preferences, [], {}
             
         except Exception as e:
             logger.error(f"Error processing issue comment event: {e}", exc_info=True)
-            return False
+            return False, [], {}
 
     @classmethod
     async def process_issue_event(
@@ -506,9 +566,175 @@ class NotificationService:
         user_id: str,
         payload: Dict[str, Any],
         event_id: str
-    ) -> bool:
+    ) -> Tuple[bool, List[str], Dict[str, Any]]:
         """
         Process an issue event and determine if a user should be notified.
+        
+        Args:
+            user_id: User ID
+            payload: Event payload
+            event_id: Event ID
+            
+        Returns:
+            Tuple containing:
+            - bool: True if the user should be notified, False otherwise
+            - List[str]: List of matched keywords if any
+            - Dict[str, Any]: Match details if any
+        """
+        try:
+            # Extract data from payload
+            action = payload.get("action")
+            issue = payload.get("issue", {})
+            sender = payload.get("sender", {})
+            
+            # Skip if action is not interesting
+            if action not in ["opened", "closed", "reopened", "assigned", "edited"]:
+                return False, [], {}
+            
+            # Get user settings
+            settings = await SupabaseManager.get_user_settings(user_id)
+            if not settings:
+                # Use default settings
+                preferences = NotificationPreferences()
+            else:
+                # Use user settings
+                preferences_data = settings.get("notification_preferences", {})
+                preferences = NotificationPreferences(**preferences_data)
+            
+            # Check if this is the user's own activity
+            user = await SupabaseManager.get_user(user_id)
+            if not user:
+                return False, [], {}
+                
+            github_username = user.get("github_login")
+            is_own_activity = sender.get("login") == github_username
+            
+            # Don't notify for own activity if muted
+            if is_own_activity and preferences.mute_own_activity:
+                return False, [], {}
+            
+            # Check for keyword matches in issue title and body
+            content_to_check = [
+                issue.get("title", ""),
+                issue.get("body", "")
+            ]
+            
+            should_notify_keywords, matched_keywords, match_details = await cls.should_notify_based_on_keywords(
+                user_id, content_to_check, "issue"
+            )
+            
+            # If we have keyword matches, always notify
+            if should_notify_keywords:
+                return True, matched_keywords, match_details
+            
+            # Get watching reasons for this issue (only check if no keyword matches)
+            watching_reasons = await cls.determine_watching_reasons(user_id, issue)
+            
+            # If the user isn't watching the issue, don't notify
+            if not watching_reasons:
+                return False, [], {}
+            
+            # Check notification preference for this action
+            notification_key = f"issue_{action}"
+            should_notify_preferences = preferences.issues and getattr(preferences, notification_key, True)
+            
+            # Always notify if mentioned
+            if WatchingReason.MENTIONED in watching_reasons:
+                should_notify_preferences = True
+            
+            return should_notify_preferences, [], {}
+            
+        except Exception as e:
+            logger.error(f"Error processing issue event: {e}", exc_info=True)
+            return False, [], {}
+    
+    @classmethod
+    async def process_discussion_event(
+        cls,
+        user_id: str,
+        payload: Dict[str, Any],
+        event_id: str
+    ) -> Tuple[bool, List[str], Dict[str, Any]]:
+        """
+        Process a discussion event and determine if a user should be notified.
+        
+        Args:
+            user_id: User ID
+            payload: Event payload
+            event_id: Event ID
+            
+        Returns:
+            Tuple containing:
+            - bool: True if the user should be notified, False otherwise
+            - List[str]: List of matched keywords if any
+            - Dict[str, Any]: Match details if any
+        """
+        try:
+            # Extract data from payload
+            action = payload.get("action")
+            discussion = payload.get("discussion", {})
+            sender = payload.get("sender", {})
+            
+            # Skip if action is not interesting
+            if action not in ["created", "answered", "locked", "unlocked", "category_changed"]:
+                return False, [], {}
+            
+            # Get user settings
+            settings = await SupabaseManager.get_user_settings(user_id)
+            if not settings:
+                # Use default settings - assume discussions are enabled by default
+                discussion_notifications_enabled = True
+            else:
+                # Check if discussion notifications are enabled
+                notification_preferences = settings.get("notification_preferences", {})
+                discussion_notifications_enabled = notification_preferences.get("discussions", True)
+            
+            if not discussion_notifications_enabled:
+                return False, [], {}
+            
+            # Check if this is the user's own activity
+            user = await SupabaseManager.get_user(user_id)
+            if not user:
+                return False, [], {}
+                
+            github_username = user.get("github_login")
+            is_own_activity = sender.get("login") == github_username
+            
+            # Don't notify for own activity if muted
+            mute_own_activity = notification_preferences.get("mute_own_activity", False)
+            if is_own_activity and mute_own_activity:
+                return False, [], {}
+            
+            # Check for keyword matches in discussion title and body
+            content_to_check = [
+                discussion.get("title", ""),
+                discussion.get("body", "")
+            ]
+            
+            should_notify_keywords, matched_keywords, match_details = await cls.should_notify_based_on_keywords(
+                user_id, content_to_check, "discussion"
+            )
+            
+            # If we have keyword matches, always notify
+            if should_notify_keywords:
+                return True, matched_keywords, match_details
+            
+            # Default notification logic - notify for all interesting discussion actions
+            return True, [], {}
+            
+        except Exception as e:
+            logger.error(f"Error processing discussion event: {e}", exc_info=True)
+            return False, [], {}
+    
+    @classmethod
+    async def process_discussion_comment_event(
+        cls,
+        user_id: str,
+        payload: Dict[str, Any],
+        event_id: str
+    ) -> bool:
+        """
+        Process a discussion comment event and determine if a user should be notified.
         
         Args:
             user_id: User ID
@@ -521,28 +747,25 @@ class NotificationService:
         try:
             # Extract data from payload
             action = payload.get("action")
-            issue = payload.get("issue", {})
+            comment = payload.get("comment", {})
+            discussion = payload.get("discussion", {})
             sender = payload.get("sender", {})
             
             # Skip if action is not interesting
-            if action not in ["opened", "closed", "reopened", "assigned"]:
+            if action not in ["created", "edited"]:
                 return False
             
             # Get user settings
             settings = await SupabaseManager.get_user_settings(user_id)
             if not settings:
-                # Use default settings
-                preferences = NotificationPreferences()
+                # Use default settings - assume discussion comments are enabled by default
+                discussion_comment_notifications_enabled = True
             else:
-                # Use user settings
-                preferences_data = settings.get("notification_preferences", {})
-                preferences = NotificationPreferences(**preferences_data)
+                # Check if discussion comment notifications are enabled
+                notification_preferences = settings.get("notification_preferences", {})
+                discussion_comment_notifications_enabled = notification_preferences.get("discussion_comments", True)
             
-            # Get watching reasons for this issue
-            watching_reasons = await cls.determine_watching_reasons(user_id, issue)
-            
-            # If the user isn't watching the issue, don't notify
-            if not watching_reasons:
+            if not discussion_comment_notifications_enabled:
                 return False
             
             # Check if this is the user's own activity
@@ -554,19 +777,24 @@ class NotificationService:
             is_own_activity = sender.get("login") == github_username
             
             # Don't notify for own activity if muted
-            if is_own_activity and preferences.mute_own_activity:
+            mute_own_activity = notification_preferences.get("mute_own_activity", False)
+            if is_own_activity and mute_own_activity:
                 return False
             
-            # Check notification preference for this action
-            notification_key = f"issue_{action}"
-            should_notify = preferences.issues and getattr(preferences, notification_key, True)
+            # Check for keyword matches in comment body
+            content_to_check = [comment.get("body", "")]
             
-            # Always notify if mentioned
-            if WatchingReason.MENTIONED in watching_reasons:
-                should_notify = True
+            should_notify_keywords, matched_keywords, match_details = await cls.should_notify_based_on_keywords(
+                user_id, content_to_check, "discussion_comment"
+            )
             
-            return should_notify
+            # If we have keyword matches, always notify
+            if should_notify_keywords:
+                return True
+            
+            # Default notification logic - notify for discussion comments
+            return True
             
         except Exception as e:
-            logger.error(f"Error processing issue event: {e}", exc_info=True)
+            logger.error(f"Error processing discussion comment event: {e}", exc_info=True)
             return False

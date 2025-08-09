@@ -80,6 +80,15 @@ class Settings(BaseSettings):
     DEFAULT_DIGEST_TIME: str = "09:00"
     DEFAULT_SECOND_DIGEST_TIME: str = "16:00"
     DEFAULT_STATS_TIME_WINDOW: str = "14"
+    
+    # Rate limiting settings
+    WEBHOOK_RATE_LIMIT_PER_MINUTE: int = 60
+    WEBHOOK_MAX_REQUEST_SIZE: int = 5 * 1024 * 1024  # 5MB
+    API_RATE_LIMIT_PER_MINUTE: int = 100
+    
+    # PostHog settings
+    POSTHOG_API_KEY: Optional[str] = None
+    POSTHOG_HOST: str = "https://us.posthog.com"
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

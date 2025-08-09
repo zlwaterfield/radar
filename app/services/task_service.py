@@ -14,6 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.db.supabase import SupabaseManager
 from app.services.slack_service import SlackService
+from app.services.monitoring_service import MonitoringService
 from app.models.slack import DigestMessage, MessageType
 
 logger = logging.getLogger(__name__)
@@ -162,8 +163,9 @@ class TaskService:
                 # Default to 24 hours ago
                 since = datetime.utcnow() - timedelta(days=1)
             
-            # Get repositories
-            repositories = await SupabaseManager.get_user_repositories(user_id)
+            # Get repositories - this returns a paginated response
+            repo_response = await SupabaseManager.get_user_repositories(user_id, page_size=100)
+            repositories = repo_response.get("items", [])
             
             if not repositories:
                 logger.warning(f"No repositories found for user {user_id}")
@@ -213,15 +215,35 @@ class TaskService:
             slack_service = SlackService(token=user["slack_access_token"])
             message_ts = await slack_service.send_digest(digest_message)
             
-            # Record digest
-            await SupabaseManager.record_digest(
-                user_id=user_id,
-                message_ts=message_ts,
-                pull_request_count=len(pull_requests),
-                issue_count=len(issues)
-            )
-            
-            logger.info(f"Sent digest notification to user {user_id} with {len(pull_requests)} PRs and {len(issues)} issues")
+            if message_ts:
+                # Record digest
+                await SupabaseManager.record_digest(
+                    user_id=user_id,
+                    message_ts=message_ts,
+                    pull_request_count=len(pull_requests),
+                    issue_count=len(issues)
+                )
+                
+                # Track successful digest delivery
+                MonitoringService.track_notification_sent(
+                    user_id=user_id,
+                    notification_type="digest",
+                    repository="digest_summary",
+                    success=True
+                )
+                
+                logger.info(f"Sent digest notification to user {user_id} with {len(pull_requests)} PRs and {len(issues)} issues")
+            else:
+                # Track failed digest delivery
+                MonitoringService.track_notification_sent(
+                    user_id=user_id,
+                    notification_type="digest",
+                    repository="digest_summary",
+                    success=False,
+                    error="Failed to send digest message"
+                )
+                
+                logger.error(f"Failed to send digest notification to user {user_id}")
         
         except Exception as e:
             logger.error(f"Error sending digest notification to user {user_id}: {e}", exc_info=True)

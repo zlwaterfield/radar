@@ -15,6 +15,13 @@ from app.models.settings import (
     UpdateSettingsRequest,
     PaginatedRepositoriesResponse,
 )
+from app.utils.validation import (
+    sanitize_string, 
+    NotificationPreferencesUpdate,
+    KeywordUpdate,
+    DigestScheduleUpdate,
+    RepositoryToggleRequest
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

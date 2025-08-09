@@ -1,25 +1,44 @@
 # Radar
 
-A Slack application that connects to GitHub and tracks activity to notify users about Pull Requests, reviews, comments, and changes in near real-time.
+A sophisticated Slack application that seamlessly connects GitHub activity to your team's Slack workspace, delivering intelligent, customizable notifications about Pull Requests, issues, reviews, comments, and repository changes in near real-time.
 
-## Features
+## ✨ Features
 
-- Connect to Slack and GitHub with proper authentication
-- Select relevant GitHub repositories
-- Team usage with individual user configurations
-- Near real-time notifications from GitHub to Slack
-- Customizable notification preferences
-- Daily and weekly digest notifications
-- Repository activity statistics
+### Core Functionality
+- **Multi-Platform Integration**: Seamless connection between Slack and GitHub with OAuth2 authentication
+- **Repository Management**: Select and manage multiple GitHub repositories per user/team
+- **Intelligent Notifications**: Smart routing based on user roles (author, reviewer, assignee)
+- **Real-time Delivery**: Near-instantaneous notifications from GitHub webhooks to Slack
+- **Comprehensive Event Support**: PRs, issues, reviews, comments, discussions, and more
 
-## Tech Stack
+### Advanced Capabilities
+- **Keyword-Based Notifications**: AI-powered OpenAI integration for smart keyword matching
+- **Digest Notifications**: Configurable daily/weekly summaries of repository activity
+- **Message Updates**: Automatic Slack message updates when GitHub content is edited
+- **Webhook Retry System**: Robust delivery guarantees with exponential backoff retry logic
+- **Security & Validation**: JWT authentication, input sanitization, and rate limiting
+- **Analytics & Monitoring**: PostHog integration for comprehensive usage analytics
 
-- Python with FastAPI
-- Supabase for backend storage
-- Slack API for messaging
-- GitHub API for event tracking
-- APScheduler for scheduled tasks
-- Docker for containerization
+## 🛠 Tech Stack
+
+### Backend
+- **FastAPI**: High-performance Python web framework
+- **Supabase**: PostgreSQL database with real-time capabilities
+- **APScheduler**: Background task scheduling and cron jobs
+- **PostHog**: Product analytics and error tracking
+- **OpenAI API**: Intelligent keyword matching and analysis
+
+### Integrations
+- **Slack API**: Rich message formatting and user interactions
+- **GitHub API**: Repository access and webhook event processing
+- **GitHub Webhooks**: Real-time event delivery with signature verification
+
+### Security & Performance
+- **JWT Authentication**: Secure token-based user authentication
+- **Rate Limiting**: Request throttling and abuse prevention
+- **Input Validation**: Comprehensive data sanitization
+- **Webhook Retry System**: Exponential backoff for delivery guarantees
+- **Encrypted Storage**: Sensitive token encryption at rest
 
 ## Setup and Installation
 
@@ -131,11 +150,39 @@ Key environment variables include:
 - Supabase connection details
 - Application settings
 
-## API Documentation
+## 📚 API Documentation
 
+### Interactive Documentation
 Once the application is running, you can access the API documentation at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+
+### API Endpoints Overview
+
+#### Authentication & Users
+- `POST /api/auth/login` - User authentication with JWT tokens
+- `GET /api/users/me` - Get current user profile
+- `PUT /api/users/settings` - Update user notification preferences
+
+#### GitHub Integration
+- `GET /api/github/repositories` - List user's GitHub repositories
+- `POST /api/github/repositories/sync` - Sync repository data
+- `GET /api/github/user` - Get GitHub user information
+
+#### Slack Integration  
+- `GET /api/slack/channels` - List available Slack channels
+- `POST /api/slack/test` - Test Slack message delivery
+
+#### Webhooks & Events
+- `POST /api/webhooks/github` - GitHub webhook endpoint (secured)
+- `GET /api/retry/webhooks/retry/stats` - Webhook retry statistics
+- `POST /api/retry/webhooks/retry/trigger` - Manual retry processing
+- `GET /api/retry/webhooks/failed` - List failed webhook events
+
+#### Settings & Configuration
+- `GET /api/settings/user/{user_id}` - Get user settings
+- `PUT /api/settings/user/{user_id}` - Update user settings
+- `GET /api/retry/scheduler/status` - Background scheduler status
 
 ## Development
 
@@ -143,22 +190,45 @@ Once the application is running, you can access the API documentation at:
 
 ```
 radar/
-├── app/                # Application code
-│   ├── api/            # API endpoints
-│   │   ├── routes/     # Route handlers
-│   ├── core/           # Core application logic
-│   ├── db/             # Database models and connections
-│   ├── models/         # Pydantic models
-│   ├── services/       # External services (Slack, GitHub)
-│   └── utils/          # Utility functions
-│── client/         # Next.js application
-├── docs/               # Documentation
-├── scripts/            # Utility scripts
-├── .env.example        # Example environment variables
-├── Dockerfile          # Docker configuration
-├── docker-compose.yml  # Docker Compose configuration
-├── README.md           # Project documentation
-└── requirements.txt    # Project dependencies
+├── app/                    # Application code
+│   ├── api/                # API layer
+│   │   └── routes/         # FastAPI route handlers
+│   │       ├── auth.py     # Authentication endpoints
+│   │       ├── github.py   # GitHub integration endpoints
+│   │       ├── retry.py    # Webhook retry management
+│   │       ├── slack.py    # Slack integration endpoints
+│   │       ├── webhooks.py # GitHub webhook processing
+│   │       └── ...
+│   ├── core/               # Core application logic
+│   │   ├── config.py       # Configuration management
+│   │   └── logging.py      # Logging setup
+│   ├── db/                 # Database layer
+│   │   └── supabase.py     # Supabase client and operations
+│   ├── middleware/         # FastAPI middleware
+│   │   └── rate_limit.py   # Rate limiting middleware
+│   ├── models/             # Pydantic data models
+│   │   └── slack.py        # Slack message models
+│   ├── services/           # Business logic services
+│   │   ├── github_service.py        # GitHub API integration
+│   │   ├── monitoring_service.py    # PostHog analytics
+│   │   ├── notification_service.py  # Notification routing
+│   │   ├── scheduler_service.py     # Background scheduler
+│   │   ├── slack_service.py         # Slack API integration
+│   │   ├── task_service.py          # Scheduled tasks
+│   │   └── webhook_retry_service.py # Webhook retry logic
+│   └── utils/              # Utility functions
+│       ├── auth.py         # Authentication utilities
+│       ├── retry.py        # Retry mechanisms
+│       └── validation.py   # Input validation
+├── database/               # Database management
+│   ├── init_db.py          # Database initialization
+│   └── schema.sql          # Complete database schema
+├── tests/                  # Test suite
+│   └── test_webhook_retry.py # Webhook retry tests
+├── .env.example           # Environment variables template
+├── docker-compose.yml     # Docker Compose configuration
+├── README.md             # Project documentation
+└── requirements.txt      # Python dependencies
 ```
 
 ### Code Style
@@ -176,38 +246,104 @@ isort app tests
 flake8 app tests
 ```
 
-## Troubleshooting
+## 🚀 Key Features Implemented
 
-Common issues and solutions:
+### Notification Intelligence
+- **Role-Based Routing**: Automatically determines if users should be notified based on their relationship to the GitHub event (author, reviewer, assignee)
+- **Keyword Matching**: OpenAI-powered intelligent keyword detection in issues and comments with configurable confidence thresholds
+- **Message Updates**: Seamlessly updates existing Slack messages when GitHub content is edited (PRs, issues, comments)
+- **Discussion Support**: Full support for GitHub Discussions and Discussion Comments
 
-1. **Webhook verification fails**: Ensure your GitHub webhook secret matches the one in your environment variables.
+### Reliability & Performance  
+- **Webhook Retry System**: Exponential backoff retry mechanism (5min → 15hr delays) for failed GitHub webhooks
+- **Rate Limiting**: Configurable request throttling to prevent abuse
+- **Input Validation**: Comprehensive sanitization of all user inputs and webhook payloads
+- **Error Tracking**: Detailed error logging with PostHog integration
 
-2. **Slack authentication issues**: Verify your Slack app has the correct scopes and redirect URLs.
+### Security
+- **JWT Authentication**: Secure token-based user authentication with configurable expiration
+- **Webhook Signature Verification**: Support for both SHA1 and SHA256 GitHub webhook signatures  
+- **Token Encryption**: Sensitive API tokens encrypted at rest using Fernet encryption
+- **CORS Protection**: Configurable cross-origin request policies
 
-3. **Missing notifications**: Check user settings and ensure the repository has webhooks properly configured.
+### Monitoring & Analytics
+- **PostHog Integration**: Comprehensive event tracking, user analytics, and error monitoring
+- **Performance Metrics**: Request timing, webhook processing performance, retry statistics
+- **Health Checks**: Built-in health monitoring endpoints for system status
 
-## Contributing
+## 🔧 Troubleshooting
+
+### Common Issues & Solutions
+
+**Webhook Verification Failures**
+- Ensure GitHub webhook secret matches `GITHUB_WEBHOOK_SECRET` environment variable
+- Verify webhook is configured for both SHA1 and SHA256 signatures
+- Check webhook URL points to `/api/webhooks/github` endpoint
+
+**Slack Authentication Issues**  
+- Verify Slack app has required OAuth scopes: `chat:write`, `users:read`, `channels:read`
+- Ensure redirect URLs include your domain in Slack app configuration
+- Check `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` are correctly set
+
+**Missing Notifications**
+- Review user notification preferences in settings
+- Confirm user has enabled notifications for the specific event type
+- Verify repository webhooks are properly configured in GitHub
+- Check webhook retry stats at `/api/retry/webhooks/retry/stats`
+
+**Database Connection Issues**
+- Verify `SUPABASE_URL` and `SUPABASE_KEY` are correctly configured
+- Ensure database schema is properly initialized using `database/schema.sql`
+- Check Supabase dashboard for connection limits and usage
+
+**Background Tasks Not Running**
+- Verify APScheduler is properly started (check logs for "Webhook retry scheduler started")  
+- Check scheduler status via `/api/retry/scheduler/status` endpoint
+- Ensure no conflicting cron processes are running
+
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+### Development Setup
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`  
+3. Make your changes with proper tests
+4. Format code: `black app tests && isort app tests`
+5. Run tests: `pytest`
+6. Submit a Pull Request
 
-MIT
+## 📄 License
 
+MIT License - see LICENSE file for details.
 
-TODO
-- better align notifications for author / reviewer / assignee
-- status (current prs, reviews for home page)
-- billing
-- posthog (client, server, errors)
-- auth - use jwt for more security
-- messages updates - changed comment, title, description, merged/closed and no longer relevant
-- digest
-- docs
-- keyword notifications for issues / comments
-- add disussion support
-- remove unused utils
+## 🎯 Roadmap & Status
 
+### ✅ Completed Features
+- [x] **Authentication & Security**: JWT authentication, token encryption, input validation
+- [x] **Notification Intelligence**: Role-based routing, keyword matching, message updates  
+- [x] **GitHub Integration**: Webhook processing, discussions support, signature verification
+- [x] **Reliability**: Webhook retry system with exponential backoff
+- [x] **Monitoring**: PostHog integration, performance metrics, error tracking
+- [x] **API Documentation**: Comprehensive Swagger/ReDoc documentation
 
-Github docs
-https://docs.github.com/en/webhooks/webhook-events-and-payloads
+### 🚧 In Progress
+- [ ] Notification deduplication (prevent duplicate messages)
+- [ ] User onboarding flow improvements  
+- [ ] Enhanced metrics and analytics dashboards
+
+### 📋 Future Enhancements
+- [ ] Billing and subscription management
+- [ ] Multi-workspace Slack support
+- [ ] Advanced notification scheduling
+- [ ] Repository statistics dashboard
+- [ ] Mobile app notifications
+
+---
+
+## 📚 Additional Resources
+
+- **GitHub Webhooks**: [Webhook Events Documentation](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
+- **Slack API**: [Slack Block Kit](https://api.slack.com/block-kit)
+- **FastAPI**: [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- **Supabase**: [Supabase Documentation](https://supabase.com/docs)

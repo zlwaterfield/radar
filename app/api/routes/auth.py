@@ -15,9 +15,60 @@ from app.core.config import settings
 from app.db.supabase import SupabaseManager
 from app.models.user import User
 from app.services.slack_service import SlackService
+from app.utils.auth import TokenManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+@router.get("/validate")
+async def validate_token(token: str):
+    """
+    Validate a JWT token.
+    
+    Args:
+        token: JWT token to validate
+        
+    Returns:
+        User info if token is valid
+    """
+    payload = TokenManager.validate_user_token(token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+    
+    user_id = payload.get("sub")
+    user = await SupabaseManager.get_user(user_id, decrypt_tokens=False)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Don't return sensitive tokens
+    safe_user = {
+        "id": user["id"],
+        "name": user.get("name"),
+        "email": user.get("email"),
+        "slack_id": user.get("slack_id"),
+        "github_id": user.get("github_id"),
+        "github_login": user.get("github_login"),
+        "created_at": user.get("created_at"),
+        "updated_at": user.get("updated_at")
+    }
+    
+    return {
+        "user": safe_user,
+        "token_info": {
+            "type": payload.get("type"),
+            "provider": payload.get("provider"),
+            "expires_at": payload.get("exp")
+        }
+    }
 
 
 @router.get("/slack/login")
@@ -122,8 +173,14 @@ async def slack_callback(code: str, state: Optional[str] = None):
             # Create default user settings
             await SupabaseManager.update_user_settings(user_id, {})
         
-        # Redirect to frontend with success message
-        frontend_url = f"{settings.FRONTEND_URL}/auth/success?provider=slack&user_id={user_id}"
+        # Create JWT token for the user
+        jwt_token = TokenManager.create_user_token(user_id, {
+            "provider": "slack",
+            "slack_id": existing_user["slack_id"] if existing_user else new_user["slack_id"]
+        })
+        
+        # Redirect to frontend with JWT token
+        frontend_url = f"{settings.FRONTEND_URL}/auth/success?provider=slack&token={jwt_token}"
         return RedirectResponse(url=frontend_url)
         
     except Exception as e:

@@ -15,6 +15,8 @@ class MessageType(str, Enum):
     PULL_REQUEST_COMMENT = "pull_request_comment"
     ISSUE = "issue"
     ISSUE_COMMENT = "issue_comment"
+    DISCUSSION = "discussion"
+    DISCUSSION_COMMENT = "discussion_comment"
     DIGEST = "digest"
     STATS = "stats"
 
@@ -130,6 +132,7 @@ class IssueMessage(SlackMessage):
     repository: str
     action: str
     user: str
+    keyword_text: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -143,6 +146,7 @@ class IssueCommentMessage(SlackMessage):
     comment: str
     comment_url: str
     user: str
+    keyword_text: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -152,6 +156,33 @@ class DigestMessage(SlackMessage):
     time_period: str  # e.g., "daily", "weekly"
     pull_requests: List[Dict[str, Any]]
     issues: List[Dict[str, Any]]
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DiscussionMessage(SlackMessage):
+    """Slack message for discussion events."""
+    message_type: MessageType = MessageType.DISCUSSION
+    discussion_number: int
+    discussion_title: str
+    discussion_url: str
+    repository: str
+    action: str
+    category: Optional[str] = None
+    user: str
+    keyword_text: Optional[str] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DiscussionCommentMessage(SlackMessage):
+    """Slack message for discussion comment events."""
+    message_type: MessageType = MessageType.DISCUSSION_COMMENT
+    discussion_number: int
+    discussion_title: str
+    discussion_url: str
+    repository: str
+    comment: str
+    comment_url: str
+    user: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 

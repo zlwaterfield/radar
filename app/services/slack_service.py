@@ -17,6 +17,8 @@ from app.models.slack import (
     PullRequestCommentMessage,
     IssueMessage,
     IssueCommentMessage,
+    DiscussionMessage,
+    DiscussionCommentMessage,
     DigestMessage,
     StatsMessage,
 )
@@ -858,6 +860,16 @@ class SlackService:
             }
         ]
         
+        # Add keyword match information if applicable
+        if issue_message.keyword_text:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": issue_message.keyword_text
+                }
+            })
+        
         # Update text with user mention
         issue_message.text = ""
         
@@ -959,6 +971,16 @@ class SlackService:
             ]
         })
         
+        # Add keyword match information if applicable
+        if comment_message.keyword_text:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": comment_message.keyword_text
+                }
+            })
+        
         # Update text with user mention
         comment_message.text = ""
         
@@ -967,6 +989,183 @@ class SlackService:
             {
                 "color": color,
                 "blocks": blocks
+            }
+        ]
+        
+        # Update the message blocks
+        comment_message.blocks = []
+        
+        return comment_message
+    
+    @staticmethod
+    def create_discussion_message(
+        discussion_message: DiscussionMessage
+    ) -> DiscussionMessage:
+        """
+        Create a formatted Slack message for a discussion event.
+        
+        Args:
+            discussion_message: Discussion message data
+            
+        Returns:
+            Formatted discussion message
+        """
+        # Map discussion action to color
+        action_color_key = f"discussion_{discussion_message.action}"
+        color = SlackService.EVENT_COLORS.get(action_color_key, SlackService.EVENT_COLORS["default"])
+        
+        # Create icon based on action
+        icon = "💬"  # Default icon
+        if discussion_message.action == "created":
+            icon = "🆕"
+        elif discussion_message.action == "answered":
+            icon = "✅"
+        elif discussion_message.action == "locked":
+            icon = "🔒"
+        elif discussion_message.action == "unlocked":
+            icon = "🔓"
+        elif discussion_message.action == "category_changed":
+            icon = "📝"
+            
+        # Format action text
+        action_text = discussion_message.action.replace("_", " ").capitalize()
+        
+        # Create title text
+        title = f"{icon} *GitHub Discussion {action_text}*"
+        
+        # Create context text
+        context_text = f"<@{discussion_message.user}> {discussion_message.action} this discussion"
+        
+        # Create category text if available
+        category_text = f"\n*Category:* {discussion_message.category}" if discussion_message.category else ""
+        
+        # Create blocks with attachment styling
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": title
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"<{discussion_message.discussion_url}|*Discussion #{discussion_message.discussion_number}* {discussion_message.discussion_title}>\n"
+                           f"*Repository:* `{discussion_message.repository}`{category_text}\n"
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Discussion",
+                        "emoji": True
+                    },
+                    "url": discussion_message.discussion_url,
+                    "action_id": "view_discussion"
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": context_text
+                    }
+                ]
+            }
+        ]
+        
+        # Add keyword match information if applicable
+        if discussion_message.keyword_text:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": discussion_message.keyword_text
+                }
+            })
+        
+        # Update the message blocks
+        discussion_message.blocks = []
+        
+        return discussion_message
+    
+    @staticmethod
+    def create_discussion_comment_message(
+        comment_message: DiscussionCommentMessage
+    ) -> DiscussionCommentMessage:
+        """
+        Create a formatted Slack message for a discussion comment event.
+        
+        Args:
+            comment_message: Discussion comment message data
+            
+        Returns:
+            Formatted discussion comment message
+        """
+        # Use discussion comment color
+        color = SlackService.EVENT_COLORS.get("discussion_comment", SlackService.EVENT_COLORS["default"])
+        
+        # Create blocks with attachment styling
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "💬 *New Discussion Comment*"
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"<{comment_message.discussion_url}|*Discussion #{comment_message.discussion_number}* {comment_message.discussion_title}>\n"
+                           f"*Repository:* `{comment_message.repository}`\n"
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Discussion",
+                        "emoji": True
+                    },
+                    "url": comment_message.discussion_url,
+                    "action_id": "view_discussion"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Comment:* {comment_message.comment[:500]}{'...' if len(comment_message.comment) > 500 else ''}"
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Comment",
+                        "emoji": True
+                    },
+                    "url": comment_message.comment_url,
+                    "action_id": "view_discussion_comment"
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"<@{comment_message.user}> commented on this discussion"
+                    }
+                ]
             }
         ]
         
@@ -1223,3 +1422,157 @@ class SlackService:
         ]
         
         return stats_message
+    
+    async def send_digest(self, digest_message: DigestMessage) -> str:
+        """
+        Send a digest notification to Slack.
+        
+        Args:
+            digest_message: Digest message to send
+            
+        Returns:
+            Message timestamp
+        """
+        try:
+            # Format the digest message
+            formatted_message = self.create_digest_message(digest_message)
+            
+            # Send the message
+            response = await self.send_message(formatted_message)
+            
+            return response.get("ts", "")
+            
+        except SlackApiError as e:
+            logger.error(f"Slack API error sending digest: {e.response['error']}")
+            raise
+        except Exception as e:
+            logger.error(f"Error sending digest: {e}", exc_info=True)
+            raise
+    
+    @staticmethod
+    def create_digest_message(digest_message: DigestMessage) -> DigestMessage:
+        """
+        Create a formatted digest message for Slack.
+        
+        Args:
+            digest_message: Digest message data
+            
+        Returns:
+            Formatted digest message
+        """
+        color = SlackService.EVENT_COLORS["digest"]
+        
+        # Create header
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"📊 Your {digest_message.time_period.title()} GitHub Digest"
+                }
+            },
+            {
+                "type": "divider"
+            }
+        ]
+        
+        # Add summary stats
+        total_prs = len(digest_message.pull_requests) if digest_message.pull_requests else 0
+        total_issues = len(digest_message.issues) if digest_message.issues else 0
+        
+        if total_prs > 0 or total_issues > 0:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Summary*\n• Pull Requests: {total_prs}\n• Issues: {total_issues}"
+                }
+            })
+            
+            if total_prs > 0:
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Recent Pull Requests*"
+                    }
+                })
+                
+                # Add up to 5 recent PRs
+                for i, pr in enumerate(digest_message.pull_requests[:5]):
+                    blocks.append({
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"• <{pr.get('html_url', '#')}|#{pr.get('number', 'N/A')} {pr.get('title', 'Untitled')}> ({pr.get('state', 'unknown')})"
+                        }
+                    })
+                
+                if len(digest_message.pull_requests) > 5:
+                    blocks.append({
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"_... and {len(digest_message.pull_requests) - 5} more pull requests_"
+                        }
+                    })
+            
+            if total_issues > 0:
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Recent Issues*"
+                    }
+                })
+                
+                # Add up to 5 recent issues
+                for i, issue in enumerate(digest_message.issues[:5]):
+                    blocks.append({
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"• <{issue.get('html_url', '#')}|#{issue.get('number', 'N/A')} {issue.get('title', 'Untitled')}> ({issue.get('state', 'unknown')})"
+                        }
+                    })
+                
+                if len(digest_message.issues) > 5:
+                    blocks.append({
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"_... and {len(digest_message.issues) - 5} more issues_"
+                        }
+                    })
+        else:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"No new activity in the last {digest_message.time_period}. Great job staying on top of things! 🎉"
+                }
+            })
+        
+        # Add footer
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "Want to adjust your digest settings? Visit your Radar settings page."
+                }
+            ]
+        })
+        
+        # Update the message blocks
+        digest_message.blocks = []
+        
+        # Add attachments for color
+        digest_message.attachments = [
+            {
+                "color": color,
+                "blocks": blocks
+            }
+        ]
+        
+        return digest_message
