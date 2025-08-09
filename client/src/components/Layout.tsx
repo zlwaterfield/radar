@@ -2,14 +2,15 @@ import React, { ReactNode } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { FiLogOut, FiBell } from 'react-icons/fi';
+import { FiLogOut, FiArrowLeft } from 'react-icons/fi';
 
 interface LayoutProps {
   children: ReactNode;
   title?: string;
+  showBackButton?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar' }) => {
+const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButton = false }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
@@ -27,10 +28,21 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar' }) => {
           <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-shrink-0 flex flex-col">
             <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
               <h1 className="text-xl font-bold text-primary-600 flex items-center">
-                <FiBell className="mr-2" />
                 Radar
               </h1>
             </div>
+            
+            {showBackButton && (
+              <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                <button
+                  onClick={() => router.back()}
+                  className="flex items-center w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
+                >
+                  <FiArrowLeft className="mr-2 h-4 w-4" />
+                  Go Back
+                </button>
+              </div>
+            )}
             
             <div className="p-4 border-t border-gray-100 dark:border-gray-800">
               <div className="flex items-center mb-3">

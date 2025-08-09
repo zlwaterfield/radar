@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface User {
   id: string;
@@ -44,6 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
   
   const isAuthenticated = !!user;
   
@@ -59,9 +60,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       validateToken(authToken);
     } else {
       setLoading(false);
-      router.push('/');
+      // Don't redirect to home if we're on auth pages (let them handle their own flow)
+      if (!pathname.startsWith('/auth/')) {
+        router.push('/');
+      }
     }
-  }, []);
+  }, [pathname]);
   
   const validateToken = async (token: string) => {
     try {
@@ -74,7 +78,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError('Session expired or invalid');
       Cookies.remove('auth_token');
       Cookies.remove('user_id');
-      router.push('/');
+      // Don't redirect to home if we're on auth pages (let them handle their own flow)
+      if (!pathname.startsWith('/auth/')) {
+        router.push('/');
+      }
     } finally {
       setLoading(false);
     }

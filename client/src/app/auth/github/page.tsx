@@ -29,7 +29,7 @@ export default function ConnectGithub() {
   }
 
   return (
-    <Layout title="Connect GitHub">
+    <Layout title="Connect GitHub" showBackButton={true}>
       <div className="max-w-2xl mx-auto">
         <div className="card">
           <h2 className="text-2xl font-bold mb-6">Connect Your GitHub Account</h2>
