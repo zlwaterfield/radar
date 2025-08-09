@@ -265,6 +265,28 @@ class SupabaseManager:
             return None
 
     @staticmethod
+    async def get_user_by_github_login(github_login: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a user by GitHub login (username).
+        
+        Args:
+            github_login: GitHub username
+            
+        Returns:
+            User data or None if not found
+        """
+        try:
+            response = SupabaseManager.supabase.table("users").select("*").eq("github_login", github_login).execute()
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+        except Exception as e:
+            logger.error(f"Error getting user by GitHub login {github_login}: {e}")
+            return None
+
+    @staticmethod
     async def get_user_repositories(
         user_id: str, 
         page: int = 1, 

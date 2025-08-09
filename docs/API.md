@@ -93,14 +93,33 @@ Update user notification preferences.
 ```json
 {
     "notification_preferences": {
-        "author_reviewed": true,
-        "author_commented": true,
-        "reviewer_review_requested": true,
+        // PR & Issue Activity (activity-based, not role-based)
+        "pr_comments": true,
+        "pr_reviews": true,
+        "pr_status_changes": true,
+        "pr_assignments": true,
+        "pr_opened": true,
+        
+        "issue_comments": true,
+        "issue_status_changes": true,
+        "issue_assignments": true,
+        
+        // CI/CD
+        "check_failures": true,
+        "check_successes": false,
+        
+        // Mentions & Keywords
+        "mentioned_in_comments": true,
         "keyword_notifications_enabled": true,
-        "keywords": ["bug", "security", "performance"]
-    },
-    "notification_schedule": {
-        "real_time": true,
+        "keywords": ["bug", "security", "performance"],
+        "keyword_notification_threshold": 0.7,
+        
+        // Noise Control
+        "mute_own_activity": true,
+        "mute_bot_comments": true,
+        "mute_draft_prs": true,
+        
+        // Daily Digest
         "digest_enabled": true,
         "digest_time": "09:00"
     }
@@ -338,18 +357,36 @@ Get user settings and notification preferences.
 {
     "user_id": "uuid",
     "notification_preferences": {
-        "author_reviewed": true,
-        "author_commented": true,
-        "reviewer_review_requested": true,
+        // New activity-based preferences
+        "pr_comments": true,
+        "pr_reviews": true,
+        "pr_status_changes": true,
+        "pr_assignments": true,
+        "pr_opened": true,
+        
+        "issue_comments": true,
+        "issue_status_changes": true,
+        "issue_assignments": true,
+        
+        "check_failures": true,
+        "check_successes": false,
+        
+        "mentioned_in_comments": true,
         "keyword_notifications_enabled": true,
         "keywords": ["bug", "security"],
-        "keyword_notification_threshold": 0.7
-    },
-    "notification_schedule": {
-        "real_time": true,
-        "digest_enabled": true,
+        "keyword_notification_threshold": 0.7,
+        
+        "mute_own_activity": true,
+        "mute_bot_comments": true,
+        "mute_draft_prs": true,
+        
+        "digest_enabled": false,
         "digest_time": "09:00",
-        "digest_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        
+        // Legacy fields (maintained for backward compatibility)
+        "author_reviewed": true,
+        "author_commented": true,
+        "reviewer_review_requested": true
     }
 }
 ```

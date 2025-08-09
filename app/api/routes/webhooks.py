@@ -8,7 +8,7 @@ import hmac
 import json
 import logging
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Header
 
@@ -18,6 +18,7 @@ from app.services.slack_service import SlackService
 from app.services.monitoring_service import MonitoringService, track_performance
 from app.utils.validation import validate_webhook_payload, sanitize_string
 from app.utils.retry import notification_retry_handler
+import re
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -37,29 +38,13 @@ async def verify_github_webhook(request: Request, body_bytes: bytes = None):
     Raises:
         HTTPException: If signature is invalid
     """
-    logger.info("=== Starting GitHub webhook signature verification ===")
-    
     if not settings.GITHUB_WEBHOOK_SECRET:
         logger.warning("GitHub webhook secret not configured, skipping signature verification")
         return True
     
-    # Log all relevant headers for debugging
-    logger.info(f"Request headers - User-Agent: {request.headers.get('user-agent', 'N/A')}")
-    logger.info(f"Request headers - Content-Type: {request.headers.get('content-type', 'N/A')}")
-    logger.info(f"Request headers - X-GitHub-Event: {request.headers.get('x-github-event', 'N/A')}")
-    logger.info(f"Request headers - X-GitHub-Delivery: {request.headers.get('x-github-delivery', 'N/A')}")
-    
     # Get signatures from headers
     x_hub_signature_256 = request.headers.get("x-hub-signature-256")
     x_hub_signature = request.headers.get("x-hub-signature")
-    
-    logger.info(f"Signature headers - X-Hub-Signature-256: {x_hub_signature_256 is not None} ({'Present' if x_hub_signature_256 else 'Missing'})")
-    logger.info(f"Signature headers - X-Hub-Signature: {x_hub_signature is not None} ({'Present' if x_hub_signature else 'Missing'})")
-    
-    if x_hub_signature_256:
-        logger.info(f"SHA256 signature (first 20 chars): {x_hub_signature_256[:20]}...")
-    if x_hub_signature:
-        logger.info(f"SHA1 signature (first 20 chars): {x_hub_signature[:20]}...")
     
     # GitHub can send either SHA1 or SHA256 signatures
     signature = x_hub_signature_256 or x_hub_signature
@@ -71,16 +56,6 @@ async def verify_github_webhook(request: Request, body_bytes: bytes = None):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No signature provided"
         )
-    
-    # Get request body if not provided
-    if body_bytes is None:
-        logger.info("Reading request body for signature verification")
-        body_bytes = await request.body()
-    
-    logger.info(f"Request body length: {len(body_bytes)} bytes")
-    logger.info(f"Request body first 100 chars: {body_bytes[:100].decode('utf-8', errors='replace')}")
-    logger.info(f"Secret length: {len(settings.GITHUB_WEBHOOK_SECRET)} characters")
-    logger.info(f"Secret last 4 chars: ...{settings.GITHUB_WEBHOOK_SECRET[-4:]}")
     
     # Determine algorithm from signature prefix
     if signature.startswith("sha256="):
@@ -106,19 +81,8 @@ async def verify_github_webhook(request: Request, body_bytes: bytes = None):
         algorithm
     ).hexdigest()
     
-    logger.info(f"Expected signature: {expected_signature}")
-    logger.info(f"Received signature: {signature}")
-    logger.info(f"Signatures match: {hmac.compare_digest(expected_signature, signature)}")
-    
     # Compare signatures
     if not hmac.compare_digest(expected_signature, signature):
-        logger.error("=== SIGNATURE VERIFICATION FAILED ===")
-        logger.error(f"Expected: {expected_signature}")
-        logger.error(f"Received: {signature}")
-        logger.error(f"Body length: {len(body_bytes)}")
-        logger.error(f"Body SHA256 hash: {hashlib.sha256(body_bytes).hexdigest()}")
-        logger.error(f"Secret used (masked): {'*' * (len(settings.GITHUB_WEBHOOK_SECRET) - 4)}{settings.GITHUB_WEBHOOK_SECRET[-4:]}")
-        
         # Additional debugging: try different encodings
         try:
             utf8_sig = prefix + hmac.new(
@@ -141,8 +105,52 @@ async def verify_github_webhook(request: Request, body_bytes: bytes = None):
             detail="Invalid signature"
         )
     
-    logger.info("=== Signature verification SUCCESSFUL ===")
     return True
+
+
+def extract_mentioned_usernames(text: str) -> List[str]:
+    """
+    Extract GitHub usernames mentioned in text using @username syntax.
+    
+    Args:
+        text: Text to search for mentions
+        
+    Returns:
+        List of mentioned usernames (without @)
+    """
+    if not text:
+        return []
+    
+    # Find all @username mentions
+    # GitHub usernames can contain letters, numbers, and hyphens
+    # They cannot start with a hyphen and are case insensitive
+    # Use word boundary to avoid matching emails
+    mentions = re.findall(r'(?:^|[^a-zA-Z0-9.])@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)', text)
+    return list(set(mentions))  # Remove duplicates
+
+
+async def get_mentioned_users(comment_body: str) -> List[Dict[str, Any]]:
+    """
+    Get users mentioned in a comment body.
+    
+    Args:
+        comment_body: The comment body text
+        
+    Returns:
+        List of user objects for mentioned users
+    """
+    mentioned_usernames = extract_mentioned_usernames(comment_body)
+    mentioned_users = []
+    
+    for username in mentioned_usernames:
+        try:
+            user = await SupabaseManager.get_user_by_github_login(username)
+            if user:
+                mentioned_users.append(user)
+        except Exception as e:
+            logger.error(f"Error finding user by GitHub login {username}: {e}")
+    
+    return mentioned_users
 
 
 @router.post("/github")
@@ -823,7 +831,19 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
         from app.services.notification_service import NotificationService
         from app.models.slack import IssueCommentMessage
         
-        for user in users:
+        # Get users mentioned in the comment
+        comment_body = comment.get("body", "")
+        mentioned_users = await get_mentioned_users(comment_body)
+        
+        # Combine repository watchers and mentioned users
+        all_users = list(users)  # Start with repository watchers
+        
+        # Add mentioned users if they're not already in the list
+        for mentioned_user in mentioned_users:
+            if not any(u["id"] == mentioned_user["id"] for u in all_users):
+                all_users.append(mentioned_user)
+        
+        for user in all_users:
             # Check if user should be notified
             should_notify, matched_keywords, match_details = await NotificationService.process_issue_comment_event(
                 user["id"], payload, event_id

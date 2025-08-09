@@ -190,6 +190,37 @@ class RepositoryToggleRequest(BaseModel):
 
 class NotificationPreferencesUpdate(BaseModel):
     """Request model for updating notification preferences."""
+    # PR & Issue Activity
+    pr_comments: Optional[bool] = None
+    pr_reviews: Optional[bool] = None
+    pr_status_changes: Optional[bool] = None
+    pr_assignments: Optional[bool] = None
+    pr_opened: Optional[bool] = None
+    
+    issue_comments: Optional[bool] = None
+    issue_status_changes: Optional[bool] = None
+    issue_assignments: Optional[bool] = None
+    
+    # CI/CD
+    check_failures: Optional[bool] = None
+    check_successes: Optional[bool] = None
+    
+    # Mentions & Keywords
+    mentioned_in_comments: Optional[bool] = None
+    keyword_notifications_enabled: Optional[bool] = None
+    keywords: Optional[List[str]] = None
+    keyword_notification_threshold: Optional[float] = None
+    
+    # Noise Control
+    mute_own_activity: Optional[bool] = None
+    mute_bot_comments: Optional[bool] = None
+    mute_draft_prs: Optional[bool] = None
+    
+    # Daily digest
+    digest_enabled: Optional[bool] = None
+    digest_time: Optional[str] = None
+    
+    # Legacy fields (kept for backward compatibility)
     author_reviewed: Optional[bool] = None
     author_commented: Optional[bool] = None
     author_merged: Optional[bool] = None
@@ -202,8 +233,6 @@ class NotificationPreferencesUpdate(BaseModel):
     assignee_commented: Optional[bool] = None
     assignee_merged: Optional[bool] = None
     assignee_closed: Optional[bool] = None
-    mute_bot_comments: Optional[bool] = None
-    mute_own_activity: Optional[bool] = None
     
     model_config = ConfigDict(extra='forbid')  # Don't allow extra fields
 

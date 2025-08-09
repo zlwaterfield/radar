@@ -154,62 +154,34 @@ class NotificationService:
                 if user and str(actor_id) == str(user.get("github_id")):
                     return False
             
-            # Check if the user should be notified based on their relationship to the PR
-            if WatchingReason.AUTHOR in watching_reasons:
-                # User is the author
-                if trigger == NotificationTrigger.REVIEWED and preferences.author_reviewed:
-                    return True
-                if trigger == NotificationTrigger.COMMENTED and preferences.author_commented:
-                    return True
-                if trigger == NotificationTrigger.MERGED and preferences.author_merged:
-                    return True
-                if trigger == NotificationTrigger.CLOSED and preferences.author_closed:
-                    return True
-                if trigger == NotificationTrigger.CHECK_FAILED and preferences.author_check_failed:
-                    return True
-                if trigger == NotificationTrigger.CHECK_SUCCEEDED and preferences.author_check_succeeded:
-                    return True
-                # Authors should always be notified when someone is assigned to their PR
-                if trigger == NotificationTrigger.ASSIGNED:
-                    return True
-                # Authors should be notified when review is requested on their PR
-                if trigger == NotificationTrigger.REVIEW_REQUESTED:
-                    return True
+            # Check if this is a draft PR and user has muted draft PRs
+            if preferences.mute_draft_prs and pr_data.get("draft", False):
+                return False
             
-            if WatchingReason.REVIEWER in watching_reasons:
-                # User is a reviewer
-                if trigger == NotificationTrigger.REVIEW_REQUESTED and preferences.reviewer_review_requested:
-                    return True
-                if trigger == NotificationTrigger.COMMENTED and preferences.reviewer_commented:
-                    return True
-                if trigger == NotificationTrigger.MERGED and preferences.reviewer_merged:
-                    return True
-                if trigger == NotificationTrigger.CLOSED and preferences.reviewer_closed:
-                    return True
-                if trigger == NotificationTrigger.CHECK_FAILED and preferences.reviewer_check_failed:
-                    return True
-                if trigger == NotificationTrigger.CHECK_SUCCEEDED and preferences.reviewer_check_succeeded:
-                    return True
+            # Check if user should be notified based on activity type (not role)
+            # Only notify if user has some relationship to the PR/issue
+            if not watching_reasons:
+                return False
             
-            if WatchingReason.ASSIGNED in watching_reasons:
-                # User is assigned
-                if trigger == NotificationTrigger.ASSIGNED and preferences.assignee_assigned:
-                    return True
-                if trigger == NotificationTrigger.UNASSIGNED and preferences.assignee_unassigned:
-                    return True
-                if trigger == NotificationTrigger.COMMENTED and preferences.assignee_commented:
-                    return True
-                if trigger == NotificationTrigger.MERGED and preferences.assignee_merged:
-                    return True
-                if trigger == NotificationTrigger.CLOSED and preferences.assignee_closed:
-                    return True
-                if trigger == NotificationTrigger.CHECK_FAILED and preferences.assignee_check_failed:
-                    return True
-                if trigger == NotificationTrigger.CHECK_SUCCEEDED and preferences.assignee_check_succeeded:
-                    return True
-
+            # Always notify if mentioned (regardless of other preferences)
             if WatchingReason.MENTIONED in watching_reasons:
-                return True
+                return preferences.mentioned_in_comments
+            
+            # Check preferences based on activity type
+            if trigger == NotificationTrigger.COMMENTED:
+                return preferences.pr_comments
+            elif trigger == NotificationTrigger.REVIEWED:
+                return preferences.pr_reviews
+            elif trigger in [NotificationTrigger.MERGED, NotificationTrigger.CLOSED, NotificationTrigger.REOPENED]:
+                return preferences.pr_status_changes
+            elif trigger in [NotificationTrigger.ASSIGNED, NotificationTrigger.UNASSIGNED, NotificationTrigger.REVIEW_REQUESTED, NotificationTrigger.REVIEW_REQUEST_REMOVED]:
+                return preferences.pr_assignments
+            elif trigger == NotificationTrigger.OPENED:
+                return preferences.pr_opened
+            elif trigger == NotificationTrigger.CHECK_FAILED:
+                return preferences.check_failures
+            elif trigger == NotificationTrigger.CHECK_SUCCEEDED:
+                return preferences.check_successes
             
             # Default: don't notify
             return False
@@ -534,21 +506,30 @@ class NotificationService:
             if should_notify_keywords:
                 return True, matched_keywords, match_details
             
+            # Check if user is mentioned in the comment first
+            comment_body = comment.get("body", "")
+            if comment_body and f"@{github_username}" in comment_body:
+                # User is mentioned, check their mention preference
+                if preferences.mentioned_in_comments:
+                    return True, [], {}
+                else:
+                    return False, [], {}
+            
             # Get watching reasons for this issue (only check if no keyword matches)
-            watching_reasons = await cls.determine_watching_reasons(user_id, payload)
+            watching_reasons = await cls.determine_watching_reasons(user_id, issue)
             
             # If the user isn't watching the issue, don't notify
             if not watching_reasons:
                 return False, [], {}
             
-            # Check if user is mentioned in the comment
-            comment_body = comment.get("body", "")
-            if comment_body and f"@{github_username}" in comment_body:
-                # User is mentioned, always notify
-                return True, [], {}
+            # Use general comment preference for all users involved with the PR/issue
+            # Check if this is a PR or issue based on whether it has pull_request field
+            is_pr = "pull_request" in issue
             
-            # Check notification preferences for issue comments
-            should_notify_preferences = preferences.issue_comments
+            if is_pr:
+                should_notify_preferences = preferences.pr_comments
+            else:
+                should_notify_preferences = preferences.issue_comments
             
             # Always notify if mentioned
             if WatchingReason.MENTIONED in watching_reasons:
@@ -634,12 +615,17 @@ class NotificationService:
             if not watching_reasons:
                 return False, [], {}
             
-            # Check notification preference for this action
-            notification_key = f"issue_{action}"
-            should_notify_preferences = preferences.issues and getattr(preferences, notification_key, True)
-            
-            # Always notify if mentioned
+            # Always notify if mentioned (regardless of other preferences)
             if WatchingReason.MENTIONED in watching_reasons:
+                return preferences.mentioned_in_comments, [], {}
+            
+            # Check notification preferences based on issue action
+            if action in ["opened", "reopened", "closed"]:
+                should_notify_preferences = preferences.issue_status_changes
+            elif action == "assigned":
+                should_notify_preferences = preferences.issue_assignments
+            else:
+                # Default for other actions
                 should_notify_preferences = True
             
             return should_notify_preferences, [], {}

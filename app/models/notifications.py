@@ -44,23 +44,49 @@ class NotificationTrigger(str, Enum):
 class NotificationPreferences(BaseModel):
     """User notification preferences."""
     
-    # Reviewer notifications
+    # PR & Issue Activity
+    pr_comments: bool = True  # Someone comments on a PR you're involved with
+    pr_reviews: bool = True  # Someone reviews a PR you're involved with
+    pr_status_changes: bool = True  # PR merged, closed, reopened
+    pr_assignments: bool = True  # Assigned to PR, review requested
+    pr_opened: bool = True  # New PRs in watched repos
+    
+    issue_comments: bool = True  # Someone comments on an issue you're involved with
+    issue_status_changes: bool = True  # Issue opened, closed, reopened
+    issue_assignments: bool = True  # Assigned to issue
+    
+    # CI/CD
+    check_failures: bool = True  # CI checks fail
+    check_successes: bool = False  # CI checks pass (usually too noisy)
+    
+    # Mentions & Keywords
+    mentioned_in_comments: bool = True  # Someone mentions you in a comment
+    keyword_notifications_enabled: bool = False
+    keywords: List[str] = []
+    keyword_notification_threshold: float = 0.7  # Threshold for keyword matching confidence
+    
+    # Noise Control
+    mute_own_activity: bool = True
+    mute_bot_comments: bool = True
+    mute_draft_prs: bool = True  # Ignore draft PR activity
+    
+    # Daily digest
+    digest_enabled: bool = False
+    digest_time: str = "09:00"
+    
+    # Legacy fields (kept for backward compatibility but not used)
     reviewer_review_requested: bool = True
     reviewer_commented: bool = True
     reviewer_merged: bool = True
     reviewer_closed: bool = True
     reviewer_check_failed: bool = True
     reviewer_check_succeeded: bool = True
-    
-    # Author notifications
     author_reviewed: bool = True
     author_commented: bool = True
     author_merged: bool = True
     author_closed: bool = True
     author_check_failed: bool = True
     author_check_succeeded: bool = True
-
-    # Assignee notifications
     assignee_assigned: bool = True
     assignee_unassigned: bool = True
     assignee_reviewed: bool = True
@@ -70,36 +96,29 @@ class NotificationPreferences(BaseModel):
     assignee_check_failed: bool = True
     assignee_check_succeeded: bool = True
     
-    # Noise reduction
-    mute_own_activity: bool = True
-    mute_bot_comments: bool = True
-    
-    # Daily digest
-    digest_enabled: bool = False
-    digest_time: str = "09:00"
-    
-    # Keyword notifications
-    keyword_notifications_enabled: bool = False
-    keywords: List[str] = []
-    keyword_notification_threshold: float = 0.7  # Threshold for keyword matching confidence
-    
-    def get_reviewer_notifications(self) -> Dict[str, bool]:
-        """Get reviewer notification preferences."""
+    def get_pr_notifications(self) -> Dict[str, bool]:
+        """Get PR notification preferences."""
         return {
-            "review_requested": self.reviewer_review_requested,
-            "commented": self.reviewer_commented,
-            "merged": self.reviewer_merged,
-            "closed": self.reviewer_closed,
-            "check_failed": self.reviewer_check_failed,
+            "comments": self.pr_comments,
+            "reviews": self.pr_reviews,
+            "status_changes": self.pr_status_changes,
+            "assignments": self.pr_assignments,
+            "opened": self.pr_opened,
         }
     
-    def get_author_notifications(self) -> Dict[str, bool]:
-        """Get author notification preferences."""
+    def get_issue_notifications(self) -> Dict[str, bool]:
+        """Get issue notification preferences."""
         return {
-            "reviewed": self.author_reviewed,
-            "commented": self.author_commented,
-            "check_failed": self.author_check_failed,
-            "check_succeeded": self.author_check_succeeded,
+            "comments": self.issue_comments,
+            "status_changes": self.issue_status_changes,
+            "assignments": self.issue_assignments,
+        }
+    
+    def get_ci_notifications(self) -> Dict[str, bool]:
+        """Get CI/CD notification preferences."""
+        return {
+            "failures": self.check_failures,
+            "successes": self.check_successes,
         }
 
 

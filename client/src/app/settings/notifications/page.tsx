@@ -6,17 +6,35 @@ import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 interface NotificationSettings {
-  reviewer_review_requested: boolean;
-  reviewer_commented: boolean;
-  reviewer_merged: boolean;
-  reviewer_closed: boolean;
-  reviewer_check_failed: boolean;
-  author_reviewed: boolean;
-  author_commented: boolean;
-  author_check_failed: boolean;
-  author_check_succeeded: boolean;
+  // PR & Issue Activity
+  pr_comments: boolean;
+  pr_reviews: boolean;
+  pr_status_changes: boolean;
+  pr_assignments: boolean;
+  pr_opened: boolean;
+  
+  issue_comments: boolean;
+  issue_status_changes: boolean;
+  issue_assignments: boolean;
+  
+  // CI/CD
+  check_failures: boolean;
+  check_successes: boolean;
+  
+  // Mentions & Keywords
+  mentioned_in_comments: boolean;
+  keyword_notifications_enabled: boolean;
+  keywords: string[];
+  keyword_notification_threshold: number;
+  
+  // Noise Control
   mute_own_activity: boolean;
   mute_bot_comments: boolean;
+  mute_draft_prs: boolean;
+  
+  // Daily digest
+  digest_enabled: boolean;
+  digest_time: string;
 }
 
 export default function NotificationsSettings() {
@@ -24,17 +42,35 @@ export default function NotificationsSettings() {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
-    reviewer_review_requested: true,
-    reviewer_commented: true,
-    reviewer_merged: true,
-    reviewer_closed: true,
-    reviewer_check_failed: true,
-    author_reviewed: true,
-    author_commented: true,
-    author_check_failed: true,
-    author_check_succeeded: true,
+    // PR & Issue Activity
+    pr_comments: true,
+    pr_reviews: true,
+    pr_status_changes: true,
+    pr_assignments: true,
+    pr_opened: true,
+    
+    issue_comments: true,
+    issue_status_changes: true,
+    issue_assignments: true,
+    
+    // CI/CD
+    check_failures: true,
+    check_successes: false,
+    
+    // Mentions & Keywords
+    mentioned_in_comments: true,
+    keyword_notifications_enabled: false,
+    keywords: [],
+    keyword_notification_threshold: 0.7,
+    
+    // Noise Control
     mute_own_activity: true,
     mute_bot_comments: true,
+    mute_draft_prs: true,
+    
+    // Daily digest
+    digest_enabled: false,
+    digest_time: '09:00',
   });
 
   useEffect(() => {
@@ -68,22 +104,35 @@ export default function NotificationsSettings() {
         setNotificationSettings(prev => ({
           ...prev,
           
-          // Reviewer notifications
-          reviewer_review_requested: prefs.reviewer_review_requested ?? prev.reviewer_review_requested,
-          reviewer_commented: prefs.reviewer_commented ?? prev.reviewer_commented,
-          reviewer_merged: prefs.reviewer_merged ?? prev.reviewer_merged,
-          reviewer_closed: prefs.reviewer_closed ?? prev.reviewer_closed,
-          reviewer_check_failed: prefs.reviewer_check_failed ?? prev.reviewer_check_failed,
+          // PR & Issue Activity
+          pr_comments: prefs.pr_comments ?? prev.pr_comments,
+          pr_reviews: prefs.pr_reviews ?? prev.pr_reviews,
+          pr_status_changes: prefs.pr_status_changes ?? prev.pr_status_changes,
+          pr_assignments: prefs.pr_assignments ?? prev.pr_assignments,
+          pr_opened: prefs.pr_opened ?? prev.pr_opened,
           
-          // Author notifications
-          author_reviewed: prefs.author_reviewed ?? prev.author_reviewed,
-          author_commented: prefs.author_commented ?? prev.author_commented,
-          author_check_failed: prefs.author_check_failed ?? prev.author_check_failed,
-          author_check_succeeded: prefs.author_check_succeeded ?? prev.author_check_succeeded,
+          issue_comments: prefs.issue_comments ?? prev.issue_comments,
+          issue_status_changes: prefs.issue_status_changes ?? prev.issue_status_changes,
+          issue_assignments: prefs.issue_assignments ?? prev.issue_assignments,
           
-          // Noise reduction
+          // CI/CD
+          check_failures: prefs.check_failures ?? prev.check_failures,
+          check_successes: prefs.check_successes ?? prev.check_successes,
+          
+          // Mentions & Keywords
+          mentioned_in_comments: prefs.mentioned_in_comments ?? prev.mentioned_in_comments,
+          keyword_notifications_enabled: prefs.keyword_notifications_enabled ?? prev.keyword_notifications_enabled,
+          keywords: prefs.keywords ?? prev.keywords,
+          keyword_notification_threshold: prefs.keyword_notification_threshold ?? prev.keyword_notification_threshold,
+          
+          // Noise Control
           mute_own_activity: prefs.mute_own_activity ?? prev.mute_own_activity,
           mute_bot_comments: prefs.mute_bot_comments ?? prev.mute_bot_comments,
+          mute_draft_prs: prefs.mute_draft_prs ?? prev.mute_draft_prs,
+          
+          // Daily digest
+          digest_enabled: prefs.digest_enabled ?? prev.digest_enabled,
+          digest_time: prefs.digest_time ?? prev.digest_time,
         }));
       }
     } catch (error) {
@@ -108,22 +157,35 @@ export default function NotificationsSettings() {
       // Format settings for API
       const settings = {
         notification_preferences: {
-          // Reviewer notifications
-          reviewer_review_requested: notificationSettings.reviewer_review_requested,
-          reviewer_commented: notificationSettings.reviewer_commented,
-          reviewer_merged: notificationSettings.reviewer_merged,
-          reviewer_closed: notificationSettings.reviewer_closed,
-          reviewer_check_failed: notificationSettings.reviewer_check_failed,
+          // PR & Issue Activity
+          pr_comments: notificationSettings.pr_comments,
+          pr_reviews: notificationSettings.pr_reviews,
+          pr_status_changes: notificationSettings.pr_status_changes,
+          pr_assignments: notificationSettings.pr_assignments,
+          pr_opened: notificationSettings.pr_opened,
           
-          // Author notifications
-          author_reviewed: notificationSettings.author_reviewed,
-          author_commented: notificationSettings.author_commented,
-          author_check_failed: notificationSettings.author_check_failed,
-          author_check_succeeded: notificationSettings.author_check_succeeded,
+          issue_comments: notificationSettings.issue_comments,
+          issue_status_changes: notificationSettings.issue_status_changes,
+          issue_assignments: notificationSettings.issue_assignments,
           
-          // Noise reduction
+          // CI/CD
+          check_failures: notificationSettings.check_failures,
+          check_successes: notificationSettings.check_successes,
+          
+          // Mentions & Keywords
+          mentioned_in_comments: notificationSettings.mentioned_in_comments,
+          keyword_notifications_enabled: notificationSettings.keyword_notifications_enabled,
+          keywords: notificationSettings.keywords,
+          keyword_notification_threshold: notificationSettings.keyword_notification_threshold,
+          
+          // Noise Control
           mute_own_activity: notificationSettings.mute_own_activity,
           mute_bot_comments: notificationSettings.mute_bot_comments,
+          mute_draft_prs: notificationSettings.mute_draft_prs,
+          
+          // Daily digest
+          digest_enabled: notificationSettings.digest_enabled,
+          digest_time: notificationSettings.digest_time,
         }
       };
       
@@ -164,7 +226,7 @@ export default function NotificationsSettings() {
           Advanced Notification Preferences
         </h3>
         <div className="mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-400">
-          <p>Configure when you want to be notified based on your relationship to a pull request.</p>
+          <p>Configure when you want to be notified about GitHub activity. These settings apply regardless of your role on each PR or issue.</p>
         </div>
         
         <div className="mt-5 space-y-6">
