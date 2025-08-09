@@ -45,6 +45,7 @@ async def verify_github_webhook(request: Request,
     
     # GitHub can send either SHA1 or SHA256 signatures
     signature = x_hub_signature_256 or x_hub_signature
+    logger.info(f"Webhook signature verification - SHA256: {x_hub_signature_256 is not None}, SHA1: {x_hub_signature is not None}")
     
     if not signature:
         logger.error("No GitHub webhook signature provided")
@@ -79,7 +80,8 @@ async def verify_github_webhook(request: Request,
     
     # Compare signatures
     if not hmac.compare_digest(expected_signature, signature):
-        logger.error("Invalid GitHub webhook signature")
+        logger.error(f"Invalid GitHub webhook signature - Expected: {expected_signature[:20]}..., Received: {signature[:20]}..., Body length: {len(body)}")
+        logger.error(f"Secret used: {'*' * (len(settings.GITHUB_WEBHOOK_SECRET) - 4)}{settings.GITHUB_WEBHOOK_SECRET[-4:]}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid signature"
@@ -104,10 +106,12 @@ async def github_webhook(request: Request, verified: bool = Depends(verify_githu
     start_time = time.time()
     event_type = None
     repository_name = None
+
     
     try:
         # Get event type from header
         event_type = request.headers.get("X-GitHub-Event")
+        logger.info(f"GitHub webhook received: {event_type}")
         if not event_type:
             logger.error("No GitHub event type provided")
             raise HTTPException(
