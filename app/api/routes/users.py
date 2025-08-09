@@ -315,6 +315,100 @@ async def update_user_repositories(user_id: str, data):
         )
 
 
+@router.get("/{user_id}/github-installations", response_model=Dict[str, Any])
+async def get_user_github_installations(user_id: str):
+    """
+    Check GitHub App installations for the user.
+    
+    Args:
+        user_id: User ID
+        
+    Returns:
+        Installation status and details
+    """
+    # Check if user exists
+    user = await SupabaseManager.get_user(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Check if user has GitHub connected
+    if not user.get("github_id") or not user.get("github_access_token"):
+        return {
+            "has_installations": False,
+            "github_connected": False,
+            "installations": [],
+            "message": "GitHub account not connected"
+        }
+    
+    try:
+        # Get GitHub service instance
+        github_service = GitHubService(token=user["github_access_token"])
+        
+        # Get GitHub App installations for this user
+        installations = github_service.get_app_installations(user["github_login"])
+        
+        if not installations:
+            return {
+                "has_installations": False,
+                "github_connected": True,
+                "installations": [],
+                "message": "No GitHub App installations found. Please install the Radar GitHub App."
+            }
+        
+        # Format installation data for frontend
+        formatted_installations = []
+        total_repositories = 0
+        
+        for installation in installations:
+            installation_id = installation.get("id")
+            account = installation.get("account", {})
+            
+            # Get repository count for this installation
+            repo_count = 0
+            if installation_id:
+                try:
+                    repos = github_service.get_installation_repositories(installation_id)
+                    repo_count = len(repos)
+                    total_repositories += repo_count
+                except Exception as e:
+                    logger.warning(f"Could not get repositories for installation {installation_id}: {e}")
+            
+            formatted_installations.append({
+                "id": installation_id,
+                "account_name": account.get("login"),
+                "account_type": account.get("type"),
+                "account_avatar": account.get("avatar_url"),
+                "repository_count": repo_count,
+                "created_at": installation.get("created_at"),
+                "updated_at": installation.get("updated_at"),
+                "app_slug": installation.get("app_slug"),
+                "permissions": installation.get("permissions", {}),
+                "events": installation.get("events", [])
+            })
+        
+        return {
+            "has_installations": True,
+            "github_connected": True,
+            "installations": formatted_installations,
+            "total_installations": len(formatted_installations),
+            "total_repositories": total_repositories,
+            "message": f"Found {len(formatted_installations)} GitHub App installation(s)"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error checking GitHub installations for user {user_id}: {e}", exc_info=True)
+        return {
+            "has_installations": False,
+            "github_connected": True,
+            "installations": [],
+            "error": str(e),
+            "message": "Error checking GitHub App installations"
+        }
+
+
 @router.post("/{user_id}/repositories/refresh", response_model=Dict[str, Any])
 async def refresh_user_repositories(user_id: str):
     """

@@ -4,6 +4,7 @@ Authentication routes for Radar.
 This module handles authentication with Slack and GitHub.
 """
 import logging
+import time
 from typing import Dict, Any, Optional
 from urllib.parse import urlencode
 
@@ -214,11 +215,23 @@ async def github_login(user_id: str, reconnect: bool = False):
             detail="User not found"
         )
     
+    # Generate secure state parameter instead of using user_id directly
+    import secrets
+    import base64
+    import json
+    state_token = secrets.token_urlsafe(32)
+    state_data = {
+        "user_id": user_id,
+        "timestamp": int(time.time()),
+        "nonce": state_token[:16]
+    }
+    encoded_state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
+    
     params = {
         "client_id": settings.GITHUB_CLIENT_ID,
         "redirect_uri": f"{settings.CALLBACK_API_HOST}/api/auth/github/callback",
         # "scope": "repo user:email read:org admin:org",
-        "state": user_id,  # Use state to store user_id
+        "state": encoded_state,  # Use secure encoded state
     }
     
     # If reconnecting, add the access_type=offline parameter to force a new token
@@ -242,8 +255,28 @@ async def github_callback(code: str, state: str):
         Redirect to GitHub App installation page
     """
     try:
-        # Get user ID from state
-        user_id = state
+        # Decode state to get user_id
+        import base64
+        import json
+        
+        try:
+            state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
+            user_id = state_data.get("user_id")
+            timestamp = state_data.get("timestamp", 0)
+            
+            # Check if state is not too old (10 minutes max)
+            if time.time() - timestamp > 600:
+                raise ValueError("State token expired")
+                
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Invalid state parameter in OAuth callback: {e}")
+            frontend_url = f"{settings.FRONTEND_URL}/auth/error?provider=github&error=Invalid state parameter"
+            return RedirectResponse(url=frontend_url)
+        
+        if not user_id:
+            logger.error("No user_id in OAuth state parameter")
+            frontend_url = f"{settings.FRONTEND_URL}/auth/error?provider=github&error=Invalid state"
+            return RedirectResponse(url=frontend_url)
         
         # Check if user exists
         user = await SupabaseManager.get_user(user_id)
@@ -344,13 +377,15 @@ async def github_callback(code: str, state: str):
                     detail="Failed to update user with GitHub info"
                 )
             
-            # Redirect to GitHub App installation page instead of frontend
-            app_name = settings.GITHUB_APP_NAME
-            params = {
-                "state": user_id,  # Pass user_id as state to track the user
-            }
-            installation_url = f"https://github.com/apps/{app_name}/installations/new?{urlencode(params)}"
-            return RedirectResponse(url=installation_url)
+            # Create JWT token for the user after successful OAuth
+            jwt_token = TokenManager.create_user_token(user_id, {
+                "provider": "github", 
+                "github_id": updated_user["github_id"]
+            })
+            
+            # OAuth flow complete - redirect back to GitHub auth page for step 2
+            frontend_url = f"{settings.FRONTEND_URL}/auth/github?token={jwt_token}"
+            return RedirectResponse(url=frontend_url)
             
     except Exception as e:
         logger.error(f"Error in GitHub callback: {e}", exc_info=True)
@@ -386,6 +421,131 @@ async def get_github_user(access_token: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Error getting GitHub user: {e}")
         return None
+
+
+@router.get("/github/install")
+async def github_app_install(user_id: str):
+    """
+    Initiate GitHub App installation.
+    
+    Args:
+        user_id: User ID to associate with the installation
+        
+    Returns:
+        Redirect to GitHub App installation page
+    """
+    # Check if user exists
+    user = await SupabaseManager.get_user(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Generate secure random state token instead of using user_id directly
+    import secrets
+    state_token = secrets.token_urlsafe(32)
+    
+    # Store state mapping temporarily (in production, use Redis or database)
+    # For now, we'll encode user_id in a more secure way
+    import base64
+    import json
+    state_data = {
+        "user_id": user_id,
+        "timestamp": int(time.time()),
+        "nonce": state_token[:16]
+    }
+    encoded_state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
+    
+    app_name = settings.GITHUB_APP_NAME
+    params = {
+        "state": encoded_state,
+    }
+    
+    # Add setup_action parameter to ensure proper callback
+    setup_params = {
+        **params,
+        "setup_action": "install"
+    }
+    
+    installation_url = f"https://github.com/apps/{app_name}/installations/new?{urlencode(setup_params)}"
+    return RedirectResponse(url=installation_url)
+
+
+@router.get("/github/app-callback")
+async def github_app_callback(installation_id: int, setup_action: str, state: Optional[str] = None):
+    """
+    Handle GitHub App installation callback.
+    
+    Args:
+        installation_id: GitHub App installation ID
+        setup_action: Action performed (install, update, etc.)
+        state: State parameter containing encoded user info
+        
+    Returns:
+        Redirect to frontend
+    """
+    try:
+        if not state:
+            logger.error("No state parameter in GitHub App installation callback")
+            frontend_url = f"{settings.FRONTEND_URL}/auth/error?provider=github&error=No state parameter"
+            return RedirectResponse(url=frontend_url)
+        
+        # Decode state to get user_id
+        import base64
+        import json
+        import time
+        
+        try:
+            state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
+            user_id = state_data.get("user_id")
+            timestamp = state_data.get("timestamp", 0)
+            
+            # Check if state is not too old (10 minutes max)
+            if time.time() - timestamp > 600:
+                raise ValueError("State token expired")
+                
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Invalid state parameter: {e}")
+            frontend_url = f"{settings.FRONTEND_URL}/auth/error?provider=github&error=Invalid state parameter"
+            return RedirectResponse(url=frontend_url)
+        
+        if not user_id:
+            logger.error("No user_id in state parameter")
+            frontend_url = f"{settings.FRONTEND_URL}/auth/error?provider=github&error=Invalid state"
+            return RedirectResponse(url=frontend_url)
+        
+        # Check if user exists
+        user = await SupabaseManager.get_user(user_id)
+        if not user:
+            logger.error(f"User {user_id} not found")
+            frontend_url = f"{settings.FRONTEND_URL}/auth/error?provider=github&error=User not found"
+            return RedirectResponse(url=frontend_url)
+        
+        if setup_action == "install":
+            # Store the installation ID for the user
+            updated_user = await SupabaseManager.update_user(user_id, {
+                "github_installation_id": installation_id
+            })
+            
+            if not updated_user:
+                logger.error(f"Failed to update user {user_id} with installation ID")
+                frontend_url = f"{settings.FRONTEND_URL}/auth/error?provider=github&error=Failed to save installation"
+                return RedirectResponse(url=frontend_url)
+            
+            # Redirect to frontend with success
+            frontend_url = f"{settings.FRONTEND_URL}/settings/repositories?installation=success"
+            return RedirectResponse(url=frontend_url)
+        
+        else:
+            # Handle other setup actions (update, etc.)
+            frontend_url = f"{settings.FRONTEND_URL}/settings/repositories?installation=updated"
+            return RedirectResponse(url=frontend_url)
+            
+    except Exception as e:
+        logger.error(f"Error in GitHub App callback: {e}", exc_info=True)
+        frontend_url = f"{settings.FRONTEND_URL}/auth/error?provider=github&error={str(e)}"
+        return RedirectResponse(url=frontend_url)
 
 
 @router.get("/logout")

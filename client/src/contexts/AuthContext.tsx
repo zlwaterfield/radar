@@ -11,6 +11,7 @@ interface User {
   email?: string;
   slack_id?: string;
   github_id?: string;
+  github_login?: string;
 }
 
 interface AuthContextType {
@@ -22,7 +23,9 @@ interface AuthContextType {
   logout: () => void;
   connectGithub: () => void;
   reconnectGithub: () => void;
+  installGithubApp: () => void;
   manageGithubRepoAccess: () => void;
+  checkGithubInstallations: () => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -176,6 +179,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
   
+  const installGithubApp = () => {
+    if (user) {
+      window.location.href = `/api/auth/github/install?user_id=${user.id}`;
+    } else {
+      setError('You must be logged in to install the GitHub App');
+    }
+  };
+  
+  const checkGithubInstallations = async () => {
+    if (!user) {
+      throw new Error('You must be logged in to check GitHub installations');
+    }
+    
+    try {
+      const response = await axios.get(`/api/users/${user.id}/github-installations`);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking GitHub installations:', error);
+      throw error;
+    }
+  };
+  
   const manageGithubRepoAccess = () => {
     // Redirect to GitHub's application settings page
     window.open('https://github.com/settings/installations', '_blank');
@@ -192,7 +217,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         logout,
         connectGithub,
         reconnectGithub,
-        manageGithubRepoAccess
+        installGithubApp,
+        manageGithubRepoAccess,
+        checkGithubInstallations
       }}
     >
       {children}

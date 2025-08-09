@@ -81,26 +81,23 @@ export default function SettingsLayout({
           </li>
           </ul>
           
-          {!user?.github_id && (
-            <>
-              <div className="px-4 mt-6 mb-3">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Integrations</p>
-              </div>
-              <ul className="space-y-1">
-                <li>
-                  <Link href="/auth/github" 
-                    className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
-                      pathname === '/auth/github' 
-                        ? 'bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400 font-medium' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}>
-                    <FiGithub className="mr-3 flex-shrink-0 h-5 w-5" />
-                    Connect GitHub
-                  </Link>
-                </li>
-              </ul>
-            </>
-          )}
+          {/* Always show GitHub Integration */}
+          <div className="px-4 mt-6 mb-3">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Integrations</p>
+          </div>
+          <ul className="space-y-1">
+            <li>
+              <Link href="/auth/github" 
+                className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
+                  pathname === '/auth/github' 
+                    ? 'bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400 font-medium' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}>
+                <FiGithub className="mr-3 flex-shrink-0 h-5 w-5" />
+                GitHub Integration
+              </Link>
+            </li>
+          </ul>
         </nav>
         <div className="p-4 border-t border-gray-100 dark:border-gray-800">
           <div className="flex items-center mb-3">
