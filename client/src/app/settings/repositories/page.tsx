@@ -41,18 +41,12 @@ export default function RepositoriesSettings() {
     }
   }, [isAuthenticated, loading, router]);
 
+  // Fetch repositories when user is authenticated or filters/pagination changes
   useEffect(() => {
-    if (isAuthenticated && user?.github_id) {
+    if (isAuthenticated && user?.id) {
       fetchRepositories();
     }
-  }, [isAuthenticated, user]);
-
-  // Fetch repositories when filters or pagination changes
-  useEffect(() => {
-    if (user?.id) {
-      fetchRepositories();
-    }
-  }, [currentPage, pageSize, enabledFilter, debouncedSearchTerm]);
+  }, [isAuthenticated, user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm]);
 
   // Debounced search effect
   useEffect(() => {

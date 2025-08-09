@@ -48,6 +48,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   const isAuthenticated = !!user;
   
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      return payload.exp < currentTime;
+    } catch (error) {
+      // If we can't parse the token, consider it expired
+      return true;
+    }
+  };
+  
   useEffect(() => {
     // Set up axios default auth header
     const authToken = Cookies.get('auth_token');
@@ -55,17 +66,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
     }
     
-    // Check if user is already authenticated
-    if (authToken) {
-      validateToken(authToken);
+    // Set up axios interceptor to handle 401 responses
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          // Token is invalid/expired, clear it
+          Cookies.remove('auth_token');
+          Cookies.remove('user_id');
+          delete axios.defaults.headers.common['Authorization'];
+          setUser(null);
+          setError('Session expired');
+        }
+        return Promise.reject(error);
+      }
+    );
+    
+    // Check if user is already authenticated (only run once on mount)
+    if (authToken && !user) {
+      // Check if token is expired before making API call
+      if (isTokenExpired(authToken)) {
+        // Token is expired, clear it
+        Cookies.remove('auth_token');
+        Cookies.remove('user_id');
+        delete axios.defaults.headers.common['Authorization'];
+        setLoading(false);
+      } else {
+        validateToken(authToken);
+      }
     } else {
       setLoading(false);
-      // Don't redirect to home if we're on auth pages (let them handle their own flow)
-      if (!pathname.startsWith('/auth/')) {
-        router.push('/');
-      }
     }
-  }, [pathname]);
+    
+    // Cleanup interceptor on unmount
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []); // Remove pathname dependency
+  
+  // Handle route protection separately, only redirect when necessary
+  useEffect(() => {
+    if (!loading && !isAuthenticated && !pathname.startsWith('/auth/')) {
+      router.push('/');
+    }
+  }, [loading, isAuthenticated, pathname, router]);
   
   const validateToken = async (token: string) => {
     try {
@@ -78,10 +122,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError('Session expired or invalid');
       Cookies.remove('auth_token');
       Cookies.remove('user_id');
-      // Don't redirect to home if we're on auth pages (let them handle their own flow)
-      if (!pathname.startsWith('/auth/')) {
-        router.push('/');
-      }
+      delete axios.defaults.headers.common['Authorization'];
     } finally {
       setLoading(false);
     }
