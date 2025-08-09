@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
         
         "mute_own_activity": true,
         "mute_bot_comments": true,
-        "mute_draft_prs": true,
+        "mute_draft_prs": true
     }'::jsonb,
     notification_schedule JSONB DEFAULT '{
         "real_time": true,
