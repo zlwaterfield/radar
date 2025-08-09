@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiAlertTriangle } from 'react-icons/fi';

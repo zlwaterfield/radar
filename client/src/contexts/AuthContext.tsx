@@ -48,27 +48,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const isAuthenticated = !!user;
   
   useEffect(() => {
-    // Check if user is already authenticated
-    const userId = Cookies.get('user_id');
+    // Set up axios default auth header
+    const authToken = Cookies.get('auth_token');
+    if (authToken) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+    }
     
-    if (userId) {
-      fetchUser(userId);
+    // Check if user is already authenticated
+    if (authToken) {
+      validateToken(authToken);
     } else {
       setLoading(false);
       router.push('/');
     }
   }, []);
   
-  const fetchUser = async (userId: string) => {
+  const validateToken = async (token: string) => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/users/${userId}`);
-      setUser(response.data);
+      const response = await axios.get(`/api/auth/validate?token=${token}`);
+      setUser(response.data.user);
       setError(null);
     } catch (err) {
-      console.error('Error fetching user:', err);
-      setError('Failed to fetch user data');
+      console.error('Error validating token:', err);
+      setError('Session expired or invalid');
+      Cookies.remove('auth_token');
       Cookies.remove('user_id');
+      router.push('/');
     } finally {
       setLoading(false);
     }
@@ -83,7 +89,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (user) {
         await axios.get(`/api/auth/logout?user_id=${user.id}`);
       }
+      Cookies.remove('auth_token');
       Cookies.remove('user_id');
+      delete axios.defaults.headers.common['Authorization'];
       setUser(null);
       router.push('/');
     } catch (err) {

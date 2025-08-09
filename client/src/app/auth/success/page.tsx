@@ -1,30 +1,70 @@
 "use client"
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
-import { FiCheckCircle } from 'react-icons/fi';
+import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import axios from 'axios';
 
 export default function AuthSuccess() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
   
   const provider = searchParams.get('provider');
-  const user_id = searchParams.get('user_id');
+  const token = searchParams.get('token');
 
   useEffect(() => {
-    if (user_id) {
-      // Store user ID in cookie
-      Cookies.set('user_id', user_id as string, { expires: 7 });
-      
-      // Redirect to dashboard after a short delay
-      const timer = setTimeout(() => {
-        router.push('/settings/notifications');
-      }, 2000);
-      
-      return () => clearTimeout(timer);
+    if (token) {
+      handleTokenAuth(token);
+    } else {
+      setError('No authentication token received');
     }
-  }, [user_id, router]);
+  }, [token]);
+
+  const handleTokenAuth = async (authToken: string) => {
+    try {
+      // Validate token and get user info
+      const response = await axios.get(`/api/auth/validate?token=${authToken}`);
+      
+      if (response.data.user) {
+        // Store token and user info
+        Cookies.set('auth_token', authToken, { expires: 7 });
+        Cookies.set('user_id', response.data.user.id, { expires: 7 });
+        
+        // Set axios auth header for immediate use
+        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+        
+        // Redirect to dashboard immediately
+        router.push('/settings/notifications');
+      } else {
+        setError('Invalid authentication response');
+      }
+    } catch (err) {
+      console.error('Token validation failed:', err);
+      setError('Authentication failed. Please try logging in again.');
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="card max-w-md w-full text-center p-8">
+          <div className="flex justify-center mb-4">
+            <FiAlertCircle className="text-red-500 text-6xl" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Authentication Error</h1>
+          <p className="mb-4 text-red-600">{error}</p>
+          <button
+            onClick={() => router.push('/')}
+            className="btn btn-primary"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
