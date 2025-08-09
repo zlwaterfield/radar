@@ -110,18 +110,11 @@ Update user notification preferences.
         
         // Mentions & Keywords
         "mentioned_in_comments": true,
-        "keyword_notifications_enabled": true,
-        "keywords": ["bug", "security", "performance"],
-        "keyword_notification_threshold": 0.7,
         
         // Noise Control
         "mute_own_activity": true,
         "mute_bot_comments": true,
         "mute_draft_prs": true,
-        
-        // Daily Digest
-        "digest_enabled": true,
-        "digest_time": "09:00"
     }
 }
 ```
@@ -371,16 +364,10 @@ Get user settings and notification preferences.
         "check_successes": false,
         
         "mentioned_in_comments": true,
-        "keyword_notifications_enabled": true,
-        "keywords": ["bug", "security"],
-        "keyword_notification_threshold": 0.7,
         
         "mute_own_activity": true,
         "mute_bot_comments": true,
         "mute_draft_prs": true,
-        
-        "digest_enabled": false,
-        "digest_time": "09:00",
     }
 }
 ```

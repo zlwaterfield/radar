@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # OpenAI API configuration
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_MODEL = "gpt-5-nano"  # Valid OpenAI model for chat completions
+OPENAI_MODEL = "gpt-5-nano"
 
 class KeywordMatchRequest(BaseModel):
     """Request model for keyword matching."""

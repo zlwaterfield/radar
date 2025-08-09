@@ -409,7 +409,7 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
                     detail = match_details.get(keyword, "Match found")
                     keyword_details.append(f"• *{keyword}*: {detail}")
                 
-                keyword_text = f"\n\n🎯 *Keyword Matches:*\n" + "\n".join(keyword_details)
+                keyword_text = f"🎯 *Keyword Matches:*" + "\n".join(keyword_details)
                 
             message = PullRequestMessage(
                 channel=channel,

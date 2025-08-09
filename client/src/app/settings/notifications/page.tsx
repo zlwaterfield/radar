@@ -24,19 +24,10 @@ interface NotificationSettings {
   // Mentions
   mentioned_in_comments: boolean;
   
-  // Keywords (managed on separate page, but still part of notification_preferences)
-  keyword_notifications_enabled: boolean;
-  keywords: string[];
-  keyword_notification_threshold: number;
-  
   // Noise Control
   mute_own_activity: boolean;
   mute_bot_comments: boolean;
   mute_draft_prs: boolean;
-  
-  // Daily digest (managed on separate page, but still part of notification_preferences)
-  digest_enabled: boolean;
-  digest_time: string;
 }
 
 export default function NotificationsSettings() {
@@ -62,19 +53,10 @@ export default function NotificationsSettings() {
     // Mentions
     mentioned_in_comments: true,
     
-    // Keywords (managed on separate page, but still part of notification_preferences)
-    keyword_notifications_enabled: false,
-    keywords: [],
-    keyword_notification_threshold: 0.7,
-    
     // Noise Control
     mute_own_activity: true,
     mute_bot_comments: true,
     mute_draft_prs: true,
-    
-    // Daily digest (managed on separate page, but still part of notification_preferences)
-    digest_enabled: false,
-    digest_time: '09:00',
   });
 
   useEffect(() => {
@@ -126,19 +108,10 @@ export default function NotificationsSettings() {
           // Mentions
           mentioned_in_comments: prefs.mentioned_in_comments ?? prev.mentioned_in_comments,
           
-          // Keywords (managed on separate page, but still part of notification_preferences)
-          keyword_notifications_enabled: prefs.keyword_notifications_enabled ?? prev.keyword_notifications_enabled,
-          keywords: prefs.keywords ?? prev.keywords,
-          keyword_notification_threshold: prefs.keyword_notification_threshold ?? prev.keyword_notification_threshold,
-          
           // Noise Control
           mute_own_activity: prefs.mute_own_activity ?? prev.mute_own_activity,
           mute_bot_comments: prefs.mute_bot_comments ?? prev.mute_bot_comments,
           mute_draft_prs: prefs.mute_draft_prs ?? prev.mute_draft_prs,
-          
-          // Daily digest (managed on separate page, but still part of notification_preferences)
-          digest_enabled: prefs.digest_enabled ?? prev.digest_enabled,
-          digest_time: prefs.digest_time ?? prev.digest_time,
         }));
       }
     } catch (error) {
@@ -181,19 +154,10 @@ export default function NotificationsSettings() {
           // Mentions
           mentioned_in_comments: notificationSettings.mentioned_in_comments,
           
-          // Keywords (managed on separate page, but still part of notification_preferences)
-          keyword_notifications_enabled: notificationSettings.keyword_notifications_enabled,
-          keywords: notificationSettings.keywords,
-          keyword_notification_threshold: notificationSettings.keyword_notification_threshold,
-          
           // Noise Control
           mute_own_activity: notificationSettings.mute_own_activity,
           mute_bot_comments: notificationSettings.mute_bot_comments,
           mute_draft_prs: notificationSettings.mute_draft_prs,
-          
-          // Daily digest (managed on separate page, but still part of notification_preferences)
-          digest_enabled: notificationSettings.digest_enabled,
-          digest_time: notificationSettings.digest_time,
         }
       };
       

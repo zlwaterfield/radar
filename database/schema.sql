@@ -41,16 +41,10 @@ CREATE TABLE IF NOT EXISTS user_settings (
         "check_successes": false,
         
         "mentioned_in_comments": true,
-        "keyword_notifications_enabled": false,
-        "keywords": [],
-        "keyword_notification_threshold": 0.7,
         
         "mute_own_activity": true,
         "mute_bot_comments": true,
         "mute_draft_prs": true,
-        
-        "digest_enabled": false,
-        "digest_time": "09:00",
     }'::jsonb,
     notification_schedule JSONB DEFAULT '{
         "real_time": true,
