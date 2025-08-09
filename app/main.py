@@ -108,14 +108,15 @@ def validate_environment():
         logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
         raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
     
-    # Validate GitHub private key file exists
-    if not app_settings.GITHUB_PRIVATE_KEY_PATH:
-        raise RuntimeError("GITHUB_PRIVATE_KEY_PATH not set")
+    # Validate GitHub private key is available
+    if not app_settings.GITHUB_PRIVATE_KEY and not app_settings.GITHUB_PRIVATE_KEY_PATH:
+        raise RuntimeError("Either GITHUB_PRIVATE_KEY or GITHUB_PRIVATE_KEY_PATH must be set")
     
-    from pathlib import Path
-    if not Path(app_settings.GITHUB_PRIVATE_KEY_PATH).exists():
-        logger.error(f"GitHub private key file not found: {app_settings.GITHUB_PRIVATE_KEY_PATH}")
-        raise RuntimeError(f"GitHub private key file not found: {app_settings.GITHUB_PRIVATE_KEY_PATH}")
+    if app_settings.GITHUB_PRIVATE_KEY_PATH:
+        from pathlib import Path
+        if not Path(app_settings.GITHUB_PRIVATE_KEY_PATH).exists():
+            logger.error(f"GitHub private key file not found: {app_settings.GITHUB_PRIVATE_KEY_PATH}")
+            raise RuntimeError(f"GitHub private key file not found: {app_settings.GITHUB_PRIVATE_KEY_PATH}")
     
     logger.info("Environment validation passed")
 

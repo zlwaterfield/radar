@@ -57,17 +57,22 @@ class Settings(BaseSettings):
     GITHUB_APP_NAME: str
     GITHUB_CLIENT_ID: str
     GITHUB_CLIENT_SECRET: str
-    GITHUB_PRIVATE_KEY_PATH: str
+    GITHUB_PRIVATE_KEY_PATH: Optional[str] = None
+    GITHUB_PRIVATE_KEY: Optional[str] = None
     GITHUB_WEBHOOK_SECRET: str
 
     @property
     def github_private_key(self) -> str:
-        """Read GitHub private key from file."""
-        try:
-            with open(self.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
-                return key_file.read()
-        except FileNotFoundError:
-            return ""
+        """Get GitHub private key from environment variable or file."""
+        if self.GITHUB_PRIVATE_KEY:
+            return self.GITHUB_PRIVATE_KEY
+        elif self.GITHUB_PRIVATE_KEY_PATH:
+            try:
+                with open(self.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
+                    return key_file.read()
+            except FileNotFoundError:
+                return ""
+        return ""
 
     # Supabase settings
     SUPABASE_URL: str
