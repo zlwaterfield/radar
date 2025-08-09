@@ -30,7 +30,6 @@ export default function SettingsLayout({
       <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-shrink-0 flex flex-col">
         <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
           <h1 className="text-xl font-bold text-primary-600 flex items-center">
-            <FiBell className="mr-2" />
             Radar
           </h1>
         </div>
