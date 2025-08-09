@@ -220,20 +220,6 @@ class NotificationPreferencesUpdate(BaseModel):
     digest_enabled: Optional[bool] = None
     digest_time: Optional[str] = None
     
-    # Legacy fields (kept for backward compatibility)
-    author_reviewed: Optional[bool] = None
-    author_commented: Optional[bool] = None
-    author_merged: Optional[bool] = None
-    author_closed: Optional[bool] = None
-    reviewer_review_requested: Optional[bool] = None
-    reviewer_commented: Optional[bool] = None
-    reviewer_merged: Optional[bool] = None
-    reviewer_closed: Optional[bool] = None
-    assignee_assigned: Optional[bool] = None
-    assignee_commented: Optional[bool] = None
-    assignee_merged: Optional[bool] = None
-    assignee_closed: Optional[bool] = None
-    
     model_config = ConfigDict(extra='forbid')  # Don't allow extra fields
 
 

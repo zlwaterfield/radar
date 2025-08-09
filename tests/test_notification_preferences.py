@@ -187,26 +187,6 @@ class TestNewNotificationPreferences:
         
         # Should be disabled for issue assignments
         assert prefs.issue_assignments is False
-    
-    def test_backward_compatibility(self):
-        """Test that legacy fields still exist for backward compatibility."""
-        prefs = NotificationPreferences()
-        
-        # Legacy fields should exist with default values
-        assert hasattr(prefs, 'reviewer_review_requested')
-        assert hasattr(prefs, 'reviewer_commented')
-        assert hasattr(prefs, 'author_reviewed')
-        assert hasattr(prefs, 'author_commented')
-        assert hasattr(prefs, 'assignee_assigned')
-        assert hasattr(prefs, 'assignee_commented')
-        
-        # They should have default values
-        assert prefs.reviewer_review_requested is True
-        assert prefs.reviewer_commented is True
-        assert prefs.author_reviewed is True
-        assert prefs.author_commented is True
-        assert prefs.assignee_assigned is True
-        assert prefs.assignee_commented is True
 
 
 class TestNotificationTriggersWithNewPreferences:

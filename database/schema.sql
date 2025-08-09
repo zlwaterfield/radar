@@ -27,32 +27,30 @@ CREATE TABLE IF NOT EXISTS user_settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     notification_preferences JSONB DEFAULT '{
-        "author_reviewed": true,
-        "author_commented": true,
-        "author_merged": true,
-        "author_closed": true,
-        "author_check_failed": true,
-        "author_check_succeeded": true,
-        "reviewer_review_requested": true,
-        "reviewer_commented": true,
-        "reviewer_merged": true,
-        "reviewer_closed": true,
-        "reviewer_check_failed": true,
-        "reviewer_check_succeeded": true,
-        "assignee_assigned": true,
-        "assignee_unassigned": true,
-        "assignee_commented": true,
-        "assignee_merged": true,
-        "assignee_closed": true,
-        "assignee_check_failed": true,
-        "assignee_check_succeeded": true,
-        "mute_own_activity": true,
-        "mute_bot_comments": true,
+        "pr_comments": true,
+        "pr_reviews": true,
+        "pr_status_changes": true,
+        "pr_assignments": true,
+        "pr_opened": true,
+        
+        "issue_comments": true,
+        "issue_status_changes": true,
+        "issue_assignments": true,
+        
+        "check_failures": true,
+        "check_successes": false,
+        
+        "mentioned_in_comments": true,
         "keyword_notifications_enabled": false,
         "keywords": [],
         "keyword_notification_threshold": 0.7,
-        "issues": true,
-        "pull_requests": true
+        
+        "mute_own_activity": true,
+        "mute_bot_comments": true,
+        "mute_draft_prs": true,
+        
+        "digest_enabled": false,
+        "digest_time": "09:00",
     }'::jsonb,
     notification_schedule JSONB DEFAULT '{
         "real_time": true,
@@ -207,6 +205,7 @@ CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_status ON failed_webhook_ev
 CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_next_retry_at ON failed_webhook_events(next_retry_at);
 CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_event_type ON failed_webhook_events(event_type);
 CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_created_at ON failed_webhook_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_user_settings_notification_preferences ON user_settings USING GIN (notification_preferences);
 
 -- Row Level Security (RLS) - Uncomment to enable
 -- Note: RLS policies must be implemented before enabling RLS, otherwise all queries are blocked

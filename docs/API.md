@@ -357,7 +357,6 @@ Get user settings and notification preferences.
 {
     "user_id": "uuid",
     "notification_preferences": {
-        // New activity-based preferences
         "pr_comments": true,
         "pr_reviews": true,
         "pr_status_changes": true,
@@ -382,11 +381,6 @@ Get user settings and notification preferences.
         
         "digest_enabled": false,
         "digest_time": "09:00",
-        
-        // Legacy fields (maintained for backward compatibility)
-        "author_reviewed": true,
-        "author_commented": true,
-        "reviewer_review_requested": true
     }
 }
 ```

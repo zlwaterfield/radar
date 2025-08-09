@@ -74,28 +74,6 @@ class NotificationPreferences(BaseModel):
     digest_enabled: bool = False
     digest_time: str = "09:00"
     
-    # Legacy fields (kept for backward compatibility but not used)
-    reviewer_review_requested: bool = True
-    reviewer_commented: bool = True
-    reviewer_merged: bool = True
-    reviewer_closed: bool = True
-    reviewer_check_failed: bool = True
-    reviewer_check_succeeded: bool = True
-    author_reviewed: bool = True
-    author_commented: bool = True
-    author_merged: bool = True
-    author_closed: bool = True
-    author_check_failed: bool = True
-    author_check_succeeded: bool = True
-    assignee_assigned: bool = True
-    assignee_unassigned: bool = True
-    assignee_reviewed: bool = True
-    assignee_commented: bool = True
-    assignee_merged: bool = True
-    assignee_closed: bool = True
-    assignee_check_failed: bool = True
-    assignee_check_succeeded: bool = True
-    
     def get_pr_notifications(self) -> Dict[str, bool]:
         """Get PR notification preferences."""
         return {
