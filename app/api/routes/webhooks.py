@@ -61,11 +61,9 @@ async def verify_github_webhook(request: Request, body_bytes: bytes = None):
     if signature.startswith("sha256="):
         algorithm = hashlib.sha256
         prefix = "sha256="
-        logger.info("Using SHA256 algorithm for verification")
     elif signature.startswith("sha1="):
         algorithm = hashlib.sha1
         prefix = "sha1="
-        logger.info("Using SHA1 algorithm for verification")
     else:
         logger.error(f"Unknown signature format: {signature[:20]}...")
         raise HTTPException(
@@ -74,7 +72,6 @@ async def verify_github_webhook(request: Request, body_bytes: bytes = None):
         )
     
     # Calculate expected signature
-    logger.info("Calculating expected signature...")
     expected_signature = prefix + hmac.new(
         settings.GITHUB_WEBHOOK_SECRET.encode('utf-8'),
         body_bytes,
@@ -319,7 +316,7 @@ async def process_github_event(event_type: str, payload: Dict[str, Any], event_i
             await process_pull_request_review_event(payload, users, event_id)
         elif event_type == "pull_request_review_comment":
             await process_pull_request_review_comment_event(payload, users, event_id)
-        elif event_type == "issue":
+        elif event_type == "issues":
             await process_issue_event(payload, users, event_id)
         elif event_type == "issue_comment":
             await process_issue_comment_event(payload, users, event_id)
