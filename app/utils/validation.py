@@ -6,7 +6,7 @@ This module provides validation functions for API inputs.
 import re
 from typing import Any, Dict, List, Optional
 import bleach
-from pydantic import BaseModel, Field, validator, HttpUrl
+from pydantic import BaseModel, Field, field_validator, HttpUrl, ConfigDict
 
 
 def sanitize_string(value: str, max_length: int = 1000) -> str:
@@ -180,7 +180,8 @@ class RepositoryToggleRequest(BaseModel):
     """Request model for toggling repository status."""
     enabled: bool = Field(..., description="Whether the repository is enabled")
     
-    @validator('enabled')
+    @field_validator('enabled')
+    @classmethod
     def validate_enabled(cls, v):
         if not isinstance(v, bool):
             raise ValueError('enabled must be a boolean')
@@ -204,26 +205,33 @@ class NotificationPreferencesUpdate(BaseModel):
     mute_bot_comments: Optional[bool] = None
     mute_own_activity: Optional[bool] = None
     
-    class Config:
-        extra = 'forbid'  # Don't allow extra fields
+    model_config = ConfigDict(extra='forbid')  # Don't allow extra fields
 
 
 class KeywordUpdate(BaseModel):
     """Request model for updating keywords."""
-    keywords: List[str] = Field(..., max_items=50)
+    keywords: List[str] = Field(..., max_length=50)
     
-    @validator('keywords', each_item=True)
-    def validate_keyword(cls, v):
-        if not isinstance(v, str):
-            raise ValueError('Each keyword must be a string')
+    @field_validator('keywords', mode='before')
+    @classmethod
+    def validate_keywords(cls, v):
+        if not isinstance(v, list):
+            raise ValueError('Keywords must be a list')
         
-        # Sanitize and validate length
-        v = sanitize_string(v, max_length=100)
+        validated_keywords = []
+        for keyword in v:
+            if not isinstance(keyword, str):
+                raise ValueError('Each keyword must be a string')
+            
+            # Sanitize and validate length
+            sanitized = sanitize_string(keyword, max_length=100)
+            
+            if len(sanitized) < 2:
+                raise ValueError('Keywords must be at least 2 characters')
+            
+            validated_keywords.append(sanitized)
         
-        if len(v) < 2:
-            raise ValueError('Keywords must be at least 2 characters')
-        
-        return v
+        return validated_keywords
 
 
 class DigestScheduleUpdate(BaseModel):
@@ -233,7 +241,8 @@ class DigestScheduleUpdate(BaseModel):
     second_digest_enabled: Optional[bool] = None
     second_digest_time: Optional[str] = Field(None, pattern=r'^([01]\d|2[0-3]):([0-5]\d)$')
     
-    @validator('digest_time', 'second_digest_time')
+    @field_validator('digest_time', 'second_digest_time')
+    @classmethod
     def validate_time_format(cls, v):
         if v and not re.match(r'^([01]\d|2[0-3]):([0-5]\d)$', v):
             raise ValueError('Time must be in HH:MM format')

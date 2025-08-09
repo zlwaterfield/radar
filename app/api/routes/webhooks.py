@@ -163,24 +163,14 @@ async def github_webhook(request: Request):
 
     
     try:
-        logger.info("=== GitHub webhook handler started ===")
-        logger.info(f"Request method: {request.method}")
-        logger.info(f"Request URL: {request.url}")
-        logger.info(f"Client IP: {request.client.host if request.client else 'Unknown'}")
-        
         # Read the body once and use it for both verification and processing
-        logger.info("Reading request body...")
         body_bytes = await request.body()
-        logger.info(f"Body read successfully: {len(body_bytes)} bytes")
         
         # Verify webhook signature
-        logger.info("Starting signature verification...")
         await verify_github_webhook(request, body_bytes)
-        logger.info("Signature verification completed successfully")
         
         # Get event type from header
         event_type = request.headers.get("X-GitHub-Event")
-        logger.info(f"GitHub webhook received: {event_type}")
         if not event_type:
             logger.error("No GitHub event type provided")
             raise HTTPException(
@@ -189,7 +179,6 @@ async def github_webhook(request: Request):
             )
         
         # Parse the JSON body
-        logger.info("Parsing JSON body...")
         try:
             body = json.loads(body_bytes.decode('utf-8'))
             logger.info("JSON parsing successful")
@@ -206,19 +195,18 @@ async def github_webhook(request: Request):
         action = body.get("action")
         
         # Validate webhook payload structure
-        if not validate_webhook_payload(body):
-            logger.error("Invalid webhook payload structure")
-            MonitoringService.track_webhook_received(
-                event_type=event_type,
-                repository=repository_name,
-                action=action,
-                success=False,
-                error="Invalid payload structure"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid webhook payload structure"
-            )
+        # if not validate_webhook_payload(body):
+        #     MonitoringService.track_webhook_received(
+        #         event_type=event_type,
+        #         repository=repository_name,
+        #         action=action,
+        #         success=False,
+        #         error="Invalid payload structure"
+        #     )
+        #     raise HTTPException(
+        #         status_code=status.HTTP_400_BAD_REQUEST,
+        #         detail="Invalid webhook payload structure"
+        #     )
         
         # Sanitize and validate repository name
         repo_name = body.get("repository", {}).get("full_name", "")

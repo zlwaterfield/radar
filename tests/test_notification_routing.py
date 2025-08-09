@@ -47,6 +47,7 @@ class TestNotificationService:
             "created_at": "2024-01-15T14:30:25Z"
         }
 
+    @pytest.mark.asyncio
     async def test_should_notify_user_basic(self, notification_service, sample_user_data, sample_notification_data):
         """Test basic notification eligibility check."""
         with patch.object(SupabaseManager, 'get_user_settings', return_value={
@@ -56,6 +57,7 @@ class TestNotificationService:
             should_notify = await notification_service.should_notify(sample_user_data, sample_notification_data)
             assert should_notify is True
 
+    @pytest.mark.asyncio
     async def test_should_not_notify_disabled_user(self, notification_service, sample_user_data, sample_notification_data):
         """Test that disabled users don't get notifications."""
         with patch.object(SupabaseManager, 'get_user_settings', return_value={
@@ -65,6 +67,7 @@ class TestNotificationService:
             should_notify = await notification_service.should_notify(sample_user_data, sample_notification_data)
             assert should_notify is False
 
+    @pytest.mark.asyncio
     async def test_should_not_notify_disabled_event_type(self, notification_service, sample_user_data, sample_notification_data):
         """Test that users don't get notifications for disabled event types."""
         with patch.object(SupabaseManager, 'get_user_settings', return_value={
@@ -74,6 +77,7 @@ class TestNotificationService:
             should_notify = await notification_service.should_notify(sample_user_data, sample_notification_data)
             assert should_notify is False
 
+    @pytest.mark.asyncio
     async def test_should_not_notify_own_activity(self, notification_service, sample_user_data, sample_notification_data):
         """Test that users don't get notifications for their own activity."""
         # User's GitHub username matches the author
@@ -87,6 +91,7 @@ class TestNotificationService:
             should_notify = await notification_service.should_notify(sample_user_data, sample_notification_data)
             assert should_notify is False
 
+    @pytest.mark.asyncio
     async def test_keyword_matching_notification(self, notification_service, sample_user_data, sample_notification_data):
         """Test keyword matching in notifications."""
         with patch.object(SupabaseManager, 'get_user_settings', return_value={
@@ -109,6 +114,7 @@ class TestNotificationService:
             assert result is not None
             mock_analyzer_instance.analyze_keywords.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_time_window_filtering(self, notification_service, sample_user_data, sample_notification_data):
         """Test that notifications respect user time window settings."""
         with patch.object(SupabaseManager, 'get_user_settings', return_value={
@@ -158,6 +164,7 @@ class TestSlackNotificationIntegration:
             "created_at": "2024-01-15T14:30:25Z"
         }
 
+    @pytest.mark.asyncio
     async def test_format_pull_request_notification(self, slack_service, sample_slack_message_data):
         """Test Slack message formatting for pull request notifications."""
         formatted_message = await slack_service.format_notification(
@@ -176,6 +183,7 @@ class TestSlackNotificationIntegration:
         assert "blocks" in formatted_message
         assert len(formatted_message["blocks"]) > 0
 
+    @pytest.mark.asyncio
     async def test_format_issue_notification(self, slack_service):
         """Test Slack message formatting for issue notifications."""
         issue_data = {
@@ -200,6 +208,7 @@ class TestSlackNotificationIntegration:
         assert "Authentication bug" in formatted_message["text"]
         assert "bug-reporter" in formatted_message["text"]
 
+    @pytest.mark.asyncio
     async def test_keyword_highlighting_in_message(self, slack_service, sample_slack_message_data):
         """Test that keyword matches are highlighted in Slack messages."""
         keyword_matches = [
@@ -216,6 +225,7 @@ class TestSlackNotificationIntegration:
         message_text = str(formatted_message)
         assert "authentication" in message_text.lower()
 
+    @pytest.mark.asyncio
     async def test_send_notification_success(self, slack_service):
         """Test successful Slack notification delivery."""
         slack_service.client.chat_postMessage = AsyncMock(return_value={
@@ -240,6 +250,7 @@ class TestSlackNotificationIntegration:
             token=None  # Would be set based on team token
         )
 
+    @pytest.mark.asyncio
     async def test_send_notification_failure(self, slack_service):
         """Test Slack notification delivery failure handling."""
         slack_service.client.chat_postMessage = AsyncMock(side_effect=Exception("Slack API error"))
@@ -254,6 +265,7 @@ class TestSlackNotificationIntegration:
         
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_rate_limit_handling(self, slack_service):
         """Test Slack rate limit handling."""
         from slack_sdk.errors import SlackApiError
@@ -279,6 +291,7 @@ class TestSlackNotificationIntegration:
 class TestNotificationWorkflow:
     """Test end-to-end notification workflows."""
 
+    @pytest.mark.asyncio
     async def test_pull_request_notification_workflow(self, pull_request_opened_payload, test_users):
         """Test complete PR notification workflow."""
         from app.api.routes.webhooks import process_pull_request_event
@@ -307,6 +320,7 @@ class TestNotificationWorkflow:
             # Verify notification processing was called for each user
             assert mock_notification_instance.process_notification.call_count == len(test_users)
 
+    @pytest.mark.asyncio
     async def test_issue_with_mentions_workflow(self, issue_opened_payload, test_users):
         """Test issue notification workflow with user mentions."""
         from app.api.routes.webhooks import process_issue_event
@@ -332,6 +346,7 @@ class TestNotificationWorkflow:
             # Should process notifications for mentioned users with higher priority
             assert mock_notification_instance.process_notification.called
 
+    @pytest.mark.asyncio
     async def test_push_notification_batching(self, test_users):
         """Test that rapid push events are batched appropriately."""
         from app.api.routes.webhooks import process_push_event
@@ -375,6 +390,7 @@ class TestNotificationWorkflow:
             # Verify notifications were processed (batching logic depends on implementation)
             assert mock_notification_instance.process_notification.call_count >= len(test_users)
 
+    @pytest.mark.asyncio
     async def test_notification_failure_retry(self, pull_request_opened_payload, test_users):
         """Test notification retry on failure."""
         from app.api.routes.webhooks import process_pull_request_event
@@ -400,6 +416,7 @@ class TestNotificationWorkflow:
             # (This depends on your specific retry implementation)
             assert mock_notification_instance.process_notification.called
 
+    @pytest.mark.asyncio
     async def test_cross_team_notifications(self, pull_request_opened_payload):
         """Test notifications across different Slack teams."""
         # Users from different Slack teams

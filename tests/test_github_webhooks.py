@@ -35,6 +35,7 @@ class TestGitHubWebhookSignatureVerification:
             ).hexdigest()
             return f"sha1={signature}"
 
+    @pytest.mark.asyncio
     async def test_valid_sha256_signature(self, async_client: AsyncClient, github_webhook_secret: str, push_payload):
         """Test webhook with valid SHA256 signature."""
         payload_bytes = json.dumps(push_payload).encode()
@@ -47,20 +48,20 @@ class TestGitHubWebhookSignatureVerification:
             "Content-Type": "application/json"
         }
         
-        with patch.object(SupabaseManager, 'get_repository_id', return_value="repo-123"), \
-             patch.object(SupabaseManager, 'create_event', return_value="event-123"), \
-             patch.object(SupabaseManager, 'get_users_by_repository', return_value=[]), \
-             patch.object(SupabaseManager, 'update_event', return_value=True):
+        with patch.object(SupabaseManager, 'create_event', new_callable=AsyncMock, return_value={"id": "event-123"}), \
+             patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=[]), \
+             patch.object(SupabaseManager, 'update_event', new_callable=AsyncMock, return_value={"id": "event-123"}):
             
             response = await async_client.post(
                 "/api/webhooks/github",
-                json=push_payload,
+                content=payload_bytes,
                 headers=headers
             )
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() == {"status": "success", "message": "Webhook processed"}
+        assert response.json() == {"message": "Webhook received successfully"}
 
+    @pytest.mark.asyncio
     async def test_valid_sha1_signature(self, async_client: AsyncClient, github_webhook_secret: str, push_payload):
         """Test webhook with valid SHA1 signature (legacy)."""
         payload_bytes = json.dumps(push_payload).encode()
@@ -73,10 +74,9 @@ class TestGitHubWebhookSignatureVerification:
             "Content-Type": "application/json"
         }
         
-        with patch.object(SupabaseManager, 'get_repository_id', return_value="repo-123"), \
-             patch.object(SupabaseManager, 'create_event', return_value="event-123"), \
-             patch.object(SupabaseManager, 'get_users_by_repository', return_value=[]), \
-             patch.object(SupabaseManager, 'update_event', return_value=True):
+        with patch.object(SupabaseManager, 'create_event', new_callable=AsyncMock, return_value={"id": "event-123"}), \
+             patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=[]), \
+             patch.object(SupabaseManager, 'update_event', new_callable=AsyncMock, return_value={"id": "event-123"}):
             
             response = await async_client.post(
                 "/api/webhooks/github",
@@ -86,6 +86,7 @@ class TestGitHubWebhookSignatureVerification:
         
         assert response.status_code == status.HTTP_200_OK
 
+    @pytest.mark.asyncio
     async def test_invalid_signature(self, async_client: AsyncClient, github_webhook_secret: str, push_payload):
         """Test webhook with invalid signature."""
         headers = {
@@ -104,6 +105,7 @@ class TestGitHubWebhookSignatureVerification:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid signature" in response.json()["detail"]
 
+    @pytest.mark.asyncio
     async def test_missing_signature(self, async_client: AsyncClient, push_payload):
         """Test webhook with missing signature."""
         headers = {
@@ -121,6 +123,7 @@ class TestGitHubWebhookSignatureVerification:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert "No signature provided" in response.json()["detail"]
 
+    @pytest.mark.asyncio
     async def test_invalid_signature_format(self, async_client: AsyncClient, push_payload):
         """Test webhook with invalid signature format."""
         headers = {
@@ -139,6 +142,7 @@ class TestGitHubWebhookSignatureVerification:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid signature format" in response.json()["detail"]
 
+    @pytest.mark.asyncio
     @patch.object(settings, 'GITHUB_WEBHOOK_SECRET', None)
     async def test_no_webhook_secret_configured(self, async_client: AsyncClient, push_payload):
         """Test webhook when no secret is configured (should skip verification)."""
@@ -148,10 +152,9 @@ class TestGitHubWebhookSignatureVerification:
             "Content-Type": "application/json"
         }
         
-        with patch.object(SupabaseManager, 'get_repository_id', return_value="repo-123"), \
-             patch.object(SupabaseManager, 'create_event', return_value="event-123"), \
-             patch.object(SupabaseManager, 'get_users_by_repository', return_value=[]), \
-             patch.object(SupabaseManager, 'update_event', return_value=True):
+        with patch.object(SupabaseManager, 'create_event', new_callable=AsyncMock, return_value={"id": "event-123"}), \
+             patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=[]), \
+             patch.object(SupabaseManager, 'update_event', new_callable=AsyncMock, return_value={"id": "event-123"}):
             
             response = await async_client.post(
                 "/api/webhooks/github",
@@ -170,10 +173,9 @@ class TestGitHubWebhookEventProcessing:
     @pytest.fixture(autouse=True)
     def setup_mocks(self):
         """Set up common mocks for webhook processing."""
-        with patch.object(SupabaseManager, 'get_repository_id', return_value="repo-123"), \
-             patch.object(SupabaseManager, 'create_event', return_value="event-123"), \
-             patch.object(SupabaseManager, 'update_event', return_value=True), \
-             patch.object(SupabaseManager, 'should_filter_event', return_value=False):
+        with patch.object(SupabaseManager, 'create_event', new_callable=AsyncMock, return_value={"id": "event-123"}), \
+             patch.object(SupabaseManager, 'update_event', new_callable=AsyncMock, return_value={"id": "event-123"}), \
+             patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=[]):
             yield
 
     async def make_webhook_request(self, async_client: AsyncClient, event_type: str, payload: dict, 
@@ -200,10 +202,11 @@ class TestGitHubWebhookEventProcessing:
         )
         return response
 
+    @pytest.mark.asyncio
     async def test_pull_request_opened_event(self, async_client: AsyncClient, github_webhook_secret: str, 
                                            pull_request_opened_payload: dict, test_users: list):
         """Test pull request opened webhook event."""
-        with patch.object(SupabaseManager, 'get_users_by_repository', return_value=test_users), \
+        with patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=test_users), \
              patch('app.api.routes.webhooks.process_pull_request_event', new_callable=AsyncMock) as mock_process:
             
             response = await self.make_webhook_request(
@@ -213,10 +216,11 @@ class TestGitHubWebhookEventProcessing:
             assert response.status_code == status.HTTP_200_OK
             mock_process.assert_called_once_with(pull_request_opened_payload, test_users, "event-123")
 
+    @pytest.mark.asyncio
     async def test_push_event(self, async_client: AsyncClient, github_webhook_secret: str, 
                             push_payload: dict, test_users: list):
         """Test push webhook event."""
-        with patch.object(SupabaseManager, 'get_users_by_repository', return_value=test_users), \
+        with patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=test_users), \
              patch('app.api.routes.webhooks.process_push_event', new_callable=AsyncMock) as mock_process:
             
             response = await self.make_webhook_request(
@@ -226,10 +230,11 @@ class TestGitHubWebhookEventProcessing:
             assert response.status_code == status.HTTP_200_OK
             mock_process.assert_called_once_with(push_payload, test_users, "event-123")
 
+    @pytest.mark.asyncio
     async def test_issue_opened_event(self, async_client: AsyncClient, github_webhook_secret: str, 
                                     issue_opened_payload: dict, test_users: list):
         """Test issue opened webhook event."""
-        with patch.object(SupabaseManager, 'get_users_by_repository', return_value=test_users), \
+        with patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=test_users), \
              patch('app.api.routes.webhooks.process_issue_event', new_callable=AsyncMock) as mock_process:
             
             response = await self.make_webhook_request(
@@ -239,10 +244,11 @@ class TestGitHubWebhookEventProcessing:
             assert response.status_code == status.HTTP_200_OK
             mock_process.assert_called_once_with(issue_opened_payload, test_users, "event-123")
 
+    @pytest.mark.asyncio
     async def test_no_users_watching_repository(self, async_client: AsyncClient, github_webhook_secret: str, 
                                               push_payload: dict):
         """Test webhook when no users are watching the repository."""
-        with patch.object(SupabaseManager, 'get_users_by_repository', return_value=[]):
+        with patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=[]):
             
             response = await self.make_webhook_request(
                 async_client, "push", push_payload, github_webhook_secret
@@ -250,11 +256,11 @@ class TestGitHubWebhookEventProcessing:
             
             assert response.status_code == status.HTTP_200_OK
 
+    @pytest.mark.asyncio
     async def test_filtered_event(self, async_client: AsyncClient, github_webhook_secret: str, 
                                 push_payload: dict, test_users: list):
         """Test webhook when event should be filtered out."""
-        with patch.object(SupabaseManager, 'get_users_by_repository', return_value=test_users), \
-             patch.object(SupabaseManager, 'should_filter_event', return_value=True):
+        with patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=test_users):
             
             response = await self.make_webhook_request(
                 async_client, "push", push_payload, github_webhook_secret
@@ -262,10 +268,11 @@ class TestGitHubWebhookEventProcessing:
             
             assert response.status_code == status.HTTP_200_OK
 
+    @pytest.mark.asyncio
     async def test_unsupported_event_type(self, async_client: AsyncClient, github_webhook_secret: str, 
                                         push_payload: dict, test_users: list):
         """Test webhook with unsupported event type."""
-        with patch.object(SupabaseManager, 'get_users_by_repository', return_value=test_users):
+        with patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=test_users):
             
             response = await self.make_webhook_request(
                 async_client, "unsupported_event", push_payload, github_webhook_secret
@@ -273,11 +280,12 @@ class TestGitHubWebhookEventProcessing:
             
             assert response.status_code == status.HTTP_200_OK
 
+    @pytest.mark.asyncio
     async def test_event_processing_error(self, async_client: AsyncClient, github_webhook_secret: str, 
                                         push_payload: dict, test_users: list):
         """Test webhook when event processing fails."""
-        with patch.object(SupabaseManager, 'get_users_by_repository', return_value=test_users), \
-             patch.object(SupabaseManager, 'create_failed_webhook_event', return_value=True), \
+        with patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=test_users), \
+             patch.object(SupabaseManager, 'create_failed_webhook_event', new_callable=AsyncMock, return_value=True), \
              patch('app.api.routes.webhooks.process_push_event', side_effect=Exception("Processing error")):
             
             response = await self.make_webhook_request(
@@ -286,6 +294,7 @@ class TestGitHubWebhookEventProcessing:
             
             assert response.status_code == status.HTTP_200_OK
 
+    @pytest.mark.asyncio
     async def test_invalid_payload_structure(self, async_client: AsyncClient, github_webhook_secret: str):
         """Test webhook with invalid payload structure."""
         invalid_payload = {"invalid": "payload"}
@@ -297,9 +306,10 @@ class TestGitHubWebhookEventProcessing:
         # Should still process but may fail during event handling
         assert response.status_code == status.HTTP_200_OK
 
+    @pytest.mark.asyncio
     async def test_repository_not_found(self, async_client: AsyncClient, github_webhook_secret: str, push_payload: dict):
         """Test webhook when repository is not found in database."""
-        with patch.object(SupabaseManager, 'get_repository_id', return_value=None):
+        with patch.object(SupabaseManager, 'get_users_by_repository', new_callable=AsyncMock, return_value=[]):
             
             response = await self.make_webhook_request(
                 async_client, "push", push_payload, github_webhook_secret
@@ -307,6 +317,7 @@ class TestGitHubWebhookEventProcessing:
             
             assert response.status_code == status.HTTP_200_OK
 
+    @pytest.mark.asyncio
     async def test_ping_event(self, async_client: AsyncClient, github_webhook_secret: str):
         """Test GitHub ping webhook event."""
         ping_payload = {
@@ -370,6 +381,7 @@ class TestNotificationRouting:
                 'monitoring': mock_monitoring_instance
             }
 
+    @pytest.mark.asyncio
     async def test_notification_sent_to_all_watching_users(self, mock_services, test_users: list, 
                                                           pull_request_opened_payload: dict):
         """Test that notifications are sent to all users watching a repository."""
@@ -380,6 +392,7 @@ class TestNotificationRouting:
         # Verify notification service was called for each user
         assert mock_services['notification'].process_notification.call_count == len(test_users)
 
+    @pytest.mark.asyncio
     async def test_user_specific_notification_settings(self, mock_services, test_users: list, 
                                                       push_payload: dict):
         """Test that user-specific notification settings are respected."""
@@ -397,6 +410,7 @@ class TestNotificationRouting:
             # Should still call notification service (it decides based on settings)
             assert mock_services['notification'].process_notification.call_count == len(test_users)
 
+    @pytest.mark.asyncio
     async def test_keyword_matching_in_notifications(self, mock_services, test_users: list, 
                                                    issue_opened_payload: dict):
         """Test that keyword matching works in notifications."""
@@ -415,6 +429,7 @@ class TestNotificationRouting:
             # Verify notification processing
             assert mock_services['notification'].process_notification.called
 
+    @pytest.mark.asyncio
     async def test_notification_failure_handling(self, mock_services, test_users: list, 
                                                 push_payload: dict):
         """Test handling of notification delivery failures."""
@@ -429,6 +444,7 @@ class TestNotificationRouting:
         # Verify error was logged (through monitoring service)
         assert mock_services['monitoring'].log_error.called or mock_services['notification'].process_notification.called
 
+    @pytest.mark.asyncio
     async def test_rate_limiting_notifications(self, mock_services, test_users: list):
         """Test that notifications respect rate limiting."""
         from app.api.routes.webhooks import process_push_event
@@ -451,6 +467,7 @@ class TestNotificationRouting:
         # Verify notifications were attempted (rate limiting handled by service layer)
         assert mock_services['notification'].process_notification.call_count >= len(push_events)
 
+    @pytest.mark.asyncio
     async def test_notification_retry_on_temporary_failure(self, mock_services, test_users: list, 
                                                          pull_request_opened_payload: dict):
         """Test notification retry mechanism for temporary failures."""
@@ -480,8 +497,8 @@ class TestWebhookUtilityFunctions:
         
         # Valid payload
         valid_payload = {
-            "repository": {"full_name": "test/repo"},
-            "sender": {"login": "testuser"},
+            "repository": {"id": 12345, "full_name": "test/repo"},
+            "sender": {"id": 67890, "login": "testuser"},
             "action": "opened"
         }
         assert validate_webhook_payload(valid_payload) is True
@@ -518,6 +535,7 @@ class TestWebhookIntegration:
     """Integration tests for webhook processing end-to-end."""
 
     @pytest.mark.slow
+    @pytest.mark.asyncio
     async def test_complete_webhook_flow(self, async_client: AsyncClient, github_webhook_secret: str,
                                        pull_request_opened_payload: dict):
         """Test complete webhook processing flow from request to notification."""

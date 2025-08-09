@@ -5,6 +5,7 @@ Simple test script to verify Supabase connection and basic operations.
 import asyncio
 import os
 import sys
+import pytest
 from pathlib import Path
 
 # Add the app directory to the Python path
@@ -15,6 +16,7 @@ from app.core.config import settings
 from app.db.supabase import SupabaseManager
 
 
+@pytest.mark.asyncio
 async def test_supabase_connection():
     """Test Supabase connection and basic operations."""
     print("🔍 Testing Supabase connection...")
@@ -41,6 +43,7 @@ async def test_supabase_connection():
         return False
 
 
+@pytest.mark.asyncio
 async def test_user_operations():
     """Test user CRUD operations."""
     print("\n🧪 Testing user operations...")
@@ -102,6 +105,7 @@ async def test_user_operations():
         return False
 
 
+@pytest.mark.asyncio
 async def test_settings_operations():
     """Test user settings operations."""
     print("\n⚙️ Testing settings operations...")

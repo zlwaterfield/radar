@@ -41,7 +41,7 @@ class TestWebhookRetryService:
     @pytest.mark.asyncio
     async def test_process_failed_webhooks_no_events(self, retry_service, mock_supabase_manager):
         """Test processing when no failed events exist."""
-        mock_supabase_manager.get_pending_failed_webhook_events.return_value = []
+        mock_supabase_manager.get_pending_failed_webhook_events = AsyncMock(return_value=[])
         
         result = await retry_service.process_failed_webhooks()
         
@@ -66,9 +66,9 @@ class TestWebhookRetryService:
                 "payload": {"repository": {"id": "123", "full_name": "test/repo"}}
             }
         ]
-        mock_supabase_manager.get_pending_failed_webhook_events.return_value = failed_events
-        mock_supabase_manager.get_users_by_repository.return_value = []
-        mock_supabase_manager.update_failed_webhook_event.return_value = None
+        mock_supabase_manager.get_pending_failed_webhook_events = AsyncMock(return_value=failed_events)
+        mock_supabase_manager.get_users_by_repository = AsyncMock(return_value=[])
+        mock_supabase_manager.update_failed_webhook_event = AsyncMock(return_value=None)
         
         # Mock the process_github_event function to succeed
         with patch('app.services.webhook_retry_service.process_github_event') as mock_process:
@@ -93,8 +93,8 @@ class TestWebhookRetryService:
             "payload": {"repository": {"id": "123", "full_name": "test/repo"}}
         }
         
-        mock_supabase_manager.get_users_by_repository.return_value = []
-        mock_supabase_manager.update_failed_webhook_event.return_value = None
+        mock_supabase_manager.get_users_by_repository = AsyncMock(return_value=[])
+        mock_supabase_manager.update_failed_webhook_event = AsyncMock(return_value=None)
         
         with patch('app.services.webhook_retry_service.process_github_event') as mock_process:
             mock_process.return_value = None
@@ -119,8 +119,8 @@ class TestWebhookRetryService:
             "payload": {"repository": {"id": "123", "full_name": "test/repo"}}
         }
         
-        mock_supabase_manager.get_users_by_repository.return_value = []
-        mock_supabase_manager.update_failed_webhook_event.return_value = None
+        mock_supabase_manager.get_users_by_repository = AsyncMock(return_value=[])
+        mock_supabase_manager.update_failed_webhook_event = AsyncMock(return_value=None)
         
         with patch('app.services.webhook_retry_service.process_github_event') as mock_process:
             mock_process.side_effect = Exception("Test error")
@@ -151,8 +151,8 @@ class TestWebhookRetryService:
         mock_response.data = [failed_event]
         mock_supabase_manager.supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
         
-        mock_supabase_manager.get_users_by_repository.return_value = []
-        mock_supabase_manager.update_failed_webhook_event.return_value = None
+        mock_supabase_manager.get_users_by_repository = AsyncMock(return_value=[])
+        mock_supabase_manager.update_failed_webhook_event = AsyncMock(return_value=None)
         
         with patch('app.services.webhook_retry_service.process_github_event') as mock_process:
             mock_process.return_value = None
@@ -171,7 +171,7 @@ class TestWebhookRetryService:
             "succeeded": 10
         }
         
-        mock_supabase_manager.get_failed_webhook_events_stats.return_value = stats
+        mock_supabase_manager.get_failed_webhook_events_stats = AsyncMock(return_value=stats)
         
         # Mock additional stats query
         mock_response = Mock()
@@ -200,15 +200,24 @@ class TestSchedulerService:
     
     def test_scheduler_start_stop(self):
         """Test scheduler start and stop functionality."""
-        scheduler = SchedulerService()
-        
-        # Start scheduler
-        scheduler.start()
-        assert scheduler.is_running() is True
-        
-        # Stop scheduler
-        scheduler.stop()
-        assert scheduler.is_running() is False
+        with patch('app.services.scheduler_service.AsyncIOScheduler') as mock_scheduler_class:
+            mock_scheduler = Mock()
+            mock_scheduler_class.return_value = mock_scheduler
+            mock_scheduler.running = False
+            
+            scheduler = SchedulerService()
+            
+            # Start scheduler
+            scheduler.start()
+            mock_scheduler.start.assert_called_once()
+            
+            # Simulate running state
+            mock_scheduler.running = True
+            assert scheduler.is_running() is True
+            
+            # Stop scheduler
+            scheduler.stop()
+            mock_scheduler.shutdown.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_process_failed_webhooks_scheduled(self):

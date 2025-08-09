@@ -189,6 +189,25 @@ async def get_user_repositories(
         search=search
     )
     
+    # If no repositories found and user has GitHub token, try to sync from GitHub
+    if repositories["total"] == 0 and user.get("github_access_token"):
+        # Import the refresh function from users module
+        from app.api.routes.users import refresh_user_repositories as sync_repos
+        try:
+            # Sync repositories from GitHub
+            await sync_repos(user_id)
+            # Fetch repositories again after sync
+            repositories = await SupabaseManager.get_user_repositories(
+                user_id=user_id,
+                page=page,
+                page_size=page_size,
+                enabled=enabled,
+                search=search
+            )
+        except Exception as e:
+            logger.warning(f"Failed to auto-sync repositories for user {user_id}: {e}")
+            # Continue with empty result if sync fails
+    
     return repositories
 
 
