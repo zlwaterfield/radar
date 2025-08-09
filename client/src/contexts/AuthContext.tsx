@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { useRouter, usePathname } from 'next/navigation';
@@ -45,6 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const isValidating = useRef(false);
   
   const isAuthenticated = !!user;
   
@@ -83,7 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     );
     
     // Check if user is already authenticated (only run once on mount)
-    if (authToken && !user) {
+    if (authToken && !user && !isValidating.current) {
       // Check if token is expired before making API call
       if (isTokenExpired(authToken)) {
         // Token is expired, clear it
@@ -92,6 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         delete axios.defaults.headers.common['Authorization'];
         setLoading(false);
       } else {
+        isValidating.current = true;
         validateToken(authToken);
       }
     } else {
@@ -125,6 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       delete axios.defaults.headers.common['Authorization'];
     } finally {
       setLoading(false);
+      isValidating.current = false;
     }
   };
   
