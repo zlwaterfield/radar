@@ -46,22 +46,6 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             
             {/* Navigation */}
             <nav className="flex-1 px-4 py-6">
-              <div className="space-y-1">
-                <a
-                  href="/auth/github"
-                  className="flex items-center px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
-                >
-                  <FiGithub className="mr-3 h-4 w-4" />
-                  GitHub Integration
-                </a>
-                <a
-                  href="/settings/notifications"
-                  className="flex items-center px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
-                >
-                  <FiSettings className="mr-3 h-4 w-4" />
-                  Settings
-                </a>
-              </div>
             </nav>
             
             <div className="p-4 border-t border-gray-100 dark:border-gray-800">
