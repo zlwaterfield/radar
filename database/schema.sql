@@ -209,11 +209,11 @@ CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_event_type ON failed_webhoo
 CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_created_at ON failed_webhook_events(created_at);
 
 -- Row Level Security (RLS) - Uncomment to enable
--- ALTER TABLE users ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE user_repositories ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE user_digests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_repositories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_digests ENABLE ROW LEVEL SECURITY;
 
 -- Example RLS policies (customize based on your authentication approach)
 -- CREATE POLICY "Users can view their own data" ON users
