@@ -372,7 +372,7 @@ class NotificationService:
                 return False
             
             # Check if user should be notified
-            return cls.should_notify(
+            return await cls.should_notify(
                 user_id,
                 pr,
                 NotificationTrigger.REVIEWED,

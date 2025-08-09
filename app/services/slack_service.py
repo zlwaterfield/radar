@@ -622,21 +622,21 @@ class SlackService:
             Formatted pull request review message
         """
         # Map review state to color
-        color = SlackService.EVENT_COLORS.get(review_message.state, SlackService.EVENT_COLORS["default"])
+        color = SlackService.EVENT_COLORS.get(review_message.review_state, SlackService.EVENT_COLORS["default"])
         
         # Create icon based on review state
         icon = "💬"  # Default icon
-        if review_message.state == "approved":
+        if review_message.review_state == "approved":
             icon = "✅"
-        elif review_message.state == "changes_requested":
+        elif review_message.review_state == "changes_requested":
             icon = "❌"
-        elif review_message.state == "commented":
+        elif review_message.review_state == "commented":
             icon = "💬"
-        elif review_message.state == "dismissed":
+        elif review_message.review_state == "dismissed":
             icon = "🚫"
             
         # Format state text
-        state_text = review_message.state.replace("_", " ").capitalize()
+        state_text = review_message.review_state.replace("_", " ").capitalize()
             
         # Create blocks with attachment styling
         blocks = [
