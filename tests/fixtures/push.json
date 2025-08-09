@@ -1,0 +1,156 @@
+{
+  "ref": "refs/heads/main",
+  "before": "3f9c2a6e8b1d4c7f0a5e9b2d6f8a4c1e7b0d3a6c9f2e5",
+  "after": "7d1e8a5b2f3c6e9a0b4d7f2e5c8a1d4b7e0a3c6f9",
+  "created": false,
+  "deleted": false,
+  "forced": false,
+  "base_ref": null,
+  "compare": "https://github.com/acme-corp/awesome-app/compare/3f9c2a6e8b1d4c7f...7d1e8a5b2f3c6e9a",
+  "commits": [
+    {
+      "id": "7d1e8a5b2f3c6e9a0b4d7f2e5c8a1d4b7e0a3c6f9",
+      "tree_id": "9a2f5c8e1b4d7a0e3c6f9b2d5f8a1c4e7b0d3a6c9f2e5",
+      "distinct": true,
+      "message": "Fix authentication bug and improve error handling\n\n- Fix OAuth callback handling\n- Add better error messages for failed authentication\n- Update documentation\n\nFixes #123",
+      "timestamp": "2024-01-15T14:30:20Z",
+      "url": "https://github.com/acme-corp/awesome-app/commit/7d1e8a5b2f3c6e9a0b4d7f2e5c8a1d4b7e0a3c6f9",
+      "author": {
+        "name": "John Doe",
+        "email": "john.doe@acme-corp.com",
+        "username": "johndoe"
+      },
+      "committer": {
+        "name": "John Doe",
+        "email": "john.doe@acme-corp.com",
+        "username": "johndoe"
+      },
+      "added": [
+        "src/auth/error_handler.py",
+        "docs/authentication.md"
+      ],
+      "removed": [
+        "src/legacy_auth.py"
+      ],
+      "modified": [
+        "src/auth/oauth.py",
+        "src/auth/routes.py",
+        "README.md",
+        "tests/test_auth.py"
+      ]
+    },
+    {
+      "id": "2c5f8a1b4e7d0a3c6f9b2e5a8c1d4f7e0b3a6c9f2d5e8",
+      "tree_id": "8f1c4a7e0b3d6a9c2f5e8b1a4c7e0d3f6a9c2e5f8b1a4",
+      "distinct": true,
+      "message": "Add unit tests for new authentication features\n\n- Add tests for OAuth callback handling\n- Add tests for error scenarios\n- Improve test coverage to 95%",
+      "timestamp": "2024-01-15T14:25:15Z",
+      "url": "https://github.com/acme-corp/awesome-app/commit/2c5f8a1b4e7d0a3c6f9b2e5a8c1d4f7e0b3a6c9f2d5e8",
+      "author": {
+        "name": "John Doe",
+        "email": "john.doe@acme-corp.com",
+        "username": "johndoe"
+      },
+      "committer": {
+        "name": "John Doe",
+        "email": "john.doe@acme-corp.com",
+        "username": "johndoe"
+      },
+      "added": [
+        "tests/auth/test_oauth_callback.py",
+        "tests/auth/test_error_handling.py"
+      ],
+      "removed": [],
+      "modified": [
+        "tests/test_auth.py",
+        "pytest.ini"
+      ]
+    }
+  ],
+  "head_commit": {
+    "id": "7d1e8a5b2f3c6e9a0b4d7f2e5c8a1d4b7e0a3c6f9",
+    "tree_id": "9a2f5c8e1b4d7a0e3c6f9b2d5f8a1c4e7b0d3a6c9f2e5",
+    "distinct": true,
+    "message": "Fix authentication bug and improve error handling\n\n- Fix OAuth callback handling\n- Add better error messages for failed authentication\n- Update documentation\n\nFixes #123",
+    "timestamp": "2024-01-15T14:30:20Z",
+    "url": "https://github.com/acme-corp/awesome-app/commit/7d1e8a5b2f3c6e9a0b4d7f2e5c8a1d4b7e0a3c6f9",
+    "author": {
+      "name": "John Doe",
+      "email": "john.doe@acme-corp.com",
+      "username": "johndoe"
+    },
+    "committer": {
+      "name": "John Doe",
+      "email": "john.doe@acme-corp.com",
+      "username": "johndoe"
+    },
+    "added": [
+      "src/auth/error_handler.py",
+      "docs/authentication.md"
+    ],
+    "removed": [
+      "src/legacy_auth.py"
+    ],
+    "modified": [
+      "src/auth/oauth.py",
+      "src/auth/routes.py",
+      "README.md",
+      "tests/test_auth.py"
+    ]
+  },
+  "repository": {
+    "id": 987654321,
+    "node_id": "MDEwOlJlcG9zaXRvcnk5ODc2NTQzMjE=",
+    "name": "awesome-app",
+    "full_name": "acme-corp/awesome-app",
+    "private": false,
+    "owner": {
+      "login": "acme-corp",
+      "id": 98765432,
+      "node_id": "MDEyOk9yZ2FuaXphdGlvbjk4NzY1NDMy",
+      "avatar_url": "https://avatars.githubusercontent.com/u/98765432?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/acme-corp",
+      "html_url": "https://github.com/acme-corp",
+      "type": "Organization",
+      "site_admin": false
+    },
+    "html_url": "https://github.com/acme-corp/awesome-app",
+    "description": "An awesome web application built with modern technologies",
+    "fork": false,
+    "created_at": "2023-06-01T10:00:00Z",
+    "updated_at": "2024-01-15T14:30:25Z",
+    "pushed_at": "2024-01-15T14:30:20Z",
+    "clone_url": "https://github.com/acme-corp/awesome-app.git",
+    "size": 1024,
+    "stargazers_count": 42,
+    "watchers_count": 42,
+    "language": "Python",
+    "has_issues": true,
+    "has_projects": true,
+    "has_wiki": true,
+    "has_pages": false,
+    "forks_count": 8,
+    "archived": false,
+    "disabled": false,
+    "open_issues_count": 5,
+    "topics": ["python", "web-app", "authentication", "oauth"],
+    "visibility": "public",
+    "default_branch": "main"
+  },
+  "pusher": {
+    "name": "johndoe",
+    "email": "john.doe@acme-corp.com"
+  },
+  "sender": {
+    "login": "johndoe",
+    "id": 12345678,
+    "node_id": "MDQ6VXNlcjEyMzQ1Njc4",
+    "avatar_url": "https://avatars.githubusercontent.com/u/12345678?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/johndoe",
+    "html_url": "https://github.com/johndoe",
+    "type": "User",
+    "site_admin": false
+  }
+}

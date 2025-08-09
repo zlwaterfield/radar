@@ -1,0 +1,307 @@
+{
+  "action": "opened",
+  "number": 42,
+  "pull_request": {
+    "id": 1234567890,
+    "node_id": "PR_kwDOBm6k3c5GY4oP",
+    "number": 42,
+    "state": "open",
+    "locked": false,
+    "title": "Add new feature for user authentication",
+    "user": {
+      "login": "johndoe",
+      "id": 12345678,
+      "node_id": "MDQ6VXNlcjEyMzQ1Njc4",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12345678?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/johndoe",
+      "html_url": "https://github.com/johndoe",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "This PR introduces OAuth 2.0 authentication using GitHub as the provider.\n\n## Changes\n- Add OAuth routes\n- Update user model\n- Add authentication middleware\n\n## Testing\n- [ ] Manual testing\n- [ ] Unit tests added",
+    "created_at": "2024-01-15T14:30:25Z",
+    "updated_at": "2024-01-15T14:30:25Z",
+    "closed_at": null,
+    "merged_at": null,
+    "merge_commit_sha": null,
+    "assignee": {
+      "login": "reviewer1",
+      "id": 87654321,
+      "node_id": "MDQ6VXNlcjg3NjU0MzIx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/87654321?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/reviewer1",
+      "html_url": "https://github.com/reviewer1",
+      "type": "User",
+      "site_admin": false
+    },
+    "assignees": [
+      {
+        "login": "reviewer1",
+        "id": 87654321,
+        "node_id": "MDQ6VXNlcjg3NjU0MzIx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/87654321?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/reviewer1",
+        "html_url": "https://github.com/reviewer1",
+        "type": "User",
+        "site_admin": false
+      }
+    ],
+    "requested_reviewers": [
+      {
+        "login": "reviewer2",
+        "id": 11223344,
+        "node_id": "MDQ6VXNlcjExMjIzMzQ0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/11223344?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/reviewer2",
+        "html_url": "https://github.com/reviewer2",
+        "type": "User",
+        "site_admin": false
+      }
+    ],
+    "requested_teams": [],
+    "labels": [
+      {
+        "id": 1111111,
+        "node_id": "MDU6TGFiZWwxMTExMTEx",
+        "url": "https://api.github.com/repos/acme-corp/awesome-app/labels/feature",
+        "name": "feature",
+        "color": "0075ca",
+        "default": false,
+        "description": "New feature or request"
+      },
+      {
+        "id": 2222222,
+        "node_id": "MDU6TGFiZWwyMjIyMjIy",
+        "url": "https://api.github.com/repos/acme-corp/awesome-app/labels/auth",
+        "name": "auth",
+        "color": "fbca04",
+        "default": false,
+        "description": "Authentication related changes"
+      }
+    ],
+    "milestone": {
+      "id": 5555555,
+      "node_id": "MDk6TWlsZXN0b25lNTU1NTU1NQ==",
+      "number": 1,
+      "title": "v2.0.0",
+      "description": "Major release with authentication features",
+      "creator": {
+        "login": "projectmanager",
+        "id": 44556677,
+        "node_id": "MDQ6VXNlcjQ0NTU2Njc3",
+        "avatar_url": "https://avatars.githubusercontent.com/u/44556677?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/projectmanager",
+        "html_url": "https://github.com/projectmanager",
+        "type": "User",
+        "site_admin": false
+      },
+      "open_issues": 5,
+      "closed_issues": 12,
+      "state": "open",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-15T14:30:25Z",
+      "due_on": "2024-02-01T00:00:00Z",
+      "closed_at": null
+    },
+    "draft": false,
+    "commits_url": "https://api.github.com/repos/acme-corp/awesome-app/pulls/42/commits",
+    "review_comments_url": "https://api.github.com/repos/acme-corp/awesome-app/pulls/42/comments",
+    "review_comment_url": "https://api.github.com/repos/acme-corp/awesome-app/pulls/comments{/number}",
+    "comments_url": "https://api.github.com/repos/acme-corp/awesome-app/issues/42/comments",
+    "statuses_url": "https://api.github.com/repos/acme-corp/awesome-app/statuses/7d1e8a5b2f3c6e9a0b4d7f2e5c8a1d4b7e0a3c6f9",
+    "head": {
+      "label": "johndoe:feature/oauth-authentication",
+      "ref": "feature/oauth-authentication",
+      "sha": "7d1e8a5b2f3c6e9a0b4d7f2e5c8a1d4b7e0a3c6f9",
+      "user": {
+        "login": "johndoe",
+        "id": 12345678,
+        "node_id": "MDQ6VXNlcjEyMzQ1Njc4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/12345678?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/johndoe",
+        "html_url": "https://github.com/johndoe",
+        "type": "User",
+        "site_admin": false
+      },
+      "repo": {
+        "id": 987654321,
+        "node_id": "MDEwOlJlcG9zaXRvcnk5ODc2NTQzMjE=",
+        "name": "awesome-app",
+        "full_name": "acme-corp/awesome-app",
+        "private": false,
+        "owner": {
+          "login": "acme-corp",
+          "id": 98765432,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk4NzY1NDMy",
+          "avatar_url": "https://avatars.githubusercontent.com/u/98765432?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/acme-corp",
+          "html_url": "https://github.com/acme-corp",
+          "type": "Organization",
+          "site_admin": false
+        },
+        "html_url": "https://github.com/acme-corp/awesome-app",
+        "description": "An awesome web application built with modern technologies",
+        "fork": false,
+        "created_at": "2023-06-01T10:00:00Z",
+        "updated_at": "2024-01-15T14:30:25Z",
+        "pushed_at": "2024-01-15T14:30:20Z",
+        "clone_url": "https://github.com/acme-corp/awesome-app.git",
+        "size": 1024,
+        "stargazers_count": 42,
+        "watchers_count": 42,
+        "language": "Python",
+        "has_issues": true,
+        "has_projects": true,
+        "has_wiki": true,
+        "has_pages": false,
+        "forks_count": 8,
+        "archived": false,
+        "disabled": false,
+        "open_issues_count": 5,
+        "topics": ["python", "web-app", "authentication", "oauth"],
+        "visibility": "public",
+        "default_branch": "main"
+      }
+    },
+    "base": {
+      "label": "acme-corp:main",
+      "ref": "main",
+      "sha": "3f9c2a6e8b1d4c7f0a5e9b2d6f8a4c1e7b0d3a6c9f2e5",
+      "user": {
+        "login": "acme-corp",
+        "id": 98765432,
+        "node_id": "MDEyOk9yZ2FuaXphdGlvbjk4NzY1NDMy",
+        "avatar_url": "https://avatars.githubusercontent.com/u/98765432?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/acme-corp",
+        "html_url": "https://github.com/acme-corp",
+        "type": "Organization",
+        "site_admin": false
+      },
+      "repo": {
+        "id": 987654321,
+        "node_id": "MDEwOlJlcG9zaXRvcnk5ODc2NTQzMjE=",
+        "name": "awesome-app",
+        "full_name": "acme-corp/awesome-app",
+        "private": false,
+        "owner": {
+          "login": "acme-corp",
+          "id": 98765432,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk4NzY1NDMy",
+          "avatar_url": "https://avatars.githubusercontent.com/u/98765432?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/acme-corp",
+          "html_url": "https://github.com/acme-corp",
+          "type": "Organization",
+          "site_admin": false
+        },
+        "html_url": "https://github.com/acme-corp/awesome-app",
+        "description": "An awesome web application built with modern technologies",
+        "fork": false,
+        "created_at": "2023-06-01T10:00:00Z",
+        "updated_at": "2024-01-15T14:30:25Z",
+        "pushed_at": "2024-01-15T14:30:20Z",
+        "clone_url": "https://github.com/acme-corp/awesome-app.git",
+        "size": 1024,
+        "stargazers_count": 42,
+        "watchers_count": 42,
+        "language": "Python",
+        "has_issues": true,
+        "has_projects": true,
+        "has_wiki": true,
+        "has_pages": false,
+        "forks_count": 8,
+        "archived": false,
+        "disabled": false,
+        "open_issues_count": 5,
+        "topics": ["python", "web-app", "authentication", "oauth"],
+        "visibility": "public",
+        "default_branch": "main"
+      }
+    },
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/acme-corp/awesome-app/pulls/42"
+      },
+      "html": {
+        "href": "https://github.com/acme-corp/awesome-app/pull/42"
+      },
+      "issue": {
+        "href": "https://api.github.com/repos/acme-corp/awesome-app/issues/42"
+      },
+      "comments": {
+        "href": "https://api.github.com/repos/acme-corp/awesome-app/issues/42/comments"
+      },
+      "review_comments": {
+        "href": "https://api.github.com/repos/acme-corp/awesome-app/pulls/42/comments"
+      },
+      "review_comment": {
+        "href": "https://api.github.com/repos/acme-corp/awesome-app/pulls/comments{/number}"
+      },
+      "commits": {
+        "href": "https://api.github.com/repos/acme-corp/awesome-app/pulls/42/commits"
+      },
+      "statuses": {
+        "href": "https://api.github.com/repos/acme-corp/awesome-app/statuses/7d1e8a5b2f3c6e9a0b4d7f2e5c8a1d4b7e0a3c6f9"
+      }
+    }
+  },
+  "repository": {
+    "id": 987654321,
+    "node_id": "MDEwOlJlcG9zaXRvcnk5ODc2NTQzMjE=",
+    "name": "awesome-app",
+    "full_name": "acme-corp/awesome-app",
+    "private": false,
+    "owner": {
+      "login": "acme-corp",
+      "id": 98765432,
+      "node_id": "MDEyOk9yZ2FuaXphdGlvbjk4NzY1NDMy",
+      "avatar_url": "https://avatars.githubusercontent.com/u/98765432?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/acme-corp",
+      "html_url": "https://github.com/acme-corp",
+      "type": "Organization",
+      "site_admin": false
+    },
+    "html_url": "https://github.com/acme-corp/awesome-app",
+    "description": "An awesome web application built with modern technologies",
+    "fork": false,
+    "created_at": "2023-06-01T10:00:00Z",
+    "updated_at": "2024-01-15T14:30:25Z",
+    "pushed_at": "2024-01-15T14:30:20Z",
+    "clone_url": "https://github.com/acme-corp/awesome-app.git",
+    "size": 1024,
+    "stargazers_count": 42,
+    "watchers_count": 42,
+    "language": "Python",
+    "has_issues": true,
+    "has_projects": true,
+    "has_wiki": true,
+    "has_pages": false,
+    "forks_count": 8,
+    "archived": false,
+    "disabled": false,
+    "open_issues_count": 5,
+    "topics": ["python", "web-app", "authentication", "oauth"],
+    "visibility": "public",
+    "default_branch": "main"
+  },
+  "sender": {
+    "login": "johndoe",
+    "id": 12345678,
+    "node_id": "MDQ6VXNlcjEyMzQ1Njc4",
+    "avatar_url": "https://avatars.githubusercontent.com/u/12345678?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/johndoe",
+    "html_url": "https://github.com/johndoe",
+    "type": "User",
+    "site_admin": false
+  }
+}

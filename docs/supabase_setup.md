@@ -35,166 +35,19 @@ Radar requires several tables in your Supabase database. You can create these ta
 
 1. In the Supabase dashboard, go to the "SQL Editor" section
 2. Create a new query
-3. Paste the following SQL code:
+3. Copy the contents of the `database/schema.sql` file from the Radar project
+4. Paste the SQL code into the editor
+5. Click "Run" to execute the SQL code
 
-```sql
--- Create users table
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR,
-    name VARCHAR,
-    is_active BOOLEAN DEFAULT TRUE,
-    slack_id VARCHAR NOT NULL UNIQUE,
-    slack_team_id VARCHAR NOT NULL,
-    slack_access_token VARCHAR NOT NULL,
-    slack_refresh_token VARCHAR,
-    github_id VARCHAR UNIQUE,
-    github_login VARCHAR,
-    github_access_token VARCHAR,
-    github_refresh_token VARCHAR,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+> **Note**: The complete database schema is maintained in `database/schema.sql`. This file contains all the necessary tables, indexes, and triggers required for Radar to function properly.
 
--- Create user_settings table
-CREATE TABLE user_settings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    notification_preferences JSONB DEFAULT '{
-        "pull_request_opened": true,
-        "pull_request_closed": true,
-        "pull_request_merged": true,
-        "pull_request_reviewed": true,
-        "pull_request_commented": true,
-        "pull_request_assigned": true,
-        "issue_opened": true,
-        "issue_closed": true,
-        "issue_commented": true,
-        "issue_assigned": true
-    }'::jsonb,
-    notification_schedule JSONB DEFAULT '{
-        "real_time": true,
-        "digest_time": "09:00",
-        "digest_enabled": true,
-        "digest_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        "second_digest_time": null,
-        "second_digest_enabled": false
-    }'::jsonb,
-    keyword_notification_preferences JSONB DEFAULT '{
-        "enabled": false,
-        "keywords": []
-    }'::jsonb,
-    stats_time_window INTEGER DEFAULT 14,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id)
-);
+### Using the Database Initialization Script
 
--- Create user_repositories table
-CREATE TABLE user_repositories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    github_id VARCHAR NOT NULL,
-    name VARCHAR NOT NULL,
-    description VARCHAR,
-    url VARCHAR NOT NULL,
-    full_name VARCHAR NOT NULL,
-    repo_data JSONB,
-    owner_name VARCHAR,
-    owner_avatar_url VARCHAR,
-    owner_url VARCHAR,
-    enabled BOOLEAN DEFAULT FALSE,
-    organization VARCHAR,
-    is_private BOOLEAN NOT NULL,
-    is_fork BOOLEAN NOT NULL DEFAULT FALSE,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, github_id)
-);
+Alternatively, after setting up the basic tables, you can use Radar's built-in database initialization script to verify your setup:
 
--- Create events table to store GitHub events
-CREATE TABLE events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    event_type VARCHAR NOT NULL,
-    action VARCHAR,
-    repository_id VARCHAR NOT NULL,
-    repository_name VARCHAR NOT NULL,
-    sender_id VARCHAR NOT NULL,
-    sender_login VARCHAR NOT NULL,
-    payload JSONB NOT NULL,
-    processed BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create notifications table to store sent notifications
-CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    event_id UUID REFERENCES events(id) ON DELETE SET NULL,
-    message_type VARCHAR NOT NULL,
-    channel VARCHAR NOT NULL,
-    message_ts VARCHAR,
-    thread_ts VARCHAR,
-    payload JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create user_digests table to track sent digest notifications
-CREATE TABLE user_digests (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    message_ts VARCHAR,
-    pull_request_count INTEGER DEFAULT 0,
-    issue_count INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create functions and triggers for updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_users_updated_at
-BEFORE UPDATE ON users
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_user_settings_updated_at
-BEFORE UPDATE ON user_settings
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_user_repositories_updated_at
-BEFORE UPDATE ON user_repositories
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
--- Create indexes for performance
-CREATE INDEX idx_users_slack_id ON users(slack_id);
-CREATE INDEX idx_users_github_id ON users(github_id);
-CREATE INDEX idx_user_repositories_user_id ON user_repositories(user_id);
-CREATE INDEX idx_events_repository_id ON events(repository_id);
-CREATE INDEX idx_events_processed ON events(processed);
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_event_id ON notifications(event_id);
-```
-
-4. Click "Run" to execute the SQL code
-
-### Using the Dashboard
-
-Alternatively, you can create the tables using the Supabase dashboard:
-
-1. Go to the "Table Editor" section
-2. Click "Create a new table"
-3. Enter the table name and columns as defined in the SQL above
-4. Repeat for each table
+1. Set up your environment variables (see Step 5 below)
+2. Run the initialization script: `python database/init_db.py`
+3. The script will check your database schema and guide you through any missing components
 
 ## Step 4: Set Up Row-Level Security (RLS)
 

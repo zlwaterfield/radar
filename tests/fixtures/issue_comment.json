@@ -1,0 +1,148 @@
+{
+  "action": "created",
+  "issue": {
+    "id": 2468013579,
+    "node_id": "I_kwDOBm6k3c6SY4qL",
+    "number": 123,
+    "title": "Authentication fails when using special characters in username",
+    "user": {
+      "login": "bug-reporter",
+      "id": 33445566,
+      "node_id": "MDQ6VXNlcjMzNDQ1NTY2",
+      "avatar_url": "https://avatars.githubusercontent.com/u/33445566?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/bug-reporter",
+      "html_url": "https://github.com/bug-reporter",
+      "type": "User",
+      "site_admin": false
+    },
+    "labels": [
+      {
+        "id": 1111111,
+        "node_id": "MDU6TGFiZWwxMTExMTEx",
+        "url": "https://api.github.com/repos/acme-corp/awesome-app/labels/bug",
+        "name": "bug",
+        "color": "d73a4a",
+        "default": true,
+        "description": "Something isn't working"
+      }
+    ],
+    "state": "open",
+    "locked": false,
+    "assignee": {
+      "login": "johndoe",
+      "id": 12345678,
+      "node_id": "MDQ6VXNlcjEyMzQ1Njc4",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12345678?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/johndoe",
+      "html_url": "https://github.com/johndoe",
+      "type": "User",
+      "site_admin": false
+    },
+    "assignees": [
+      {
+        "login": "johndoe",
+        "id": 12345678,
+        "node_id": "MDQ6VXNlcjEyMzQ1Njc4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/12345678?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/johndoe",
+        "html_url": "https://github.com/johndoe",
+        "type": "User",
+        "site_admin": false
+      }
+    ],
+    "milestone": null,
+    "comments": 4,
+    "created_at": "2024-01-15T10:15:30Z",
+    "updated_at": "2024-01-15T16:20:15Z",
+    "closed_at": null,
+    "body": "## Description\n\nWhen trying to authenticate with a username containing special characters like `@`, `+`, or `-`, the authentication process fails with a 400 error.\n\n## Steps to Reproduce\n\n1. Navigate to the login page\n2. Enter username: `test-user@domain.com`\n3. Enter valid password\n4. Click \"Sign In\"\n5. Observe error message: \"Invalid username format\"\n\n## Expected Behavior\n\nAuthentication should succeed with usernames containing special characters, as these are valid in many systems."
+  },
+  "comment": {
+    "id": 1482736951,
+    "node_id": "IC_kwDOBm6k3c5Yi4qH",
+    "url": "https://api.github.com/repos/acme-corp/awesome-app/issues/comments/1482736951",
+    "html_url": "https://github.com/acme-corp/awesome-app/issues/123#issuecomment-1482736951",
+    "user": {
+      "login": "johndoe",
+      "id": 12345678,
+      "node_id": "MDQ6VXNlcjEyMzQ1Njc4",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12345678?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/johndoe",
+      "html_url": "https://github.com/johndoe",
+      "type": "User",
+      "site_admin": false
+    },
+    "created_at": "2024-01-15T16:20:15Z",
+    "updated_at": "2024-01-15T16:20:15Z",
+    "author_association": "COLLABORATOR",
+    "body": "Thanks for reporting this issue! I can reproduce the problem.\n\nThe issue is in our username validation regex in `src/auth/validation.py`. The current pattern is too restrictive:\n\n```python\n# Current (too restrictive)\nUSERNAME_PATTERN = r'^[a-zA-Z0-9_]+$'\n\n# Should be (more flexible)\nUSERNAME_PATTERN = r'^[a-zA-Z0-9_.@+-]+$'\n```\n\nI'll prepare a fix for this in the authentication branch. This should be a quick fix that we can include in the v2.0.0 release.\n\n@bug-reporter Can you test with the updated pattern once I push the fix?",
+    "reactions": {
+      "url": "https://api.github.com/repos/acme-corp/awesome-app/issues/comments/1482736951/reactions",
+      "total_count": 3,
+      "+1": 2,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 1,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "performed_via_github_app": null
+  },
+  "repository": {
+    "id": 987654321,
+    "node_id": "MDEwOlJlcG9zaXRvcnk5ODc2NTQzMjE=",
+    "name": "awesome-app",
+    "full_name": "acme-corp/awesome-app",
+    "private": false,
+    "owner": {
+      "login": "acme-corp",
+      "id": 98765432,
+      "node_id": "MDEyOk9yZ2FuaXphdGlvbjk4NzY1NDMy",
+      "avatar_url": "https://avatars.githubusercontent.com/u/98765432?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/acme-corp",
+      "html_url": "https://github.com/acme-corp",
+      "type": "Organization",
+      "site_admin": false
+    },
+    "html_url": "https://github.com/acme-corp/awesome-app",
+    "description": "An awesome web application built with modern technologies",
+    "fork": false,
+    "created_at": "2023-06-01T10:00:00Z",
+    "updated_at": "2024-01-15T14:30:25Z",
+    "pushed_at": "2024-01-15T14:30:20Z",
+    "clone_url": "https://github.com/acme-corp/awesome-app.git",
+    "size": 1024,
+    "stargazers_count": 42,
+    "watchers_count": 42,
+    "language": "Python",
+    "has_issues": true,
+    "has_projects": true,
+    "has_wiki": true,
+    "has_pages": false,
+    "forks_count": 8,
+    "archived": false,
+    "disabled": false,
+    "open_issues_count": 5,
+    "topics": ["python", "web-app", "authentication", "oauth"],
+    "visibility": "public",
+    "default_branch": "main"
+  },
+  "sender": {
+    "login": "johndoe",
+    "id": 12345678,
+    "node_id": "MDQ6VXNlcjEyMzQ1Njc4",
+    "avatar_url": "https://avatars.githubusercontent.com/u/12345678?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/johndoe",
+    "html_url": "https://github.com/johndoe",
+    "type": "User",
+    "site_admin": false
+  }
+}

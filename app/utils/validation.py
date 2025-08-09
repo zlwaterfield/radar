@@ -229,9 +229,9 @@ class KeywordUpdate(BaseModel):
 class DigestScheduleUpdate(BaseModel):
     """Request model for updating digest schedule."""
     digest_enabled: bool = Field(..., description="Whether digest is enabled")
-    digest_time: Optional[str] = Field(None, regex=r'^([01]\d|2[0-3]):([0-5]\d)$')
+    digest_time: Optional[str] = Field(None, pattern=r'^([01]\d|2[0-3]):([0-5]\d)$')
     second_digest_enabled: Optional[bool] = None
-    second_digest_time: Optional[str] = Field(None, regex=r'^([01]\d|2[0-3]):([0-5]\d)$')
+    second_digest_time: Optional[str] = Field(None, pattern=r'^([01]\d|2[0-3]):([0-5]\d)$')
     
     @validator('digest_time', 'second_digest_time')
     def validate_time_format(cls, v):
