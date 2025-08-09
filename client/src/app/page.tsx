@@ -46,7 +46,7 @@ export default function Home() {
               Track GitHub activity and receive notifications in Slack
             </p>
             
-            <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+            <div className="flex item-center justify-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
               <button
                 onClick={login}
                 className="btn btn-primary flex items-center justify-center text-lg px-8 py-3"
