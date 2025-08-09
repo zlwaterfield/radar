@@ -8,10 +8,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, github, slack, users, webhooks, settings
+from app.api.routes import auth, github, slack, users, webhooks, settings, retry
 from app.core.config import settings as app_settings
 from app.core.logging import setup_logging
 from app.services.task_service import TaskService
+from app.services.monitoring_service import MonitoringService
+from app.services.scheduler_service import scheduler_service
+from app.middleware.rate_limit import RateLimitMiddleware
 
 # Setup logging
 setup_logging()
@@ -24,12 +27,21 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
+
 # Add CORS middleware
+# In production, replace with specific origins from settings
+allowed_origins = ["*"] if app_settings.DEBUG else [
+    app_settings.FRONTEND_URL,
+    "https://app.radarnotifications.com",  # Add your production domain
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -40,6 +52,7 @@ app.include_router(slack.router, prefix="/api/slack", tags=["Slack"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
+app.include_router(retry.router, prefix="/api/retry", tags=["Retry Management"])
 
 @app.get("/", tags=["Health"])
 async def root():
@@ -55,20 +68,113 @@ async def health_check():
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for all unhandled exceptions."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    
+    # Track unhandled errors
+    MonitoringService.track_error(
+        error=exc,
+        context={
+            "request_url": str(request.url),
+            "request_method": request.method,
+            "handler": "global_exception_handler"
+        }
+    )
+    
     return JSONResponse(
         status_code=500,
         content={"message": "An unexpected error occurred. Please try again later."},
     )
+
+def validate_environment():
+    """Validate required environment variables on startup."""
+    required_vars = [
+        "SLACK_APP_CLIENT_ID",
+        "SLACK_APP_CLIENT_SECRET", 
+        "SLACK_SIGNING_SECRET",
+        "GITHUB_APP_ID",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        "GITHUB_WEBHOOK_SECRET",
+        "SUPABASE_URL",
+        "SUPABASE_KEY",
+        "SECRET_KEY"
+    ]
+    
+    missing_vars = []
+    for var in required_vars:
+        if not getattr(app_settings, var, None):
+            missing_vars.append(var)
+    
+    if missing_vars:
+        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+        raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
+    
+    # Validate GitHub private key file exists
+    if not app_settings.GITHUB_PRIVATE_KEY_PATH:
+        raise RuntimeError("GITHUB_PRIVATE_KEY_PATH not set")
+    
+    from pathlib import Path
+    if not Path(app_settings.GITHUB_PRIVATE_KEY_PATH).exists():
+        logger.error(f"GitHub private key file not found: {app_settings.GITHUB_PRIVATE_KEY_PATH}")
+        raise RuntimeError(f"GitHub private key file not found: {app_settings.GITHUB_PRIVATE_KEY_PATH}")
+    
+    logger.info("Environment validation passed")
+
 
 @app.on_event("startup")
 async def startup_event():
     """Startup event handler."""
     logger.info("Starting up Radar API")
     
+    # Track application startup
+    MonitoringService.track_event(
+        "application_startup",
+        properties={
+            "environment": app_settings.ENVIRONMENT,
+            "debug": app_settings.DEBUG,
+            "posthog_enabled": bool(app_settings.POSTHOG_API_KEY)
+        }
+    )
+    
+    # Validate environment variables
+    try:
+        validate_environment()
+    except RuntimeError as e:
+        logger.error(f"Environment validation failed: {e}")
+        # Track validation failure
+        MonitoringService.track_event(
+            "environment_validation_failed",
+            properties={"error": str(e)}
+        )
+        # In production, you might want to exit here
+        # import sys
+        # sys.exit(1)
+    
     # Schedule digest notifications
     task_service = TaskService()
     await task_service.schedule_digest_notifications()
     # await task_service.schedule_stats_notifications()
+    
+    # Start webhook retry scheduler
+    try:
+        scheduler_service.start()
+        logger.info("Webhook retry scheduler started")
+    except Exception as e:
+        logger.error(f"Failed to start webhook retry scheduler: {e}")
+        # Track scheduler startup failure
+        MonitoringService.track_event(
+            "scheduler_startup_failed",
+            properties={"error": str(e)}
+        )
+    
+    # Track successful startup
+    MonitoringService.track_event(
+        "application_ready",
+        properties={
+            "tasks_scheduled": True,
+            "scheduler_started": scheduler_service.is_running(),
+            "monitoring_enabled": bool(app_settings.POSTHOG_API_KEY)
+        }
+    )
     
     logger.info("Scheduled background tasks")
 
@@ -79,6 +185,13 @@ def shutdown_event():
     
     # Shutdown task scheduler
     TaskService().shutdown()
+    
+    # Shutdown webhook retry scheduler
+    try:
+        scheduler_service.stop()
+        logger.info("Webhook retry scheduler stopped")
+    except Exception as e:
+        logger.error(f"Error stopping webhook retry scheduler: {e}")
 
 if __name__ == "__main__":
     import uvicorn

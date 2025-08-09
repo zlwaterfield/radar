@@ -9,6 +9,8 @@ from datetime import datetime
 from supabase import create_client, Client
 
 from app.core.config import settings
+from app.utils.auth import TokenManager
+from app.services.monitoring_service import MonitoringService, track_performance
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +25,14 @@ class SupabaseManager:
     supabase = supabase
 
     @staticmethod
-    async def get_user(user_id: str) -> Optional[Dict[str, Any]]:
+    @track_performance("database_get_user")
+    async def get_user(user_id: str, decrypt_tokens: bool = True) -> Optional[Dict[str, Any]]:
         """
         Get a user by ID.
         
         Args:
             user_id: The user ID
+            decrypt_tokens: Whether to decrypt stored tokens
             
         Returns:
             User data or None if not found
@@ -38,13 +42,26 @@ class SupabaseManager:
             data = response.data
             
             if data and len(data) > 0:
-                return data[0]
+                user = data[0]
+                
+                # Decrypt tokens if requested
+                if decrypt_tokens:
+                    if user.get("github_access_token"):
+                        decrypted = TokenManager.decrypt_external_token(user["github_access_token"])
+                        user["github_access_token"] = decrypted
+                    
+                    if user.get("slack_access_token"):
+                        decrypted = TokenManager.decrypt_external_token(user["slack_access_token"])
+                        user["slack_access_token"] = decrypted
+                
+                return user
             return None
         except Exception as e:
             logger.error(f"Error getting user {user_id}: {e}")
             return None
 
     @staticmethod
+    @track_performance("database_get_all_users")
     async def get_all_users() -> List[Dict[str, Any]]:
         """
         Get all users.
@@ -60,6 +77,7 @@ class SupabaseManager:
             return []
 
     @staticmethod
+    @track_performance("database_get_users_with_digest_enabled")
     async def get_users_with_digest_enabled() -> List[Dict[str, Any]]:
         """
         Get all users who have digest notifications enabled.
@@ -123,11 +141,25 @@ class SupabaseManager:
             Created user data or None if failed
         """
         try:
-            response = SupabaseManager.supabase.table("users").insert(user_data).execute()
+            # Encrypt tokens before storing
+            data_to_store = user_data.copy()
+            
+            if data_to_store.get("github_access_token"):
+                data_to_store["github_access_token"] = TokenManager.encrypt_external_token(
+                    data_to_store["github_access_token"]
+                )
+            
+            if data_to_store.get("slack_access_token"):
+                data_to_store["slack_access_token"] = TokenManager.encrypt_external_token(
+                    data_to_store["slack_access_token"]
+                )
+            
+            response = SupabaseManager.supabase.table("users").insert(data_to_store).execute()
             data = response.data
             
             if data and len(data) > 0:
-                return data[0]
+                # Return decrypted version
+                return await SupabaseManager.get_user(data[0]["id"])
             return None
         except Exception as e:
             logger.error(f"Error creating user: {e}")
@@ -146,11 +178,25 @@ class SupabaseManager:
             Updated user data or None if failed
         """
         try:
-            response = SupabaseManager.supabase.table("users").update(user_data).eq("id", user_id).execute()
+            # Encrypt tokens before storing
+            data_to_store = user_data.copy()
+            
+            if data_to_store.get("github_access_token"):
+                data_to_store["github_access_token"] = TokenManager.encrypt_external_token(
+                    data_to_store["github_access_token"]
+                )
+            
+            if data_to_store.get("slack_access_token"):
+                data_to_store["slack_access_token"] = TokenManager.encrypt_external_token(
+                    data_to_store["slack_access_token"]
+                )
+            
+            response = SupabaseManager.supabase.table("users").update(data_to_store).eq("id", user_id).execute()
             data = response.data
             
             if data and len(data) > 0:
-                return data[0]
+                # Return decrypted version
+                return await SupabaseManager.get_user(user_id)
             return None
         except Exception as e:
             logger.error(f"Error updating user {user_id}: {e}")
@@ -758,6 +804,47 @@ class SupabaseManager:
             return False
 
     @staticmethod
+    async def find_notification_by_github_entity(
+        user_id: str, 
+        message_type: str, 
+        github_entity_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Find existing notification for a specific GitHub entity.
+        
+        Args:
+            user_id: User ID
+            message_type: Type of message (issue, issue_comment, pull_request, etc.)
+            github_entity_id: GitHub entity ID (issue_id, comment_id, etc.)
+            
+        Returns:
+            Existing notification data or None if not found
+        """
+        try:
+            # Query notifications table for matching user, message type, and GitHub entity
+            response = SupabaseManager.supabase.table("notifications").select("*").eq("user_id", user_id).eq("message_type", message_type).execute()
+            
+            if response.data:
+                for notification in response.data:
+                    payload = notification.get("payload", {})
+                    # Check different entity ID fields based on message type
+                    entity_ids = [
+                        payload.get("issue_id"),
+                        payload.get("comment_id"), 
+                        payload.get("pull_request_id"),
+                        payload.get("discussion_id"),
+                        payload.get("review_id")
+                    ]
+                    
+                    if github_entity_id in [str(eid) for eid in entity_ids if eid]:
+                        return notification
+            
+            return None
+        except Exception as e:
+            logger.error(f"Error finding notification by GitHub entity: {e}")
+            return None
+
+    @staticmethod
     async def create_notification(notification_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Create a new notification in the database.
@@ -777,6 +864,156 @@ class SupabaseManager:
         except Exception as e:
             logger.error(f"Error creating notification: {e}")
             return None
+
+    @staticmethod
+    async def create_failed_webhook_event(
+        event_id: Optional[str],
+        event_type: str,
+        action: Optional[str],
+        repository_name: str,
+        repository_id: str,
+        sender_login: str,
+        payload: Dict[str, Any],
+        error_message: str,
+        error_details: Optional[Dict[str, Any]] = None,
+        max_retries: int = 3
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Create a failed webhook event for retry processing.
+        
+        Args:
+            event_id: Original event ID (if available)
+            event_type: GitHub event type
+            action: Event action
+            repository_name: Repository full name
+            repository_id: GitHub repository ID
+            sender_login: GitHub user who triggered the event
+            payload: Original webhook payload
+            error_message: Error message
+            error_details: Additional error details
+            max_retries: Maximum number of retries
+            
+        Returns:
+            Created failed event data or None if failed
+        """
+        try:
+            from datetime import datetime, timedelta
+            
+            # Calculate next retry time (start with 5 minutes)
+            next_retry_at = datetime.utcnow() + timedelta(minutes=5)
+            
+            failed_event_data = {
+                "original_event_id": event_id,
+                "event_type": event_type,
+                "action": action,
+                "repository_name": repository_name,
+                "repository_id": repository_id,
+                "sender_login": sender_login,
+                "payload": payload,
+                "error_message": error_message,
+                "error_details": error_details or {},
+                "retry_count": 0,
+                "max_retries": max_retries,
+                "next_retry_at": next_retry_at.isoformat(),
+                "status": "pending"
+            }
+            
+            response = SupabaseManager.supabase.table("failed_webhook_events").insert(failed_event_data).execute()
+            
+            if response.data and len(response.data) > 0:
+                logger.info(f"Created failed webhook event for retry: {event_type} - {error_message}")
+                return response.data[0]
+            return None
+        except Exception as e:
+            logger.error(f"Error creating failed webhook event: {e}")
+            return None
+
+    @staticmethod
+    async def get_pending_failed_webhook_events() -> List[Dict[str, Any]]:
+        """
+        Get all pending failed webhook events that are ready for retry.
+        
+        Returns:
+            List of failed webhook events ready for retry
+        """
+        try:
+            from datetime import datetime
+            
+            current_time = datetime.utcnow().isoformat()
+            
+            response = SupabaseManager.supabase.table("failed_webhook_events").select("*").eq("status", "pending").lte("next_retry_at", current_time).execute()
+            
+            return response.data or []
+        except Exception as e:
+            logger.error(f"Error getting pending failed webhook events: {e}")
+            return []
+
+    @staticmethod
+    async def update_failed_webhook_event(
+        failed_event_id: str,
+        status: str,
+        retry_count: Optional[int] = None,
+        next_retry_at: Optional[str] = None,
+        error_message: Optional[str] = None
+    ) -> bool:
+        """
+        Update a failed webhook event status.
+        
+        Args:
+            failed_event_id: Failed event ID
+            status: New status (pending, retrying, failed, succeeded)
+            retry_count: Updated retry count
+            next_retry_at: Next retry time
+            error_message: Updated error message
+            
+        Returns:
+            True if update successful
+        """
+        try:
+            from datetime import datetime
+            
+            update_data = {
+                "status": status,
+                "last_retry_at": datetime.utcnow().isoformat()
+            }
+            
+            if retry_count is not None:
+                update_data["retry_count"] = retry_count
+            
+            if next_retry_at:
+                update_data["next_retry_at"] = next_retry_at
+            
+            if error_message:
+                update_data["error_message"] = error_message
+            
+            response = SupabaseManager.supabase.table("failed_webhook_events").update(update_data).eq("id", failed_event_id).execute()
+            
+            return bool(response.data)
+        except Exception as e:
+            logger.error(f"Error updating failed webhook event {failed_event_id}: {e}")
+            return False
+
+    @staticmethod
+    async def get_failed_webhook_events_stats() -> Dict[str, int]:
+        """
+        Get statistics about failed webhook events.
+        
+        Returns:
+            Dictionary with counts by status
+        """
+        try:
+            response = SupabaseManager.supabase.table("failed_webhook_events").select("status").execute()
+            
+            stats = {"pending": 0, "retrying": 0, "failed": 0, "succeeded": 0}
+            
+            for event in response.data or []:
+                status = event.get("status", "pending")
+                stats[status] = stats.get(status, 0) + 1
+            
+            return stats
+        except Exception as e:
+            logger.error(f"Error getting failed webhook events stats: {e}")
+            return {"pending": 0, "retrying": 0, "failed": 0, "succeeded": 0}
 
     @staticmethod
     async def record_digest(
@@ -837,3 +1074,87 @@ class SupabaseManager:
         except Exception as e:
             logger.error(f"Error getting repository by GitHub ID {github_id} for user {user_id}: {e}")
             return None
+    
+    @staticmethod
+    async def get_repository_pull_requests(repo_id: str, since: datetime = None) -> List[Dict[str, Any]]:
+        """
+        Get pull requests for a repository since a given date.
+        
+        Args:
+            repo_id: Repository ID
+            since: Get PRs created after this date
+            
+        Returns:
+            List of pull requests
+        """
+        try:
+            # For now, return empty list as we'd need to query GitHub API
+            # In production, this would fetch from a cache or GitHub API
+            logger.info(f"get_repository_pull_requests called for repo {repo_id} since {since}")
+            return []
+        except Exception as e:
+            logger.error(f"Error getting pull requests for repository {repo_id}: {e}")
+            return []
+    
+    @staticmethod
+    async def get_repository_issues(repo_id: str, since: datetime = None) -> List[Dict[str, Any]]:
+        """
+        Get issues for a repository since a given date.
+        
+        Args:
+            repo_id: Repository ID
+            since: Get issues created after this date
+            
+        Returns:
+            List of issues
+        """
+        try:
+            # For now, return empty list as we'd need to query GitHub API
+            # In production, this would fetch from a cache or GitHub API
+            logger.info(f"get_repository_issues called for repo {repo_id} since {since}")
+            return []
+        except Exception as e:
+            logger.error(f"Error getting issues for repository {repo_id}: {e}")
+            return []
+    
+    @staticmethod
+    async def get_repository_comments(repo_id: str, since: datetime = None) -> List[Dict[str, Any]]:
+        """
+        Get comments for a repository since a given date.
+        
+        Args:
+            repo_id: Repository ID
+            since: Get comments created after this date
+            
+        Returns:
+            List of comments
+        """
+        try:
+            # For now, return empty list as we'd need to query GitHub API
+            # In production, this would fetch from a cache or GitHub API
+            logger.info(f"get_repository_comments called for repo {repo_id} since {since}")
+            return []
+        except Exception as e:
+            logger.error(f"Error getting comments for repository {repo_id}: {e}")
+            return []
+    
+    @staticmethod
+    async def get_repository_reviews(repo_id: str, since: datetime = None) -> List[Dict[str, Any]]:
+        """
+        Get reviews for a repository since a given date.
+        
+        Args:
+            repo_id: Repository ID
+            since: Get reviews created after this date
+            
+        Returns:
+            List of reviews
+        """
+        try:
+            # For now, return empty list as we'd need to query GitHub API
+            # In production, this would fetch from a cache or GitHub API
+            logger.info(f"get_repository_reviews called for repo {repo_id} since {since}")
+            return []
+        except Exception as e:
+            logger.error(f"Error getting reviews for repository {repo_id}: {e}")
+            return []
