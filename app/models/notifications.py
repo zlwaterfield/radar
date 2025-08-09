@@ -59,20 +59,13 @@ class NotificationPreferences(BaseModel):
     check_failures: bool = True  # CI checks fail
     check_successes: bool = False  # CI checks pass (usually too noisy)
     
-    # Mentions & Keywords
+    # Mentions
     mentioned_in_comments: bool = True  # Someone mentions you in a comment
-    keyword_notifications_enabled: bool = False
-    keywords: List[str] = []
-    keyword_notification_threshold: float = 0.7  # Threshold for keyword matching confidence
     
     # Noise Control
     mute_own_activity: bool = True
     mute_bot_comments: bool = True
     mute_draft_prs: bool = True  # Ignore draft PR activity
-    
-    # Daily digest
-    digest_enabled: bool = False
-    digest_time: str = "09:00"
     
     def get_pr_notifications(self) -> Dict[str, bool]:
         """Get PR notification preferences."""

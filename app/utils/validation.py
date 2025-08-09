@@ -205,20 +205,13 @@ class NotificationPreferencesUpdate(BaseModel):
     check_failures: Optional[bool] = None
     check_successes: Optional[bool] = None
     
-    # Mentions & Keywords
+    # Mentions
     mentioned_in_comments: Optional[bool] = None
-    keyword_notifications_enabled: Optional[bool] = None
-    keywords: Optional[List[str]] = None
-    keyword_notification_threshold: Optional[float] = None
     
     # Noise Control
     mute_own_activity: Optional[bool] = None
     mute_bot_comments: Optional[bool] = None
     mute_draft_prs: Optional[bool] = None
-    
-    # Daily digest
-    digest_enabled: Optional[bool] = None
-    digest_time: Optional[str] = None
     
     model_config = ConfigDict(extra='forbid')  # Don't allow extra fields
 

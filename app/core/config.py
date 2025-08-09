@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     # PostHog settings
     POSTHOG_API_KEY: Optional[str] = None
     POSTHOG_HOST: str = "https://us.posthog.com"
+    
+    # OpenAI settings
+    OPENAI_API_KEY: Optional[str] = None
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

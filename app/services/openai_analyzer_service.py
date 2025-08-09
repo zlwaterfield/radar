@@ -9,19 +9,20 @@ import os
 import re
 from typing import Dict, List, Any, Optional, Tuple
 import json
+from difflib import SequenceMatcher
 
 import httpx
 from pydantic import BaseModel
 
 from app.db.supabase import SupabaseManager
-from app.models.notifications import NotificationPreferences
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 # OpenAI API configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = settings.OPENAI_API_KEY
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_MODEL = "gpt-3.5-turbo-instruct"  # Fast and cost-effective model
+OPENAI_MODEL = "GPT-5 nano"
 
 class KeywordMatchRequest(BaseModel):
     """Request model for keyword matching."""
@@ -48,11 +49,14 @@ class OpenAIAnalyzerService:
         Returns:
             Tuple of (matched_keywords, match_details)
         """
+        logger.debug(f"Matching keywords with OpenAI - Content length: {len(content)}, Keywords: {keywords}")
+        
         if not OPENAI_API_KEY:
             logger.warning("OpenAI API key not set, using fallback method")
             return cls.fallback_keyword_match(content, keywords)
             
         if not keywords:
+            logger.debug("No keywords provided, returning empty results")
             return [], {}
             
         try:
@@ -110,6 +114,8 @@ class OpenAIAnalyzerService:
                     matched_keywords = result.get("matched_keywords", [])
                     match_details = result.get("match_details", {})
                     
+                    logger.info(f"OpenAI keyword matching results - Matched: {matched_keywords}, Details: {match_details}")
+                    
                     return matched_keywords, match_details
                 except json.JSONDecodeError:
                     logger.error(f"Failed to parse OpenAI response: {content}")
@@ -131,25 +137,95 @@ class OpenAIAnalyzerService:
         Returns:
             Tuple of (matched_keywords, match_details)
         """
-        content = content.lower()
+        logger.debug(f"Using fallback keyword matching - Content length: {len(content)}, Keywords: {keywords}")
+        
+        content_lower = content.lower()
         matched_keywords = []
         match_details = {}
         
+        logger.debug(f"Content (lowercased): {content_lower[:200]}{'...' if len(content_lower) > 200 else ''}")
+        
         for keyword in keywords:
             keyword_lower = keyword.lower()
+            logger.debug(f"Checking keyword: '{keyword}' (lowercased: '{keyword_lower}')")
             
             # Exact match
-            if keyword_lower in content:
+            if keyword_lower in content_lower:
                 matched_keywords.append(keyword)
                 match_details[keyword] = "Exact match found"
+                logger.debug(f"✓ Exact match found for '{keyword}'")
                 continue
                 
             # Word boundary match
-            if re.search(r'\b' + re.escape(keyword_lower) + r'\b', content):
+            word_boundary_pattern = r'\b' + re.escape(keyword_lower) + r'\b'
+            if re.search(word_boundary_pattern, content_lower):
                 matched_keywords.append(keyword)
                 match_details[keyword] = "Word boundary match found"
+                logger.debug(f"✓ Word boundary match found for '{keyword}' with pattern: {word_boundary_pattern}")
                 continue
+            
+            logger.debug(f"✗ No match found for '{keyword}'")
         
+        logger.info(f"Fallback keyword matching results - Matched: {matched_keywords}, Details: {match_details}")
+        return matched_keywords, match_details
+    
+    @staticmethod
+    def similarity_keyword_match(content: str, keywords: List[str], threshold: float = 0.7) -> Tuple[List[str], Dict[str, Any]]:
+        """
+        Keyword matching using string similarity with configurable threshold.
+        
+        Args:
+            content: Text to search in
+            keywords: Keywords to search for
+            threshold: Similarity threshold (0.0 to 1.0)
+            
+        Returns:
+            Tuple of (matched_keywords, match_details)
+        """
+        logger.debug(f"Using similarity keyword matching - Content length: {len(content)}, Keywords: {keywords}, Threshold: {threshold}")
+        
+        content_lower = content.lower()
+        matched_keywords = []
+        match_details = {}
+        
+        # Split content into words for similarity comparison
+        content_words = re.findall(r'\b\w+\b', content_lower)
+        logger.debug(f"Content words: {content_words[:20]}{'...' if len(content_words) > 20 else ''} (total: {len(content_words)})")
+        
+        for keyword in keywords:
+            keyword_lower = keyword.lower()
+            logger.debug(f"Checking keyword: '{keyword}' (lowercased: '{keyword_lower}') with threshold: {threshold}")
+            
+            # First check for exact matches (threshold doesn't apply)
+            if keyword_lower in content_lower:
+                matched_keywords.append(keyword)
+                match_details[keyword] = "Exact match found"
+                logger.debug(f"✓ Exact match found for '{keyword}'")
+                continue
+            
+            # Check similarity against each word in content
+            best_similarity = 0.0
+            best_match_word = ""
+            
+            for word in content_words:
+                similarity = SequenceMatcher(None, keyword_lower, word).ratio()
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match_word = word
+                
+                logger.debug(f"  Similarity between '{keyword_lower}' and '{word}': {similarity:.3f}")
+            
+            logger.debug(f"Best similarity for '{keyword}': {best_similarity:.3f} with word '{best_match_word}' (threshold: {threshold})")
+            
+            # Check if similarity meets threshold
+            if best_similarity >= threshold:
+                matched_keywords.append(keyword)
+                match_details[keyword] = f"Similarity match found (similarity: {best_similarity:.3f}, word: '{best_match_word}')"
+                logger.debug(f"✓ Similarity match found for '{keyword}' - {best_similarity:.3f} >= {threshold}")
+            else:
+                logger.debug(f"✗ No match found for '{keyword}' - best similarity {best_similarity:.3f} < threshold {threshold}")
+        
+        logger.info(f"Similarity keyword matching results - Matched: {matched_keywords}, Details: {match_details}, Threshold: {threshold}")
         return matched_keywords, match_details
     
     @classmethod
@@ -165,28 +241,52 @@ class OpenAIAnalyzerService:
             Tuple of (should_notify, matched_keywords, match_details)
         """
         try:
+            logger.debug(f"Analyzing content for user {user_id} - Content length: {len(content)}")
+            
             # Get user settings
             settings = await SupabaseManager.get_user_settings(user_id)
             if not settings:
+                logger.debug(f"No settings found for user {user_id}")
                 return False, [], {}
                 
-            # Get notification preferences
-            preferences_data = settings.get("notification_preferences", {})
-            preferences = NotificationPreferences(**preferences_data)
+            # Get keyword notification preferences (correct column)
+            keyword_prefs = settings.get("keyword_notification_preferences", {})
+            
+            # Extract keyword settings
+            keyword_notifications_enabled = keyword_prefs.get("enabled", False)
+            keywords = keyword_prefs.get("keywords", [])
+            threshold = keyword_prefs.get("threshold", 0.7)  # Default threshold
+            
+            logger.warning(f"KEYWORD CHECK: User {user_id} preferences - Enabled: {keyword_notifications_enabled}, "
+                          f"Keywords: {keywords}, Threshold: {threshold}")
             
             # Check if keyword notifications are enabled
-            if not preferences.keyword_notifications_enabled:
+            if not keyword_notifications_enabled:
+                logger.debug(f"Keyword notifications disabled for user {user_id}")
                 return False, [], {}
                 
             # Check if user has keywords
-            if not preferences.keywords:
+            if not keywords:
+                logger.debug(f"No keywords configured for user {user_id}")
                 return False, [], {}
                 
-            # Match keywords using OpenAI
-            matched_keywords, match_details = await cls.match_keywords_with_openai(content, preferences.keywords)
+            # Choose matching strategy based on threshold and OpenAI availability
+            if threshold < 1.0 and threshold > 0.0:
+                # Use similarity matching when threshold is set to less than 1.0
+                logger.debug(f"Using similarity matching due to threshold: {threshold}")
+                matched_keywords, match_details = cls.similarity_keyword_match(
+                    content, keywords, threshold
+                )
+            else:
+                # Use OpenAI or fallback for exact matching
+                logger.debug(f"Using OpenAI/fallback matching (threshold: {threshold})")
+                matched_keywords, match_details = await cls.match_keywords_with_openai(content, keywords)
             
             # Determine if notification should be sent
             should_notify = len(matched_keywords) > 0
+            
+            logger.info(f"Content analysis complete for user {user_id} - Should notify: {should_notify}, "
+                       f"Matched keywords: {matched_keywords}, Threshold used: {threshold}")
             
             return should_notify, matched_keywords, match_details
         except Exception as e:

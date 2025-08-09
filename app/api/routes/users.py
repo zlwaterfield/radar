@@ -639,7 +639,8 @@ async def get_user_settings(user_id: str):
                 "stats_time_window": default_settings["stats_time_window"],
                 "keyword_notification_preferences": {
                     "enabled": False,
-                    "keywords": []
+                    "keywords": [],
+                    "threshold": 0.7
                 }
             }
             
@@ -650,7 +651,8 @@ async def get_user_settings(user_id: str):
         if "keyword_notification_preferences" not in settings:
             settings["keyword_notification_preferences"] = {
                 "enabled": False,
-                "keywords": []
+                "keywords": [],
+                "threshold": 0.7
             }
         
         return settings
@@ -700,7 +702,8 @@ async def update_user_settings(user_id: str, settings: Dict[str, Any]):
                 "stats_time_window": default_settings["stats_time_window"],
                 "keyword_notification_preferences": {
                     "enabled": False,
-                    "keywords": []
+                    "keywords": [],
+                    "threshold": 0.7
                 }
             }
         
@@ -735,6 +738,9 @@ async def update_user_settings(user_id: str, settings: Dict[str, Any]):
                 
             if "keywords" not in keyword_prefs:
                 keyword_prefs["keywords"] = []
+                
+            if "threshold" not in keyword_prefs:
+                keyword_prefs["threshold"] = 0.7
                 
             # Update settings
             current_settings["keyword_notification_preferences"] = keyword_prefs
