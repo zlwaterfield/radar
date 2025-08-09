@@ -21,8 +21,10 @@ interface NotificationSettings {
   check_failures: boolean;
   check_successes: boolean;
   
-  // Mentions & Keywords
+  // Mentions
   mentioned_in_comments: boolean;
+  
+  // Keywords (managed on separate page, but still part of notification_preferences)
   keyword_notifications_enabled: boolean;
   keywords: string[];
   keyword_notification_threshold: number;
@@ -32,7 +34,7 @@ interface NotificationSettings {
   mute_bot_comments: boolean;
   mute_draft_prs: boolean;
   
-  // Daily digest
+  // Daily digest (managed on separate page, but still part of notification_preferences)
   digest_enabled: boolean;
   digest_time: string;
 }
@@ -57,8 +59,10 @@ export default function NotificationsSettings() {
     check_failures: true,
     check_successes: false,
     
-    // Mentions & Keywords
+    // Mentions
     mentioned_in_comments: true,
+    
+    // Keywords (managed on separate page, but still part of notification_preferences)
     keyword_notifications_enabled: false,
     keywords: [],
     keyword_notification_threshold: 0.7,
@@ -68,7 +72,7 @@ export default function NotificationsSettings() {
     mute_bot_comments: true,
     mute_draft_prs: true,
     
-    // Daily digest
+    // Daily digest (managed on separate page, but still part of notification_preferences)
     digest_enabled: false,
     digest_time: '09:00',
   });
@@ -119,8 +123,10 @@ export default function NotificationsSettings() {
           check_failures: prefs.check_failures ?? prev.check_failures,
           check_successes: prefs.check_successes ?? prev.check_successes,
           
-          // Mentions & Keywords
+          // Mentions
           mentioned_in_comments: prefs.mentioned_in_comments ?? prev.mentioned_in_comments,
+          
+          // Keywords (managed on separate page, but still part of notification_preferences)
           keyword_notifications_enabled: prefs.keyword_notifications_enabled ?? prev.keyword_notifications_enabled,
           keywords: prefs.keywords ?? prev.keywords,
           keyword_notification_threshold: prefs.keyword_notification_threshold ?? prev.keyword_notification_threshold,
@@ -130,7 +136,7 @@ export default function NotificationsSettings() {
           mute_bot_comments: prefs.mute_bot_comments ?? prev.mute_bot_comments,
           mute_draft_prs: prefs.mute_draft_prs ?? prev.mute_draft_prs,
           
-          // Daily digest
+          // Daily digest (managed on separate page, but still part of notification_preferences)
           digest_enabled: prefs.digest_enabled ?? prev.digest_enabled,
           digest_time: prefs.digest_time ?? prev.digest_time,
         }));
@@ -172,8 +178,10 @@ export default function NotificationsSettings() {
           check_failures: notificationSettings.check_failures,
           check_successes: notificationSettings.check_successes,
           
-          // Mentions & Keywords
+          // Mentions
           mentioned_in_comments: notificationSettings.mentioned_in_comments,
+          
+          // Keywords (managed on separate page, but still part of notification_preferences)
           keyword_notifications_enabled: notificationSettings.keyword_notifications_enabled,
           keywords: notificationSettings.keywords,
           keyword_notification_threshold: notificationSettings.keyword_notification_threshold,
@@ -183,7 +191,7 @@ export default function NotificationsSettings() {
           mute_bot_comments: notificationSettings.mute_bot_comments,
           mute_draft_prs: notificationSettings.mute_draft_prs,
           
-          // Daily digest
+          // Daily digest (managed on separate page, but still part of notification_preferences)
           digest_enabled: notificationSettings.digest_enabled,
           digest_time: notificationSettings.digest_time,
         }
@@ -230,140 +238,180 @@ export default function NotificationsSettings() {
         </div>
         
         <div className="mt-5 space-y-6">
-          {/* When you're a reviewer */}
+          {/* PR & Issue Activity */}
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-gray-100">When you're a reviewer</h4>
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">Pull Request Activity</h4>
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
-                  id="reviewer-review-requested"
-                  name="reviewer_review_requested"
+                  id="pr-comments"
+                  name="pr_comments"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.reviewer_review_requested}
+                  checked={notificationSettings.pr_comments}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="reviewer-review-requested" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Review is requested
+                <label htmlFor="pr-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Comments on PRs you're involved with
                 </label>
               </div>
               <div className="flex items-center">
                 <input
-                  id="reviewer-commented"
-                  name="reviewer_commented"
+                  id="pr-reviews"
+                  name="pr_reviews"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.reviewer_commented}
+                  checked={notificationSettings.pr_reviews}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="reviewer-commented" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Someone comments on the PR
+                <label htmlFor="pr-reviews" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Reviews on PRs you're involved with
                 </label>
               </div>
               <div className="flex items-center">
                 <input
-                  id="reviewer-merged"
-                  name="reviewer_merged"
+                  id="pr-status-changes"
+                  name="pr_status_changes"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.reviewer_merged}
+                  checked={notificationSettings.pr_status_changes}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="reviewer-merged" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  PR is merged
+                <label htmlFor="pr-status-changes" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  PR status changes (merged, closed, reopened)
                 </label>
               </div>
               <div className="flex items-center">
                 <input
-                  id="reviewer-closed"
-                  name="reviewer_closed"
+                  id="pr-assignments"
+                  name="pr_assignments"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.reviewer_closed}
+                  checked={notificationSettings.pr_assignments}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="reviewer-closed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  PR is closed without merging
+                <label htmlFor="pr-assignments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  PR assignments and review requests
                 </label>
               </div>
               <div className="flex items-center">
                 <input
-                  id="reviewer-check-failed"
-                  name="reviewer_check_failed"
+                  id="pr-opened"
+                  name="pr_opened"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.reviewer_check_failed}
+                  checked={notificationSettings.pr_opened}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="reviewer-check-failed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  CI checks fail
+                <label htmlFor="pr-opened" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  New PRs opened in watched repositories
                 </label>
               </div>
             </div>
           </div>
           
-          {/* When you're the author */}
+          {/* Issue Activity */}
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-gray-100">When you're the author</h4>
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">Issue Activity</h4>
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
-                  id="author-reviewed"
-                  name="author_reviewed"
+                  id="issue-comments"
+                  name="issue_comments"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.author_reviewed}
+                  checked={notificationSettings.issue_comments}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="author-reviewed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Someone reviews your PR
+                <label htmlFor="issue-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Comments on issues you're involved with
                 </label>
               </div>
               <div className="flex items-center">
                 <input
-                  id="author-commented"
-                  name="author_commented"
+                  id="issue-status-changes"
+                  name="issue_status_changes"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.author_commented}
+                  checked={notificationSettings.issue_status_changes}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="author-commented" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Someone comments on your PR
+                <label htmlFor="issue-status-changes" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Issue status changes (opened, closed, reopened)
                 </label>
               </div>
               <div className="flex items-center">
                 <input
-                  id="author-check-failed"
-                  name="author_check_failed"
+                  id="issue-assignments"
+                  name="issue_assignments"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.author_check_failed}
+                  checked={notificationSettings.issue_assignments}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="author-check-failed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  CI checks fail
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  id="author-check-succeeded"
-                  name="author_check_succeeded"
-                  type="checkbox"
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.author_check_succeeded}
-                  onChange={handleNotificationChange}
-                />
-                <label htmlFor="author-check-succeeded" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  CI checks succeed
+                <label htmlFor="issue-assignments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Issue assignments
                 </label>
               </div>
             </div>
           </div>
           
-          {/* Noise reduction */}
+          {/* CI/CD */}
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-gray-100">Noise reduction</h4>
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">CI/CD</h4>
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center">
+                <input
+                  id="check-failures"
+                  name="check_failures"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.check_failures}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="check-failures" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  CI check failures
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="check-successes"
+                  name="check_successes"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.check_successes}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="check-successes" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  CI check successes
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          {/* Mentions */}
+          <div>
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">Mentions</h4>
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center">
+                <input
+                  id="mentioned-in-comments"
+                  name="mentioned_in_comments"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.mentioned_in_comments}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="mentioned-in-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  When you're mentioned in comments
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          {/* Noise Control */}
+          <div>
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">Noise Control</h4>
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
@@ -391,8 +439,22 @@ export default function NotificationsSettings() {
                   Mute notifications from bot comments
                 </label>
               </div>
+              <div className="flex items-center">
+                <input
+                  id="mute-draft-prs"
+                  name="mute_draft_prs"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.mute_draft_prs}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="mute-draft-prs" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Mute notifications for draft PRs
+                </label>
+              </div>
             </div>
           </div>
+          
         </div>
         
         <div className="mt-5">

@@ -644,7 +644,7 @@ async def get_user_settings(user_id: str):
             }
             
             # Save default settings
-            await SupabaseManager.create_user_settings(user_id, settings)
+            await SupabaseManager.update_user_settings(user_id, settings)
         
         # Ensure keyword notification preferences exist
         if "keyword_notification_preferences" not in settings:
