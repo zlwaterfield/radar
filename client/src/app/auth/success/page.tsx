@@ -25,7 +25,7 @@ export default function AuthSuccess() {
   const handleTokenAuth = async (authToken: string) => {
     try {
       // Validate token and get user info
-      const response = await axios.get(`/api/auth/validate?token=${authToken}`);
+      const response = await axios.post('/api/auth/validate', { token: authToken });
       
       if (response.data.user) {
         // Store token and user info

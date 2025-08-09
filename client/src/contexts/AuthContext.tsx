@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const validateToken = async (token: string) => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/auth/validate?token=${token}`);
+      const response = await axios.post('/api/auth/validate', { token });
       setUser(response.data.user);
       setError(null);
     } catch (err) {

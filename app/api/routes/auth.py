@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 import httpx
 
 from app.core.config import settings
@@ -21,18 +22,21 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/validate")
-async def validate_token(token: str):
+class TokenValidationRequest(BaseModel):
+    token: str
+
+@router.post("/validate")
+async def validate_token(request: TokenValidationRequest):
     """
     Validate a JWT token.
     
     Args:
-        token: JWT token to validate
+        request: Request containing JWT token to validate
         
     Returns:
         User info if token is valid
     """
-    payload = TokenManager.validate_user_token(token)
+    payload = TokenManager.validate_user_token(request.token)
     
     if not payload:
         raise HTTPException(

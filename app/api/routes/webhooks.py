@@ -5,6 +5,7 @@ This module handles incoming webhooks from GitHub.
 """
 import hashlib
 import hmac
+import json
 import logging
 import time
 from typing import Dict, Any, Optional
@@ -22,16 +23,13 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-async def verify_github_webhook(request: Request, 
-                              x_hub_signature_256: Optional[str] = Header(None),
-                              x_hub_signature: Optional[str] = Header(None)):
+async def verify_github_webhook(request: Request, body_bytes: bytes = None):
     """
     Verify GitHub webhook signature.
     
     Args:
         request: FastAPI request
-        x_hub_signature_256: GitHub webhook signature (SHA256)
-        x_hub_signature: GitHub webhook signature (SHA1) - legacy
+        body_bytes: Pre-read request body bytes
         
     Returns:
         True if signature is valid
@@ -39,66 +37,122 @@ async def verify_github_webhook(request: Request,
     Raises:
         HTTPException: If signature is invalid
     """
+    logger.info("=== Starting GitHub webhook signature verification ===")
+    
     if not settings.GITHUB_WEBHOOK_SECRET:
         logger.warning("GitHub webhook secret not configured, skipping signature verification")
         return True
     
+    # Log all relevant headers for debugging
+    logger.info(f"Request headers - User-Agent: {request.headers.get('user-agent', 'N/A')}")
+    logger.info(f"Request headers - Content-Type: {request.headers.get('content-type', 'N/A')}")
+    logger.info(f"Request headers - X-GitHub-Event: {request.headers.get('x-github-event', 'N/A')}")
+    logger.info(f"Request headers - X-GitHub-Delivery: {request.headers.get('x-github-delivery', 'N/A')}")
+    
+    # Get signatures from headers
+    x_hub_signature_256 = request.headers.get("x-hub-signature-256")
+    x_hub_signature = request.headers.get("x-hub-signature")
+    
+    logger.info(f"Signature headers - X-Hub-Signature-256: {x_hub_signature_256 is not None} ({'Present' if x_hub_signature_256 else 'Missing'})")
+    logger.info(f"Signature headers - X-Hub-Signature: {x_hub_signature is not None} ({'Present' if x_hub_signature else 'Missing'})")
+    
+    if x_hub_signature_256:
+        logger.info(f"SHA256 signature (first 20 chars): {x_hub_signature_256[:20]}...")
+    if x_hub_signature:
+        logger.info(f"SHA1 signature (first 20 chars): {x_hub_signature[:20]}...")
+    
     # GitHub can send either SHA1 or SHA256 signatures
     signature = x_hub_signature_256 or x_hub_signature
-    logger.info(f"Webhook signature verification - SHA256: {x_hub_signature_256 is not None}, SHA1: {x_hub_signature is not None}")
     
     if not signature:
-        logger.error("No GitHub webhook signature provided")
+        logger.error("No GitHub webhook signature provided in headers")
+        logger.error(f"Available headers: {list(request.headers.keys())}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No signature provided"
         )
     
-    # Get request body
-    body = await request.body()
+    # Get request body if not provided
+    if body_bytes is None:
+        logger.info("Reading request body for signature verification")
+        body_bytes = await request.body()
+    
+    logger.info(f"Request body length: {len(body_bytes)} bytes")
+    logger.info(f"Request body first 100 chars: {body_bytes[:100].decode('utf-8', errors='replace')}")
+    logger.info(f"Secret length: {len(settings.GITHUB_WEBHOOK_SECRET)} characters")
+    logger.info(f"Secret last 4 chars: ...{settings.GITHUB_WEBHOOK_SECRET[-4:]}")
     
     # Determine algorithm from signature prefix
     if signature.startswith("sha256="):
         algorithm = hashlib.sha256
         prefix = "sha256="
+        logger.info("Using SHA256 algorithm for verification")
     elif signature.startswith("sha1="):
         algorithm = hashlib.sha1
         prefix = "sha1="
+        logger.info("Using SHA1 algorithm for verification")
     else:
-        logger.error(f"Unknown signature format: {signature[:10]}")
+        logger.error(f"Unknown signature format: {signature[:20]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid signature format"
         )
     
     # Calculate expected signature
+    logger.info("Calculating expected signature...")
     expected_signature = prefix + hmac.new(
-        settings.GITHUB_WEBHOOK_SECRET.encode(),
-        body,
+        settings.GITHUB_WEBHOOK_SECRET.encode('utf-8'),
+        body_bytes,
         algorithm
     ).hexdigest()
     
+    logger.info(f"Expected signature: {expected_signature}")
+    logger.info(f"Received signature: {signature}")
+    logger.info(f"Signatures match: {hmac.compare_digest(expected_signature, signature)}")
+    
     # Compare signatures
     if not hmac.compare_digest(expected_signature, signature):
-        logger.error(f"Invalid GitHub webhook signature - Expected: {expected_signature[:20]}..., Received: {signature[:20]}..., Body length: {len(body)}")
-        logger.error(f"Secret used: {'*' * (len(settings.GITHUB_WEBHOOK_SECRET) - 4)}{settings.GITHUB_WEBHOOK_SECRET[-4:]}")
+        logger.error("=== SIGNATURE VERIFICATION FAILED ===")
+        logger.error(f"Expected: {expected_signature}")
+        logger.error(f"Received: {signature}")
+        logger.error(f"Body length: {len(body_bytes)}")
+        logger.error(f"Body SHA256 hash: {hashlib.sha256(body_bytes).hexdigest()}")
+        logger.error(f"Secret used (masked): {'*' * (len(settings.GITHUB_WEBHOOK_SECRET) - 4)}{settings.GITHUB_WEBHOOK_SECRET[-4:]}")
+        
+        # Additional debugging: try different encodings
+        try:
+            utf8_sig = prefix + hmac.new(
+                settings.GITHUB_WEBHOOK_SECRET.encode('utf-8'),
+                body_bytes,
+                algorithm
+            ).hexdigest()
+            ascii_sig = prefix + hmac.new(
+                settings.GITHUB_WEBHOOK_SECRET.encode('ascii'),
+                body_bytes,
+                algorithm
+            ).hexdigest()
+            logger.error(f"UTF-8 encoded secret signature: {utf8_sig}")
+            logger.error(f"ASCII encoded secret signature: {ascii_sig}")
+        except Exception as e:
+            logger.error(f"Error testing different encodings: {e}")
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid signature"
         )
     
+    logger.info("=== Signature verification SUCCESSFUL ===")
     return True
 
 
 @router.post("/github")
 @track_performance("webhook_processing")
-async def github_webhook(request: Request, verified: bool = Depends(verify_github_webhook)):
+async def github_webhook(request: Request):
     """
     Handle GitHub webhook events.
     
     Args:
         request: FastAPI request
-        verified: Whether the webhook signature is verified
         
     Returns:
         Success message
@@ -109,6 +163,21 @@ async def github_webhook(request: Request, verified: bool = Depends(verify_githu
 
     
     try:
+        logger.info("=== GitHub webhook handler started ===")
+        logger.info(f"Request method: {request.method}")
+        logger.info(f"Request URL: {request.url}")
+        logger.info(f"Client IP: {request.client.host if request.client else 'Unknown'}")
+        
+        # Read the body once and use it for both verification and processing
+        logger.info("Reading request body...")
+        body_bytes = await request.body()
+        logger.info(f"Body read successfully: {len(body_bytes)} bytes")
+        
+        # Verify webhook signature
+        logger.info("Starting signature verification...")
+        await verify_github_webhook(request, body_bytes)
+        logger.info("Signature verification completed successfully")
+        
         # Get event type from header
         event_type = request.headers.get("X-GitHub-Event")
         logger.info(f"GitHub webhook received: {event_type}")
@@ -119,8 +188,18 @@ async def github_webhook(request: Request, verified: bool = Depends(verify_githu
                 detail="No event type provided"
             )
         
-        # Get request body
-        body = await request.json()
+        # Parse the JSON body
+        logger.info("Parsing JSON body...")
+        try:
+            body = json.loads(body_bytes.decode('utf-8'))
+            logger.info("JSON parsing successful")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON body: {e}")
+            logger.error(f"Body content (first 500 chars): {body_bytes[:500].decode('utf-8', errors='replace')}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid JSON payload"
+            )
         
         # Extract repository info for monitoring
         repository_name = body.get("repository", {}).get("full_name", "unknown")
