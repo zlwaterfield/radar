@@ -82,7 +82,7 @@ async def slack_login():
     params = {
         "client_id": settings.SLACK_APP_CLIENT_ID,
         "scope": "chat:write,chat:write.public,commands,users:read,users:read.email,team:read,im:history,im:read,im:write,app_mentions:read",
-        "redirect_uri": f"https://zach.ngrok.dev/api/auth/slack/callback",
+        "redirect_uri": f"{settings.CALLBACK_API_HOST}/api/auth/slack/callback",
     }
     
     auth_url = f"https://slack.com/oauth/v2/authorize?{urlencode(params)}"
@@ -103,8 +103,9 @@ async def slack_callback(code: str, state: Optional[str] = None):
     """
     try:
         # Exchange code for token
+        redirect_uri = f"{settings.CALLBACK_API_HOST}/api/auth/slack/callback"
         slack_service = SlackService()
-        oauth_response = await slack_service.get_oauth_access(code)
+        oauth_response = await slack_service.get_oauth_access(code, redirect_uri)
         
         if not oauth_response.get("ok", False):
             logger.error(f"Slack OAuth error: {oauth_response.get('error')}")
@@ -211,7 +212,7 @@ async def github_login(user_id: str, reconnect: bool = False):
     
     params = {
         "client_id": settings.GITHUB_CLIENT_ID,
-        "redirect_uri": f"https://zach.ngrok.dev/api/auth/github/callback",
+        "redirect_uri": f"{settings.CALLBACK_API_HOST}/api/auth/github/callback",
         # "scope": "repo user:email read:org admin:org",
         "state": user_id,  # Use state to store user_id
     }
@@ -252,7 +253,7 @@ async def github_callback(code: str, state: str):
         # Exchange code for token
         async with httpx.AsyncClient() as client:
             print(f"Exchanging GitHub OAuth code for token with client_id: {settings.GITHUB_CLIENT_ID}")
-            print(f"Redirect URI: https://zach.ngrok.dev/api/auth/github/callback")
+            print(f"Redirect URI: {settings.CALLBACK_API_HOST}/api/auth/github/callback")
             
             response = await client.post(
                 "https://github.com/login/oauth/access_token",
@@ -260,7 +261,7 @@ async def github_callback(code: str, state: str):
                     "client_id": settings.GITHUB_CLIENT_ID,
                     "client_secret": settings.GITHUB_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": f"https://zach.ngrok.dev/api/auth/github/callback",
+                    "redirect_uri": f"{settings.CALLBACK_API_HOST}/api/auth/github/callback",
                 },
                 headers={"Accept": "application/json"}
             )

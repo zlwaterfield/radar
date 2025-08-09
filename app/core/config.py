@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # API settings
     API_HOST: str = "https://zach.ngrok.dev"
     API_PORT: int = 8000
+    CALLBACK_API_HOST: str = "https://zach.ngrok.dev"  # For OAuth callbacks, can be set to ngrok URL
     FRONTEND_URL: str = "http://localhost:3002"
     
     # CORS settings

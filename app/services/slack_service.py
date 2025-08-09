@@ -484,12 +484,13 @@ class SlackService:
             logger.error(f"Error updating modal in Slack: {e}")
             raise
             
-    async def get_oauth_access(self, code: str) -> Dict[str, Any]:
+    async def get_oauth_access(self, code: str, redirect_uri: str) -> Dict[str, Any]:
         """
         Exchange an OAuth code for an access token.
         
         Args:
             code: The OAuth code
+            redirect_uri: The redirect URI used in the authorization request
             
         Returns:
             The OAuth response
@@ -498,7 +499,8 @@ class SlackService:
             response = self.client.oauth_v2_access(
                 client_id=settings.SLACK_APP_CLIENT_ID,
                 client_secret=settings.SLACK_APP_CLIENT_SECRET,
-                code=code
+                code=code,
+                redirect_uri=redirect_uri
             )
             return response
         except SlackApiError as e:
