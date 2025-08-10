@@ -66,7 +66,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Set up axios default auth header
     const authToken = Cookies.get('auth_token');
-    console.log('AuthContext: Checking for auth token:', !!authToken);
     
     if (authToken) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
@@ -90,22 +89,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Check if user is already authenticated (only run once on mount)
     if (authToken && !isValidating.current) {
-      console.log('AuthContext: Found auth token, checking if expired...');
       // Check if token is expired before making API call
       if (isTokenExpired(authToken)) {
-        console.log('AuthContext: Token is expired, clearing...');
         // Token is expired, clear it
         Cookies.remove('auth_token');
         Cookies.remove('user_id');
         delete axios.defaults.headers.common['Authorization'];
         setLoading(false);
       } else {
-        console.log('AuthContext: Token is valid, validating with API...');
         isValidating.current = true;
         validateToken(authToken);
       }
     } else if (!authToken) {
-      console.log('AuthContext: No auth token found, setting loading to false');
       setLoading(false);
     }
     
@@ -117,21 +112,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   // Handle route protection separately, only redirect when necessary
   useEffect(() => {
-    if (!loading && !isAuthenticated && !pathname.startsWith('/auth/')) {
+    // If we're not authenticated and navigating to a protected route, check for cookies first
+    if (!loading && !isAuthenticated && !pathname.startsWith('/auth/') && !isValidating.current) {
+      const authToken = Cookies.get('auth_token');
+      
+      if (authToken && !isTokenExpired(authToken)) {
+        isValidating.current = true;
+        validateToken(authToken);
+        return; // Don't redirect while validating
+      }
+      
       router.push('/');
     }
   }, [loading, isAuthenticated, pathname, router]);
   
   const validateToken = async (token: string) => {
     try {
-      console.log('AuthContext: Making API call to validate token...');
       setLoading(true);
       const response = await axios.post('/api/auth/validate', { token });
-      console.log('AuthContext: Token validation successful, user:', response.data.user);
       setUser(response.data.user);
       setError(null);
     } catch (err) {
-      console.error('AuthContext: Error validating token:', err);
       setError('Session expired or invalid');
       Cookies.remove('auth_token');
       Cookies.remove('user_id');

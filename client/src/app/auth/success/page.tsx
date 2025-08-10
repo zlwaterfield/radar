@@ -25,12 +25,10 @@ function AuthSuccessContent() {
 
   const handleTokenAuth = async (authToken: string) => {
     try {
-      console.log('AuthSuccess: Validating token...', authToken.substring(0, 20) + '...');
       // Validate token and get user info
       const response = await axios.post('/api/auth/validate', { token: authToken });
       
       if (response.data.user) {
-        console.log('AuthSuccess: Token valid, user:', response.data.user);
         // Store token and user info with explicit domain and path
         Cookies.set('auth_token', authToken, { 
           expires: 7, 
@@ -45,18 +43,14 @@ function AuthSuccessContent() {
           sameSite: 'lax'
         });
         
-        console.log('AuthSuccess: Cookies set, verifying...');
-        console.log('AuthSuccess: auth_token cookie:', Cookies.get('auth_token') ? 'exists' : 'not found');
-        console.log('AuthSuccess: user_id cookie:', Cookies.get('user_id') ? 'exists' : 'not found');
-        
         // Set axios auth header for immediate use
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
         
         // Small delay to ensure cookies are set before redirect
         setTimeout(() => {
-          console.log('AuthSuccess: Redirecting to settings...');
-          router.push('/settings/notifications');
-        }, 100);
+          // Use window.location.href to ensure a full navigation that triggers AuthContext
+          window.location.href = '/settings/notifications';
+        }, 200);
       } else {
         setError('Invalid authentication response');
       }
