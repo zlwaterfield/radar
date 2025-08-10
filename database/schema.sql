@@ -126,27 +126,6 @@ CREATE TABLE IF NOT EXISTS user_digests (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Failed webhook events table for retry mechanism
-CREATE TABLE IF NOT EXISTS failed_webhook_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    original_event_id UUID REFERENCES events(id) ON DELETE CASCADE,
-    event_type VARCHAR(100) NOT NULL,
-    action VARCHAR(100),
-    repository_name VARCHAR(255),
-    repository_id VARCHAR(100),
-    sender_login VARCHAR(255),
-    payload JSONB NOT NULL,
-    error_message TEXT,
-    error_details JSONB,
-    retry_count INTEGER DEFAULT 0,
-    max_retries INTEGER DEFAULT 3,
-    next_retry_at TIMESTAMP WITH TIME ZONE,
-    last_retry_at TIMESTAMP WITH TIME ZONE,
-    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'retrying', 'failed', 'succeeded')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- Create functions and triggers for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -175,12 +154,6 @@ BEFORE UPDATE ON user_repositories
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_failed_webhook_events_updated_at ON failed_webhook_events;
-CREATE TRIGGER update_failed_webhook_events_updated_at
-BEFORE UPDATE ON failed_webhook_events
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_slack_id ON users(slack_id);
 CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);
@@ -195,10 +168,6 @@ CREATE INDEX IF NOT EXISTS idx_notifications_event_id ON notifications(event_id)
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX IF NOT EXISTS idx_user_digests_user_id ON user_digests(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_digests_sent_at ON user_digests(sent_at);
-CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_status ON failed_webhook_events(status);
-CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_next_retry_at ON failed_webhook_events(next_retry_at);
-CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_event_type ON failed_webhook_events(event_type);
-CREATE INDEX IF NOT EXISTS idx_failed_webhook_events_created_at ON failed_webhook_events(created_at);
 CREATE INDEX IF NOT EXISTS idx_user_settings_notification_preferences ON user_settings USING GIN (notification_preferences);
 
 -- Row Level Security (RLS) - Uncomment to enable
@@ -209,7 +178,6 @@ ALTER TABLE user_repositories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_digests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE failed_webhook_events ENABLE ROW LEVEL SECURITY;
 
 -- Example RLS policies (customize based on your authentication approach)
 -- CREATE POLICY "Users can view their own data" ON users
