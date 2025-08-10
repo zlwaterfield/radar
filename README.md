@@ -1,4 +1,4 @@
-# Radar
+<img width="1024" height="409" alt="radar-logo" src="https://github.com/user-attachments/assets/4df91303-8557-42a3-9860-5696794c5acb" />
 
 A Slack application that connects GitHub activity to your team's Slack workspace, delivering customizable notifications about Pull Requests, Issues, Discussions, etc. in near real-time.
 
