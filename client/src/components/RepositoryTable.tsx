@@ -1,4 +1,5 @@
 import React from 'react';
+import Loader from '@/components/Loader';
 
 interface Repository {
   id: string;
@@ -77,7 +78,10 @@ const RepositoryTable: React.FC<RepositoryTableProps> = ({
                   <span className="text-sm font-medium flex items-center">
                     {togglingRepos.has(repo.id) ? (
                       <div className="flex items-center">
-                        <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent mr-2"></div>
+                        <div className="relative h-4 w-4 mr-2">
+                          <div className="h-4 w-4 rounded-full border-2 border-gray-200 dark:border-gray-600"></div>
+                          <div className="absolute top-0 left-0 h-4 w-4 rounded-full border-2 border-primary-600 border-t-transparent animate-spin"></div>
+                        </div>
                         <span className={repo.enabled ? "text-blue-600" : "text-gray-900 dark:text-gray-300"}>
                           {repo.enabled ? 'Enabled' : 'Disabled'}
                         </span>

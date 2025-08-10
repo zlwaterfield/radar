@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import Loader from '@/components/Loader';
 import { FiGithub, FiCheck, FiSettings } from 'react-icons/fi';
 
 function ConnectGithubContent() {
@@ -47,11 +48,7 @@ function ConnectGithubContent() {
   }, [user?.github_id, checkGithubInstallations, checkingInstallations, installationStatus]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <Loader fullScreen size="large" />;
   }
 
   const hasGitHubAccount = user?.github_id;
@@ -108,7 +105,10 @@ function ConnectGithubContent() {
               <div className="flex-shrink-0">
                 {checkingInstallations ? (
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                    <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                    <div className="relative w-4 h-4">
+                      <div className="w-4 h-4 rounded-full border-2 border-blue-200"></div>
+                      <div className="absolute top-0 left-0 w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+                    </div>
                   </div>
                 ) : hasGitHubApp ? (
                   <div className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
@@ -202,11 +202,7 @@ function ConnectGithubContent() {
 
 export default function ConnectGithub() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    }>
+    <Suspense fallback={<Loader fullScreen size="large" />}>
       <ConnectGithubContent />
     </Suspense>
   );

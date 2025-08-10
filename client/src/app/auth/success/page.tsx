@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
+import Loader from '@/components/Loader';
 
 function AuthSuccessContent() {
   const router = useRouter();
@@ -105,14 +106,7 @@ function AuthSuccessContent() {
 
 export default function AuthSuccess() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="card max-w-md w-full text-center p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<Loader fullScreen size="large" />}>
       <AuthSuccessContent />
     </Suspense>
   );
