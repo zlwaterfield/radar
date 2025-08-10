@@ -25,7 +25,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
       {isAuthenticated ? (
         <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-950">
           {/* Sidebar */}
-          <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-shrink-0 flex flex-col">
+          <aside className="w-60 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-shrink-0 flex flex-col">
             <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center">
                 <img 
@@ -39,7 +39,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             {showBackButton && (
               <div className="p-4 border-b border-gray-100 dark:border-gray-800">
                 <button
-                  onClick={() => router.back()}
+                  onClick={() => router.push('/settings/notifications')}
                   className="flex items-center w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
                 >
                   <FiArrowLeft className="mr-2 h-4 w-4" />

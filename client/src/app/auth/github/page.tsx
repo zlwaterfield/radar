@@ -73,14 +73,14 @@ function ConnectGithubContent() {
                     <FiCheck className="w-5 h-5" />
                   </div>
                 ) : (
-                  <div className="w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center text-sm font-bold">
+                  <div className="w-8 h-8 bg-gray-100 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold">
                     1
                   </div>
                 )}
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold mb-2">Authenticate with GitHub</h3>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-200 mb-4">
                   Connect your GitHub account to identify yourself and access your profile information.
                 </p>
                 {!hasGitHubAccount && (
@@ -115,7 +115,7 @@ function ConnectGithubContent() {
                     <FiCheck className="w-5 h-5" />
                   </div>
                 ) : (
-                  <div className="w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center text-sm font-bold">
+                  <div className="w-8 h-8 bg-gray-100 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold">
                     2
                   </div>
                 )}
@@ -124,11 +124,11 @@ function ConnectGithubContent() {
                 <h3 className="font-semibold mb-2">
                   {checkingInstallations ? 'Checking Installation...' : hasGitHubApp ? 'Radar App Installed' : 'Install Radar App'}
                 </h3>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-200 mb-4">
                   {checkingInstallations 
                     ? 'Checking if the Radar GitHub App is installed...'
                     : hasGitHubApp 
-                      ? `The Radar GitHub App is installed and monitoring ${installationStatus?.total_repositories || 0} repositories across ${installationStatus?.total_installations || 0} installation(s).`
+                      ? `The Radar GitHub App is installed and monitoring ${installationStatus?.total_repositories || 0} ${installationStatus?.total_repositories === 1 ? 'repository' : 'repositories'} across ${installationStatus?.total_installations || 0} installation(s).`
                       : 'Install the Radar GitHub App to your repositories to monitor pull requests, issues, and comments.'
                   }
                 </p>
@@ -150,9 +150,9 @@ function ConnectGithubContent() {
                       <div key={installation.id} className="bg-gray-50 p-3 rounded-lg">
                         <div className="flex items-center justify-between">
                           <div>
-                            <span className="font-medium">{installation.account_name}</span>
+                            <span className="font-medium text-gray-500">{installation.account_name}</span>
                             <span className="text-sm text-gray-500 ml-2">
-                              ({installation.account_type}) • {installation.repository_count} repositories
+                              ({installation.account_type}) • {installation.repository_count} {installation.repository_count === 1 ? 'repository' : 'repositories'}
                             </span>
                           </div>
                         </div>
@@ -186,13 +186,6 @@ function ConnectGithubContent() {
                 )}
               </div>
             </div>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">
-              <strong>Privacy:</strong> We only request read access to your repositories and will never make changes to your code. 
-              You can manage app permissions at any time through GitHub settings.
-            </p>
           </div>
         </div>
       </div>
