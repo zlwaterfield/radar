@@ -93,13 +93,15 @@ MIT License - see LICENSE file for details.
 
 ## 🎯 Roadmap
 
-- [ ] Notification deduplication (prevent duplicate messages)
-- [ ] User onboarding flow improvements  
-- [ ] Enhanced metrics and analytics
-- [ ] Billing and subscription management
-- [ ] Advanced notification scheduling
-- [ ] Digests
+- [ ] Testing all events in production
+- [ ] Improving onboarding experience
+- [ ] Improve how the Slack messages look
 - [ ] Github Discussions support
-- [ ] Team/individual Statistics
+- [ ] Review Slack backslash command
+- [ ] Improve static page
 - [ ] More consistent UI components and better styling
-- [ ] New home page
+- [ ] Improve Slack "homepage"
+- [ ] Metrics and analytics via PostHog
+- [ ] Daily Digests support
+- [ ] Billing and subscription management
+- [ ] User statistics
