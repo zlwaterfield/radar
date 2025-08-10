@@ -319,25 +319,15 @@ MIT License - see LICENSE file for details.
 
 ## 🎯 Roadmap & Status
 
-### ✅ Completed Features
-- [x] **Authentication & Security**: JWT authentication, token encryption, input validation
-- [x] **Notification Intelligence**: Role-based routing, keyword matching, message updates  
-- [x] **GitHub Integration**: Webhook processing, discussions support, signature verification
-- [x] **Reliability**: Webhook retry system with exponential backoff
-- [x] **Monitoring**: PostHog integration, performance metrics, error tracking
-- [x] **API Documentation**: Comprehensive Swagger/ReDoc documentation
-
-### 🚧 In Progress
+### 📋 Future Enhancements
 - [ ] Notification deduplication (prevent duplicate messages)
 - [ ] User onboarding flow improvements  
-- [ ] Enhanced metrics and analytics dashboards
-
-### 📋 Future Enhancements
+- [ ] Enhanced metrics and analytics
 - [ ] Billing and subscription management
-- [ ] Multi-workspace Slack support
 - [ ] Advanced notification scheduling
-- [ ] Repository statistics dashboard
-- [ ] Mobile app notifications
+- [ ] Digests
+- [ ] Github Discussions support
+- [ ] Team/individual Statistics
 
 ---
 
