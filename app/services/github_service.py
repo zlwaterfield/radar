@@ -69,12 +69,12 @@ class GitHubService:
             GitHub client
         """
         try:
-            # Read private key
-            with open(settings.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
-                private_key = key_file.read()
+            # Get private key from settings (supports both GITHUB_PRIVATE_KEY and GITHUB_PRIVATE_KEY_PATH)
+            private_key = settings.github_private_key
+            if not private_key:
+                raise ValueError("GitHub private key not found. Please set either GITHUB_PRIVATE_KEY or GITHUB_PRIVATE_KEY_PATH")
             
             # Create JWT
-            import jwt
             from cryptography.hazmat.backends import default_backend
             from cryptography.hazmat.primitives import serialization
             
@@ -526,8 +526,9 @@ class GitHubService:
         """
         try:
             # Create JWT for GitHub App
-            with open(settings.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
-                private_key = key_file.read()
+            private_key = settings.github_private_key
+            if not private_key:
+                raise ValueError("GitHub private key not found. Please set either GITHUB_PRIVATE_KEY or GITHUB_PRIVATE_KEY_PATH")
             
             # Create JWT payload with integer timestamps
             now = int(datetime.now().timestamp())
@@ -620,8 +621,9 @@ class GitHubService:
         """
         try:
             # Create JWT for GitHub App
-            with open(settings.GITHUB_PRIVATE_KEY_PATH, "r") as key_file:
-                private_key = key_file.read()
+            private_key = settings.github_private_key
+            if not private_key:
+                raise ValueError("GitHub private key not found. Please set either GITHUB_PRIVATE_KEY or GITHUB_PRIVATE_KEY_PATH")
             
             # Create JWT payload with integer timestamps
             now = int(datetime.now().timestamp())

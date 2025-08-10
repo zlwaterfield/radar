@@ -12,12 +12,13 @@ CREATE TABLE IF NOT EXISTS users (
     is_active BOOLEAN DEFAULT TRUE,
     slack_id VARCHAR NOT NULL UNIQUE,
     slack_team_id VARCHAR NOT NULL,
-    slack_access_token TEXT NOT NULL, -- Changed to TEXT for encrypted tokens
+    slack_access_token TEXT NOT NULL,
     slack_refresh_token TEXT,
     github_id VARCHAR UNIQUE,
     github_login VARCHAR,
-    github_access_token TEXT, -- Changed to TEXT for encrypted tokens
+    github_access_token TEXT,
     github_refresh_token TEXT,
+    github_installation_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
