@@ -8,13 +8,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, github, slack, users, webhooks, settings, retry
+from app.api.routes import auth, github, slack, users, webhooks, settings
 from app.core.config import settings as app_settings
 from app.core.logging import setup_logging
 from app.services.task_service import TaskService
 from app.services.monitoring_service import MonitoringService
-from app.services.scheduler_service import scheduler_service
-from app.middleware.rate_limit import RateLimitMiddleware
 
 # Setup logging
 setup_logging()
@@ -26,9 +24,6 @@ app = FastAPI(
     description="A Slack application that connects to GitHub and tracks activity to notify users about Pull Requests, reviews, comments, and changes.",
     version="0.1.0",
 )
-
-# Add rate limiting middleware
-app.add_middleware(RateLimitMiddleware)
 
 # Add CORS middleware
 # In production, replace with specific origins from settings
@@ -52,7 +47,6 @@ app.include_router(slack.router, prefix="/api/slack", tags=["Slack"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
-app.include_router(retry.router, prefix="/api/retry", tags=["Retry Management"])
 
 @app.get("/", tags=["Health"])
 async def root():
@@ -146,33 +140,16 @@ async def startup_event():
             "environment_validation_failed",
             properties={"error": str(e)}
         )
-        # In production, you might want to exit here
-        # import sys
-        # sys.exit(1)
     
-    # Schedule digest notifications
-    task_service = TaskService()
-    await task_service.schedule_digest_notifications()
-    # await task_service.schedule_stats_notifications()
-    
-    # Start webhook retry scheduler
-    try:
-        scheduler_service.start()
-        logger.info("Webhook retry scheduler started")
-    except Exception as e:
-        logger.error(f"Failed to start webhook retry scheduler: {e}")
-        # Track scheduler startup failure
-        MonitoringService.track_event(
-            "scheduler_startup_failed",
-            properties={"error": str(e)}
-        )
+    # #Schedule digest notifications
+    # task_service = TaskService()
+    # await task_service.schedule_digest_notifications()
     
     # Track successful startup
     MonitoringService.track_event(
         "application_ready",
         properties={
             "tasks_scheduled": True,
-            "scheduler_started": scheduler_service.is_running(),
             "monitoring_enabled": bool(app_settings.POSTHOG_API_KEY)
         }
     )
@@ -185,14 +162,8 @@ def shutdown_event():
     logger.info("Shutting down Radar API")
     
     # Shutdown task scheduler
-    TaskService().shutdown()
+    # TaskService().shutdown()
     
-    # Shutdown webhook retry scheduler
-    try:
-        scheduler_service.stop()
-        logger.info("Webhook retry scheduler stopped")
-    except Exception as e:
-        logger.error(f"Error stopping webhook retry scheduler: {e}")
 
 if __name__ == "__main__":
     import uvicorn

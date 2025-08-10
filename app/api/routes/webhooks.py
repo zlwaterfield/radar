@@ -17,7 +17,6 @@ from app.db.supabase import SupabaseManager
 from app.services.slack_service import SlackService
 from app.services.monitoring_service import MonitoringService, track_performance
 from app.utils.validation import validate_webhook_payload, sanitize_string
-from app.utils.retry import notification_retry_handler
 import re
 
 router = APIRouter()
@@ -451,13 +450,19 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
                         logger.error(f"Failed to update PR message for user {user['id']} for PR {pr.get('number')}")
                 else:
                     # No existing message found, send new one
-                    notification_id = f"pr_{pr.get('id')}_{user['id']}_{event_id}"
-                    response = await notification_retry_handler.send_notification_with_retry(
-                        slack_service.send_message,
-                        notification_id,
-                        message,
-                        max_attempts=3
-                    )
+                    try:
+                        response = await slack_service.send_message(message)
+                    except Exception as e:
+                        logger.error(f"Failed to send PR notification to user {user['id']}: {e}")
+                        MonitoringService.track_notification_sent(
+                            user_id=user["id"],
+                            notification_type="pull_request",
+                            repository=repository.get("full_name"),
+                            success=False,
+                            error=str(e),
+                            matched_keywords=matched_keywords
+                        )
+                        response = None
                     
                     if response:
                         notification_data = {
@@ -474,14 +479,20 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
                         }
                         await SupabaseManager.create_notification(notification_data)
             else:
-                # Send notification with retry
-                notification_id = f"pr_{pr.get('id')}_{user['id']}_{event_id}"
-                response = await notification_retry_handler.send_notification_with_retry(
-                    slack_service.send_message,
-                    notification_id,
-                    message,
-                    max_attempts=3
-                )
+                # Send notification
+                try:
+                    response = await slack_service.send_message(message)
+                except Exception as e:
+                    logger.error(f"Failed to send PR notification to user {user['id']}: {e}")
+                    MonitoringService.track_notification_sent(
+                        user_id=user["id"],
+                        notification_type="pull_request",
+                        repository=repository.get("full_name"),
+                        success=False,
+                        error=str(e),
+                        matched_keywords=matched_keywords
+                    )
+                    response = None
                 
                 if response:
                     notification_data = {
@@ -571,14 +582,20 @@ async def process_pull_request_review_event(payload: Dict[str, Any], users: list
             )
             message = slack_service.create_pull_request_review_message(message)
             
-            # Send notification with retry
-            notification_id = f"review_{review.get('id')}_{user['id']}_{event_id}"
-            response = await notification_retry_handler.send_notification_with_retry(
-                slack_service.send_message,
-                notification_id,
-                message,
-                max_attempts=3
-            )
+            # Send notification
+            try:
+                response = await slack_service.send_message(message)
+            except Exception as e:
+                logger.error(f"Failed to send review notification to user {user['id']}: {e}")
+                MonitoringService.track_notification_sent(
+                    user_id=user["id"],
+                    notification_type="pull_request_review",
+                    repository=repository.get("full_name"),
+                    success=False,
+                    error=str(e),
+                    matched_keywords=matched_keywords
+                )
+                response = None
             
             if response:
                 notification_data = {
@@ -1037,14 +1054,20 @@ async def process_discussion_event(payload: Dict[str, Any], users: list, event_i
             )
             message = slack_service.create_discussion_message(message)
             
-            # Send notification with retry
-            notification_id = f"discussion_{discussion.get('id')}_{user['id']}_{event_id}"
-            response = await notification_retry_handler.send_notification_with_retry(
-                slack_service.send_message,
-                notification_id,
-                message,
-                max_attempts=3
-            )
+            # Send notification
+            try:
+                response = await slack_service.send_message(message)
+            except Exception as e:
+                logger.error(f"Failed to send discussion notification to user {user['id']}: {e}")
+                MonitoringService.track_notification_sent(
+                    user_id=user["id"],
+                    notification_type="discussion",
+                    repository=repository.get("full_name"),
+                    success=False,
+                    error=str(e),
+                    matched_keywords=matched_keywords
+                )
+                response = None
             
             if response:
                 notification_data = {
@@ -1134,14 +1157,20 @@ async def process_discussion_comment_event(payload: Dict[str, Any], users: list,
             )
             message = slack_service.create_discussion_comment_message(message)
             
-            # Send notification with retry
-            notification_id = f"discussion_comment_{comment.get('id')}_{user['id']}_{event_id}"
-            response = await notification_retry_handler.send_notification_with_retry(
-                slack_service.send_message,
-                notification_id,
-                message,
-                max_attempts=3
-            )
+            # Send notification
+            try:
+                response = await slack_service.send_message(message)
+            except Exception as e:
+                logger.error(f"Failed to send discussion comment notification to user {user['id']}: {e}")
+                MonitoringService.track_notification_sent(
+                    user_id=user["id"],
+                    notification_type="discussion_comment",
+                    repository=repository.get("full_name"),
+                    success=False,
+                    error=str(e),
+                    matched_keywords=matched_keywords
+                )
+                response = None
             
             if response:
                 notification_data = {

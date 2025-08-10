@@ -215,16 +215,14 @@ radar/
 │   │   ├── scheduler_service.py     # Background scheduler
 │   │   ├── slack_service.py         # Slack API integration
 │   │   ├── task_service.py          # Scheduled tasks
-│   │   └── webhook_retry_service.py # Webhook retry logic
 │   └── utils/              # Utility functions
 │       ├── auth.py         # Authentication utilities
-│       ├── retry.py        # Retry mechanisms
 │       └── validation.py   # Input validation
 ├── database/               # Database management
 │   ├── init_db.py          # Database initialization
 │   └── schema.sql          # Complete database schema
 ├── tests/                  # Test suite
-│   └── test_webhook_retry.py # Webhook retry tests
+│   └── ...
 ├── .env.example           # Environment variables template
 ├── docker-compose.yml     # Docker Compose configuration
 ├── README.md             # Project documentation
