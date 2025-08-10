@@ -91,9 +91,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 MIT License - see LICENSE file for details.
 
-## 🎯 Roadmap & Status
+## 🎯 Roadmap
 
-### 📋 Future Enhancements
 - [ ] Notification deduplication (prevent duplicate messages)
 - [ ] User onboarding flow improvements  
 - [ ] Enhanced metrics and analytics
@@ -102,3 +101,5 @@ MIT License - see LICENSE file for details.
 - [ ] Digests
 - [ ] Github Discussions support
 - [ ] Team/individual Statistics
+- [ ] More consistent UI components and better styling
+- [ ] New home page
