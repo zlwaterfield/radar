@@ -94,13 +94,13 @@ MIT License - see LICENSE file for details.
 ## 🎯 Roadmap
 
 - [ ] Improve static page
-- [ ] Improve how the Slack messages look
+- [ ] Improve how the Slack messages look (create service to test them)
 - [ ] Testing all events in production
 - [ ] Improving onboarding experience
 - [ ] Github Discussions support
 - [ ] Improve Slack "homepage"
 - [ ] Review Slack backslash command
-- [ ] Metrics and analytics via PostHog
 - [ ] Daily Digests support
 - [ ] Billing and subscription management
+- [ ] Metrics and analytics via PostHog
 - [ ] User statistics
