@@ -3,17 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 249, 250, 251;
-  --background-end-rgb: 249, 250, 251;
-  --primary-color: 62, 99, 249; /* primary-600 */
+  --foreground-rgb: 8, 13, 28;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 237, 245, 247;
+  --primary-color: 38, 64, 139; /* marian-blue */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 13, 17, 23;
-    --background-end-rgb: 13, 17, 23;
+    --foreground-rgb: 237, 245, 247;
+    --background-start-rgb: 15, 8, 75;
+    --background-end-rgb: 38, 64, 139;
   }
 }
 
@@ -31,27 +31,27 @@ body {
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 focus:outline-none shadow-sm;
+    @apply bg-gradient-to-r from-federal-blue-700 to-marian-blue-600 text-white hover:from-federal-blue-600 hover:to-marian-blue-500 focus:ring-2 focus:ring-marian-blue-700 focus:ring-opacity-50 focus:outline-none shadow-sm;
   }
   
   .btn-secondary {
-    @apply bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 focus:ring-opacity-50 focus:outline-none shadow-sm;
+    @apply bg-white dark:bg-gray-800 text-marian-blue-700 dark:text-light-blue-500 border border-marian-blue-200 dark:border-light-blue-700 hover:bg-light-blue-900 dark:hover:bg-gray-700 focus:ring-2 focus:ring-marian-blue-700 focus:ring-opacity-50 focus:outline-none shadow-sm;
   }
   
   .btn-outline-primary {
-    @apply bg-transparent text-primary-600 border border-primary-200 hover:bg-primary-50 focus:ring-2 focus:ring-primary-200 focus:ring-opacity-50 focus:outline-none;
+    @apply bg-transparent text-marian-blue-700 dark:text-light-blue-500 border border-marian-blue-700 dark:border-light-blue-500 hover:bg-marian-blue-700/10 dark:hover:bg-light-blue-500/10 focus:ring-2 focus:ring-marian-blue-700 focus:ring-opacity-50 focus:outline-none;
   }
   
   .btn-outline-secondary {
-    @apply bg-transparent text-gray-600 border border-gray-200 hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 focus:ring-opacity-50 focus:outline-none;
+    @apply bg-transparent text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 focus:ring-2 focus:ring-gray-200 focus:ring-opacity-50 focus:outline-none;
   }
   
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-card p-5 transition-all duration-200 hover:shadow-card-hover border border-gray-100 dark:border-gray-700;
+    @apply bg-white dark:bg-gray-800 backdrop-blur-sm rounded-lg shadow-card p-5 transition-all duration-200 hover:shadow-card-hover border border-gray-100 dark:border-gray-700;
   }
   
   .input {
-    @apply w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-30 dark:bg-gray-800 dark:border-gray-700 dark:text-white;
+    @apply w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-marian-blue-700 focus:ring-opacity-30 bg-white dark:bg-gray-800 dark:text-white;
   }
   
   /* Custom scrollbar */
@@ -69,7 +69,7 @@ body {
   
   /* Form elements */
   input[type="checkbox"] {
-    @apply rounded text-primary-600 focus:ring-primary-500;
+    @apply rounded text-marian-blue-600 focus:ring-marian-blue-500;
   }
   
   /* Animations */
@@ -88,7 +88,7 @@ body {
     overflow: hidden;
     background: linear-gradient(135deg, 
       rgb(var(--background-start-rgb)) 0%, 
-      rgba(62, 99, 249, 0.05) 50%, 
+      rgba(38, 64, 139, 0.05) 50%, 
       rgb(var(--background-end-rgb)) 100%);
   }
 
@@ -98,9 +98,9 @@ body {
     width: 200%;
     height: 200%;
     background: 
-      radial-gradient(circle at 25% 25%, rgba(62, 99, 249, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 75% 75%, rgba(62, 99, 249, 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 50% 0%, rgba(62, 99, 249, 0.06) 0%, transparent 50%);
+      radial-gradient(circle at 25% 25%, rgba(38, 64, 139, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(166, 207, 213, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 50% 0%, rgba(194, 231, 217, 0.06) 0%, transparent 50%);
     animation: drift 20s ease-in-out infinite alternate;
   }
 
@@ -114,7 +114,7 @@ body {
   .orb {
     position: absolute;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(62, 99, 249, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(38, 64, 139, 0.15) 0%, transparent 70%);
     animation: float 15s ease-in-out infinite;
   }
 
@@ -160,8 +160,8 @@ body {
     height: 100%;
     opacity: 0.3;
     background-image: 
-      linear-gradient(rgba(62, 99, 249, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(62, 99, 249, 0.05) 1px, transparent 1px);
+      linear-gradient(rgba(166, 207, 213, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(166, 207, 213, 0.1) 1px, transparent 1px);
     background-size: 50px 50px;
     animation: grid-wave 40s ease-in-out infinite;
   }

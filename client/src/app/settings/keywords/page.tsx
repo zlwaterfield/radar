@@ -143,7 +143,7 @@ export default function KeywordsSettings() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-100 dark:border-gray-700">
       <div className="px-6 py-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
           Keyword Notifications

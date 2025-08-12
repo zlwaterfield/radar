@@ -24,10 +24,10 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
       </Head>
 
       {isAuthenticated ? (
-        <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-950">
+        <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-900">
           {/* Sidebar */}
-          <aside className="w-60 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-shrink-0 flex flex-col">
-            <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800">
+          <aside className="w-60 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 flex flex-col">
+            <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center">
                 <img 
                   src="/logo-full-light.png" 
@@ -38,7 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             </div>
             
             {showBackButton && (
-              <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <Button
                   onClick={() => router.push('/settings/notifications')}
                   variant="ghost"
@@ -55,9 +55,9 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             <nav className="flex-1 px-4 py-6">
             </nav>
             
-            <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center mb-3">
-                <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center mr-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-marian-blue-600 to-federal-blue-700 text-white flex items-center justify-center mr-2 shadow-md">
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="flex-1 truncate">
@@ -80,7 +80,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
           {/* Main content area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header */}
-            <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-10">
+            <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
               <div className="px-6 py-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{title}</h2>
                 <div className="flex items-center space-x-4">
@@ -90,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             </header>
             
             {/* Main content */}
-            <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950">
+            <main className="flex-1 overflow-y-auto bg-transparent">
               <div className="p-6 max-w-7xl mx-auto">
                 {children}
               </div>

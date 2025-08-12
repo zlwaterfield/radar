@@ -174,10 +174,10 @@ export default function RepositoriesSettings() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-      <div className="px-4 py-5 sm:p-6">
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-100 dark:border-gray-700">
+      <div className="px-6 py-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
             Monitored Repositories
           </h3>
           <div className="flex space-x-2">

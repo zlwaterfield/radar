@@ -37,14 +37,14 @@ export default function Home() {
               variant="secondary"
               icon={<FiArrowRight />}
               iconPosition="right"
-              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+              className="bg-white/90 dark:bg-gray-800 backdrop-blur-sm"
             >
               View Dashboard
             </Button>
           </div>
         )}
         <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center relative z-10">
-          <div className="backdrop-blur-sm bg-white/5 dark:bg-gray-900/5 rounded-3xl p-8 mb-8 border border-white/10 dark:border-gray-700/20">
+          <div className="backdrop-blur-sm bg-white dark:bg-gray-800/50 rounded-3xl p-8 mb-8 border border-gray-100 dark:border-gray-700 shadow-xl">
             <div className="mb-6 flex justify-center">
               <img 
                 src="/logo-full-light.png" 
@@ -53,7 +53,7 @@ export default function Home() {
               />
             </div>
             
-            <p className="mt-3 text-2xl max-w-2xl mb-8">
+            <p className="mt-3 text-2xl max-w-2xl mb-8 text-gray-700 dark:text-gray-200">
               Track GitHub activity and receive notifications in Slack
             </p>
             
@@ -72,24 +72,24 @@ export default function Home() {
           </div>
           
           <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 max-w-4xl">
-            <div className="card backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-white/20 dark:border-gray-700/30">
-              <h2 className="text-xl font-semibold mb-4">Real-time Notifications</h2>
-              <p>Get instant notifications about pull requests, reviews, comments, and more.</p>
+            <div className="backdrop-blur-sm bg-white dark:bg-gray-800/30 rounded-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all hover:border-marian-blue-200 dark:hover:border-gray-600">
+              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Real-time Notifications</h2>
+              <p className="text-gray-600 dark:text-gray-300">Get instant notifications about pull requests, reviews, comments, and more.</p>
             </div>
             
-            <div className="card backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-white/20 dark:border-gray-700/30">
-              <h2 className="text-xl font-semibold mb-4">Custom Filters</h2>
-              <p>Choose which repositories and events you want to be notified about.</p>
+            <div className="backdrop-blur-sm bg-white dark:bg-gray-800/30 rounded-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all hover:border-marian-blue-200 dark:hover:border-gray-600">
+              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Custom Filters</h2>
+              <p className="text-gray-600 dark:text-gray-300">Choose which repositories and events you want to be notified about.</p>
             </div>
             
-            <div className="card backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-white/20 dark:border-gray-700/30">
-              <h2 className="text-xl font-semibold mb-4">Team Collaboration</h2>
-              <p>Keep your entire team in the loop with shared notifications.</p>
+            <div className="backdrop-blur-sm bg-white dark:bg-gray-800/30 rounded-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all hover:border-marian-blue-200 dark:hover:border-gray-600">
+              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Team Collaboration</h2>
+              <p className="text-gray-600 dark:text-gray-300">Keep your entire team in the loop with shared notifications.</p>
             </div>
           </div>
         </main>
         
-        <footer className="w-full h-24 border-t border-gray-200 dark:border-gray-700 flex justify-center items-center">
+        <footer className="w-full h-24 border-t border-gray-100 dark:border-gray-700 flex justify-center items-center">
           <a
             className="flex items-center justify-center"
             href="https://github.com/zlwaterfield/radar"

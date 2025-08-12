@@ -24,9 +24,9 @@ const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'font-medium transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-opacity-50 rounded-md';
   
   const variantStyles = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm border border-primary-600',
-    secondary: 'bg-transparent text-white border border-gray-300 hover:bg-white/10 focus:ring-gray-200',
-    ghost: 'bg-transparent text-gray-600 hover:text-primary-600 hover:bg-gray-50 focus:ring-gray-200 border border-transparent'
+    primary: 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white hover:from-marian-blue-500 hover:to-federal-blue-600 focus:ring-marian-blue-700 shadow-sm border border-transparent',
+    secondary: 'bg-white dark:bg-gray-800 text-marian-blue-700 dark:text-light-blue border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-marian-blue-700',
+    ghost: 'bg-transparent text-gray-600 dark:text-gray-300 hover:text-marian-blue-700 dark:hover:text-light-blue hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-gray-200 border border-transparent'
   };
   
   const sizeStyles = {

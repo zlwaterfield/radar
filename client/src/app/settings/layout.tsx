@@ -26,10 +26,10 @@ export default function SettingsLayout({
   }
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
-      <aside className="w-60 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-shrink-0 flex flex-col">
-        <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800">
+      <aside className="w-60 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 flex flex-col">
+        <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <img 
               src="/logo-full-light.png" 
@@ -44,8 +44,8 @@ export default function SettingsLayout({
             <Link href="/settings/notifications"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
                 isActive('/settings/notifications')
-                  ? 'bg-primary-50 text-primary-700 dark:bg-gray-700 dark:text-primary-400 font-medium'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
               <FiBell className="mr-3 flex-shrink-0 h-5 w-5" />
               Notifications
@@ -66,8 +66,8 @@ export default function SettingsLayout({
             <Link href="/settings/repositories"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
                 isActive('/settings/repositories')
-                  ? 'bg-primary-50 text-primary-700 dark:bg-gray-700 dark:text-primary-400 font-medium'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
               <FiGitBranch className="mr-3 flex-shrink-0 h-5 w-5" />
               Repositories
@@ -77,8 +77,8 @@ export default function SettingsLayout({
             <Link href="/settings/keywords"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
                 isActive('/settings/keywords')
-                  ? 'bg-primary-50 text-primary-700 dark:bg-gray-700 dark:text-primary-400 font-medium'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
               <FiSearch className="mr-3 flex-shrink-0 h-5 w-5" />
               Keywords
@@ -88,15 +88,15 @@ export default function SettingsLayout({
           
           {/* Always show GitHub Integration */}
           <div className="px-4 mt-6 mb-3">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Integrations</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Integrations</p>
           </div>
           <ul className="space-y-1">
             <li>
-              <Link href="/auth/github" 
+              <Link href="/settings/github" 
                 className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
-                  pathname === '/auth/github' 
-                    ? 'bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400 font-medium' 
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  pathname === '/settings/github' 
+                    ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}>
                 <FiGithub className="mr-3 flex-shrink-0 h-5 w-5" />
                 GitHub Integration
@@ -104,9 +104,9 @@ export default function SettingsLayout({
             </li>
           </ul>
         </nav>
-        <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center mb-3">
-            <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center mr-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-marian-blue-600 to-federal-blue-700 text-white flex items-center justify-center mr-2 shadow-md">
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="flex-1 truncate">
@@ -129,13 +129,14 @@ export default function SettingsLayout({
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-10">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               {pathname === '/settings/notifications' && 'Notifications'}
               {/* {pathname === '/settings/digest' && 'Daily Digest'} */}
               {pathname === '/settings/repositories' && 'Repositories'}
               {pathname === '/settings/keywords' && 'Keywords'}
+              {pathname === '/settings/github' && 'GitHub Integration'}
             </h2>
             <div className="flex items-center space-x-4">
               {/* Add header actions here if needed */}
@@ -144,7 +145,7 @@ export default function SettingsLayout({
         </header>
         
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950">
+        <main className="flex-1 overflow-y-auto bg-transparent">
           <div className="p-6 max-w-7xl mx-auto">
             {children}
           </div>
