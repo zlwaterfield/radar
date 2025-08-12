@@ -25,7 +25,7 @@ const Button: React.FC<ButtonProps> = ({
   
   const variantStyles = {
     primary: 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white hover:from-marian-blue-500 hover:to-federal-blue-600 focus:ring-marian-blue-700 shadow-sm border border-transparent',
-    secondary: 'bg-white dark:bg-gray-800 text-marian-blue-800 dark:text-light-blue border border-gray-300 dark:border-gray-600 hover:bg-white hover:text-marian-blue-900 dark:hover:bg-gray-700 dark:hover:text-light-blue focus:ring-marian-blue-700',
+    secondary: 'bg-white dark:bg-gray-800 text-marian-blue-400 dark:text-white border border-marian-blue-400 dark:border-white hover:bg-marian-blue-600 hover:text-white dark:hover:bg-white dark:hover:text-marian-blue-500 focus:ring-marian-blue-700',
     ghost: 'bg-transparent text-gray-600 dark:text-gray-300 hover:text-marian-blue-700 dark:hover:text-light-blue hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-gray-200 border border-transparent'
   };
   

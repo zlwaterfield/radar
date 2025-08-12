@@ -183,7 +183,7 @@ export default function RepositoriesSettings() {
           <Button 
             onClick={refreshRepositories}
             disabled={refreshing || toggleAllLoading}
-            variant="secondary"
+            variant="primary"
             size="sm"
             icon={<FiRefreshCw className={refreshing ? 'animate-spin' : ''} />}
           >
@@ -291,7 +291,7 @@ export default function RepositoriesSettings() {
                   disabled={toggleAllLoading || refreshing}
                   variant="ghost"
                   size="sm"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-500 dark:hover:bg-red-100"
                 >
                   Disable all
                 </Button>
