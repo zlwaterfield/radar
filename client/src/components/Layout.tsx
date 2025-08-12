@@ -30,9 +30,14 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center">
                 <img 
+                  src="/logo-full-dark.png" 
+                  alt="Radar" 
+                  className="h-10 w-auto dark:hidden block"
+                />
+                <img 
                   src="/logo-full-light.png" 
                   alt="Radar" 
-                  className="h-10 w-auto"
+                  className="h-10 w-auto hidden dark:block"
                 />
               </div>
             </div>

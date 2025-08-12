@@ -47,9 +47,14 @@ export default function Home() {
           <div className="backdrop-blur-sm bg-white dark:bg-gray-800/50 rounded-3xl p-8 mb-8 border border-gray-100 dark:border-gray-700 shadow-xl">
             <div className="mb-6 flex justify-center">
               <img 
+                src="/logo-full-dark.png" 
+                alt="Radar" 
+                className="h-10 w-auto dark:hidden block"
+              />
+              <img 
                 src="/logo-full-light.png" 
                 alt="Radar" 
-                className="h-16 w-auto"
+                className="h-10 w-auto hidden dark:block"
               />
             </div>
             
