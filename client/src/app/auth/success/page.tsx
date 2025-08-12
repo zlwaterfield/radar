@@ -68,13 +68,13 @@ function AuthSuccessContent() {
           <div className="flex justify-center mb-4">
             <FiAlertCircle className="text-red-500 text-6xl" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">Authentication Error</h1>
+          <h1 className="text-2xl font-bold mb-2">Authentication error</h1>
           <p className="mb-4 text-red-600">{error}</p>
           <Button
             onClick={() => router.push('/')}
             variant="primary"
           >
-            Return to Home
+            Return to home
           </Button>
         </div>
       </div>
@@ -87,7 +87,7 @@ function AuthSuccessContent() {
         <div className="flex justify-center mb-4">
           <FiCheckCircle className="text-green-500 text-6xl" />
         </div>
-        <h1 className="text-2xl font-bold mb-2">Authentication Successful</h1>
+        <h1 className="text-2xl font-bold mb-2">Authentication successful</h1>
         <p className="mb-4">
           {provider === 'slack' 
             ? 'You have successfully logged in with Slack.' 

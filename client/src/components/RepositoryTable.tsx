@@ -24,9 +24,10 @@ const RepositoryTable: React.FC<RepositoryTableProps> = ({
   toggleRepository 
 }) => {
   return (
-    <div className="overflow-x-auto w-full">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50 dark:bg-gray-700">
+    <div className="overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
+      <div className="overflow-x-auto">
+        <table className="min-w-full">
+        <thead>
           <tr>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Repository</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Organization</th>
@@ -34,9 +35,9 @@ const RepositoryTable: React.FC<RepositoryTableProps> = ({
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
           {repositories.map((repo) => (
-            <tr key={repo.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+            <tr key={repo.id}>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
                   {repo.owner_avatar_url && (
@@ -65,7 +66,7 @@ const RepositoryTable: React.FC<RepositoryTableProps> = ({
                       htmlFor={`toggle-${repo.id}`}
                       className={`block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${
                         togglingRepos.has(repo.id) ? 'opacity-50' : ''
-                      } ${repo.enabled ? 'bg-blue-600 dark:bg-blue-500' : 'bg-gray-300 dark:bg-gray-700'}`}
+                      } ${repo.enabled ? 'bg-marian-blue-600 dark:bg-marian-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                     >
                       <span 
                         className={`block h-5 w-5 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out ${
@@ -80,14 +81,14 @@ const RepositoryTable: React.FC<RepositoryTableProps> = ({
                       <div className="flex items-center">
                         <div className="relative h-4 w-4 mr-2">
                           <div className="h-4 w-4 rounded-full border-2 border-gray-200 dark:border-gray-600"></div>
-                          <div className="absolute top-0 left-0 h-4 w-4 rounded-full border-2 border-primary-600 border-t-transparent animate-spin"></div>
+                          <div className="absolute top-0 left-0 h-4 w-4 rounded-full border-2 border-marian-blue-600 border-t-transparent animate-spin"></div>
                         </div>
-                        <span className={repo.enabled ? "text-blue-600" : "text-gray-900 dark:text-gray-300"}>
+                        <span className="dark:text-white text-marian-blue-500">
                           {repo.enabled ? 'Enabled' : 'Disabled'}
                         </span>
                       </div>
                     ) : (
-                      <span className={repo.enabled ? "text-blue-600" : "text-gray-900 dark:text-gray-300"}>
+                      <span className="dark:text-white text-marian-blue-500">
                         {repo.enabled ? 'Enabled' : 'Disabled'}
                       </span>
                     )}
@@ -100,7 +101,8 @@ const RepositoryTable: React.FC<RepositoryTableProps> = ({
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   );
 };

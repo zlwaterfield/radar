@@ -193,7 +193,7 @@ export default function NotificationsSettings() {
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-100 dark:border-gray-700">
       <div className="px-6 py-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Advanced Notification Preferences
+          Advanced notification preferences
         </h3>
         <div className="mt-2 max-w-xl text-sm text-gray-600 dark:text-gray-300">
           <p>Configure when you want to be notified about GitHub activity. These settings apply regardless of your role on each PR or issue.</p>
@@ -202,7 +202,7 @@ export default function NotificationsSettings() {
         <div className="mt-5 space-y-6">
           {/* PR & Issue Activity */}
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-white">Pull Request Activity</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white">Pull request activity</h4>
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
@@ -274,7 +274,7 @@ export default function NotificationsSettings() {
           
           {/* Issue Activity */}
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-gray-100">Issue Activity</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white">Issue activity</h4>
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
@@ -320,7 +320,7 @@ export default function NotificationsSettings() {
           
           {/* CI/CD */}
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-gray-100">CI/CD</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white">CI/CD</h4>
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
@@ -373,7 +373,7 @@ export default function NotificationsSettings() {
           
           {/* Noise Control */}
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-gray-100">Noise Control</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white">Noise control</h4>
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
@@ -427,7 +427,7 @@ export default function NotificationsSettings() {
             disabled={isSaving}
             loading={isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save Preferences'}
+            {isSaving ? 'Saving...' : 'Save preferences'}
           </Button>
         </div>
       </div>

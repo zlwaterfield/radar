@@ -58,7 +58,7 @@ function GithubIntegrationContent() {
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-100 dark:border-gray-700">
       <div className="px-6 py-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-          GitHub Integration
+          GitHub integration
         </h3>
         <div className="mt-2 max-w-xl text-sm text-gray-600 dark:text-gray-300">
           <p>Connect your GitHub account and install the Radar app to monitor your repositories.</p>
@@ -69,7 +69,7 @@ function GithubIntegrationContent() {
           <div className="flex items-start space-x-4 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
             <div className="flex-shrink-0">
               {hasGitHubAccount ? (
-                <div className="w-8 h-8 bg-mint-green-600 text-white rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-mint-green-400 text-white rounded-full flex items-center justify-center">
                   <FiCheck className="w-5 h-5" />
                 </div>
               ) : (
@@ -89,11 +89,11 @@ function GithubIntegrationContent() {
                   variant="primary"
                   icon={<FiGithub />}
                 >
-                  Connect GitHub Account
+                  Connect GitHub account
                 </Button>
               )}
               {hasGitHubAccount && (
-                <div className="text-sm text-mint-green-600 dark:text-mint-green-500 font-medium">
+                <div className="text-sm text-mint-green-400 dark:text-mint-green-300 font-medium">
                   ✓ Connected as {user?.github_login || 'GitHub user'}
                 </div>
               )}
@@ -111,7 +111,7 @@ function GithubIntegrationContent() {
                   </div>
                 </div>
               ) : hasGitHubApp ? (
-                <div className="w-8 h-8 bg-mint-green-600 text-white rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-mint-green-400 text-white rounded-full flex items-center justify-center">
                   <FiCheck className="w-5 h-5" />
                 </div>
               ) : (
@@ -122,7 +122,7 @@ function GithubIntegrationContent() {
             </div>
             <div className="flex-1">
               <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">
-                {checkingInstallations ? 'Checking Installation...' : hasGitHubApp ? 'Radar App Installed' : 'Install Radar App'}
+                {checkingInstallations ? 'Checking installation...' : hasGitHubApp ? 'Radar app installed' : 'Install Radar app'}
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 {checkingInstallations 
@@ -138,12 +138,12 @@ function GithubIntegrationContent() {
                   variant="secondary"
                   icon={<FiSettings />}
                 >
-                  Install GitHub App
+                  Install GitHub app
                 </Button>
               )}
               {hasGitHubAccount && !checkingInstallations && hasGitHubApp && (
                 <div className="space-y-3">
-                  <div className="text-sm text-mint-green-600 dark:text-mint-green-500 font-medium">
+                  <div className="text-sm text-mint-green-400 dark:text-mint-green-300 font-medium">
                     ✓ {installationStatus?.total_installations} installation(s) found
                   </div>
                   {installationStatus?.installations?.map((installation: any, index: number) => (
@@ -165,7 +165,7 @@ function GithubIntegrationContent() {
                       size="sm"
                       icon={<FiSettings />}
                     >
-                      Update Installation
+                      Update installation
                     </Button>
                     <Button 
                       onClick={() => window.open('https://github.com/settings/installations', '_blank')}

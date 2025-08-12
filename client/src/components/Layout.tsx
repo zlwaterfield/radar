@@ -46,7 +46,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
                   icon={<FiArrowLeft />}
                   className="w-full justify-start"
                 >
-                  Go Back
+                  Go back
                 </Button>
               </div>
             )}

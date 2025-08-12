@@ -39,7 +39,7 @@ export default function Home() {
               iconPosition="right"
               className="bg-white/90 dark:bg-gray-800 backdrop-blur-sm"
             >
-              View Dashboard
+              View dashboard
             </Button>
           </div>
         )}
@@ -73,17 +73,17 @@ export default function Home() {
           
           <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 max-w-4xl">
             <div className="backdrop-blur-sm bg-white dark:bg-gray-800/30 rounded-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all hover:border-marian-blue-200 dark:hover:border-gray-600">
-              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Real-time Notifications</h2>
+              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Real-time notifications</h2>
               <p className="text-gray-600 dark:text-gray-300">Get instant notifications about pull requests, reviews, comments, and more.</p>
             </div>
             
             <div className="backdrop-blur-sm bg-white dark:bg-gray-800/30 rounded-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all hover:border-marian-blue-200 dark:hover:border-gray-600">
-              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Custom Filters</h2>
+              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Custom filters</h2>
               <p className="text-gray-600 dark:text-gray-300">Choose which repositories and events you want to be notified about.</p>
             </div>
             
             <div className="backdrop-blur-sm bg-white dark:bg-gray-800/30 rounded-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all hover:border-marian-blue-200 dark:hover:border-gray-600">
-              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Team Collaboration</h2>
+              <h2 className="text-xl font-semibold mb-4 text-marian-blue-700 dark:text-light-blue-500">Team collaboration</h2>
               <p className="text-gray-600 dark:text-gray-300">Keep your entire team in the loop with shared notifications.</p>
             </div>
           </div>

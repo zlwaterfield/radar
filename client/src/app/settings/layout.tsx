@@ -59,7 +59,7 @@ export default function SettingsLayout({
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}>
               <FiCalendar className="mr-3 flex-shrink-0 h-5 w-5" />
-              Daily Digest
+              Daily digest
             </Link>
           </li> */}
           <li>
@@ -86,7 +86,7 @@ export default function SettingsLayout({
           </li>
           </ul>
           
-          {/* Always show GitHub Integration */}
+          {/* Always show GitHub integration */}
           <div className="px-4 mt-6 mb-3">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Integrations</p>
           </div>
@@ -99,7 +99,7 @@ export default function SettingsLayout({
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}>
                 <FiGithub className="mr-3 flex-shrink-0 h-5 w-5" />
-                GitHub Integration
+                GitHub integration
               </Link>
             </li>
           </ul>
@@ -133,10 +133,10 @@ export default function SettingsLayout({
           <div className="px-6 py-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               {pathname === '/settings/notifications' && 'Notifications'}
-              {/* {pathname === '/settings/digest' && 'Daily Digest'} */}
+              {/* {pathname === '/settings/digest' && 'Daily digest'} */}
               {pathname === '/settings/repositories' && 'Repositories'}
               {pathname === '/settings/keywords' && 'Keywords'}
-              {pathname === '/settings/github' && 'GitHub Integration'}
+              {pathname === '/settings/github' && 'GitHub integration'}
             </h2>
             <div className="flex items-center space-x-4">
               {/* Add header actions here if needed */}

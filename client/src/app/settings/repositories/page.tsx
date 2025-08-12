@@ -178,36 +178,17 @@ export default function RepositoriesSettings() {
       <div className="px-6 py-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Monitored Repositories
+            Monitored repositories
           </h3>
-          <div className="flex space-x-2">
-            <Button 
-              onClick={() => toggleAllRepositories(true)}
-              disabled={toggleAllLoading || refreshing}
-              variant="secondary"
-              size="sm"
-            >
-              Enable All
-            </Button>
-            <Button 
-              onClick={() => toggleAllRepositories(false)}
-              disabled={toggleAllLoading || refreshing}
-              variant="ghost"
-              size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              Disable All
-            </Button>
-            <Button 
-              onClick={refreshRepositories}
-              disabled={refreshing || toggleAllLoading}
-              variant="secondary"
-              size="sm"
-              icon={<FiRefreshCw className={refreshing ? 'animate-spin' : ''} />}
-            >
-              {refreshing ? 'Refreshing...' : 'Refresh Repositories'}
-            </Button>
-          </div>
+          <Button 
+            onClick={refreshRepositories}
+            disabled={refreshing || toggleAllLoading}
+            variant="secondary"
+            size="sm"
+            icon={<FiRefreshCw className={refreshing ? 'animate-spin' : ''} />}
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh repositories'}
+          </Button>
         </div>
         
         <div className="mb-4">
@@ -288,6 +269,35 @@ export default function RepositoriesSettings() {
               </div>
             )}
           </>
+        )}
+        
+        {repositories.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Bulk actions for all repositories
+              </p>
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={() => toggleAllRepositories(true)}
+                  disabled={toggleAllLoading || refreshing}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Enable all
+                </Button>
+                <Button 
+                  onClick={() => toggleAllRepositories(false)}
+                  disabled={toggleAllLoading || refreshing}
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  Disable all
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
