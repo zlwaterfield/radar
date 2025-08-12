@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Button from '@/components/Button';
 import { FiGithub, FiLogOut, FiBell, FiGitBranch, FiSearch, FiCalendar } from 'react-icons/fi';
 
 export default function SettingsLayout({
@@ -113,13 +114,15 @@ export default function SettingsLayout({
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
             </div>
           </div>
-          <button 
+          <Button 
             onClick={logout}
-            className="flex items-center w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
+            variant="ghost"
+            size="sm"
+            icon={<FiLogOut />}
+            className="w-full justify-start"
           >
-            <FiLogOut className="mr-2 h-4 w-4" />
             Logout
-          </button>
+          </Button>
         </div>
       </aside>
 

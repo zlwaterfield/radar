@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
 import Loader from '@/components/Loader';
+import Button from '@/components/Button';
 
 function AuthSuccessContent() {
   const router = useRouter();
@@ -69,12 +70,12 @@ function AuthSuccessContent() {
           </div>
           <h1 className="text-2xl font-bold mb-2">Authentication Error</h1>
           <p className="mb-4 text-red-600">{error}</p>
-          <button
+          <Button
             onClick={() => router.push('/')}
-            className="btn btn-primary"
+            variant="primary"
           >
             Return to Home
-          </button>
+          </Button>
         </div>
       </div>
     );

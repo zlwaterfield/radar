@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
+import Button from '@/components/Button';
 import toast from 'react-hot-toast';
 
 interface NotificationSettings {
@@ -419,14 +420,15 @@ export default function NotificationsSettings() {
         </div>
         
         <div className="mt-5">
-          <button
+          <Button
             type="button"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            variant="primary"
             onClick={saveNotificationSettings}
             disabled={isSaving}
+            loading={isSaving}
           >
             {isSaving ? 'Saving...' : 'Save Preferences'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

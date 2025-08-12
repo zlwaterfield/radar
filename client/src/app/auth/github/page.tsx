@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
+import Button from '@/components/Button';
 import { FiGithub, FiCheck, FiSettings } from 'react-icons/fi';
 
 function ConnectGithubContent() {
@@ -84,13 +85,13 @@ function ConnectGithubContent() {
                   Connect your GitHub account to identify yourself and access your profile information.
                 </p>
                 {!hasGitHubAccount && (
-                  <button 
+                  <Button 
                     onClick={connectGithub}
-                    className="btn btn-primary flex items-center"
+                    variant="primary"
+                    icon={<FiGithub />}
                   >
-                    <FiGithub className="mr-2" />
                     Connect GitHub Account
-                  </button>
+                  </Button>
                 )}
                 {hasGitHubAccount && (
                   <div className="text-sm text-green-600 font-medium">
@@ -133,13 +134,13 @@ function ConnectGithubContent() {
                   }
                 </p>
                 {hasGitHubAccount && !checkingInstallations && !hasGitHubApp && (
-                  <button 
+                  <Button 
                     onClick={installGithubApp}
-                    className="btn btn-secondary flex items-center"
+                    variant="secondary"
+                    icon={<FiSettings />}
                   >
-                    <FiSettings className="mr-2" />
                     Install GitHub App
-                  </button>
+                  </Button>
                 )}
                 {hasGitHubAccount && !checkingInstallations && hasGitHubApp && (
                   <div className="space-y-3">
@@ -159,20 +160,22 @@ function ConnectGithubContent() {
                       </div>
                     ))}
                     <div className="flex space-x-3">
-                      <button 
+                      <Button 
                         onClick={installGithubApp}
-                        className="btn btn-outline flex items-center text-sm"
+                        variant="ghost"
+                        size="sm"
+                        icon={<FiSettings />}
                       >
-                        <FiSettings className="mr-2" />
                         Update Installation
-                      </button>
-                      <button 
+                      </Button>
+                      <Button 
                         onClick={() => window.open('https://github.com/settings/installations', '_blank')}
-                        className="btn btn-outline flex items-center text-sm"
+                        variant="ghost"
+                        size="sm"
+                        icon={<FiGithub />}
                       >
-                        <FiGithub className="mr-2" />
                         Manage on GitHub
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}

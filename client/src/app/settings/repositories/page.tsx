@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 import Loader from '@/components/Loader';
+import Button from '@/components/Button';
 import { FiRefreshCw } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import RepositoryTable from '@/components/RepositoryTable';
@@ -180,28 +181,32 @@ export default function RepositoriesSettings() {
             Monitored Repositories
           </h3>
           <div className="flex space-x-2">
-            <button 
+            <Button 
               onClick={() => toggleAllRepositories(true)}
               disabled={toggleAllLoading || refreshing}
-              className="btn btn-outline-primary flex items-center"
+              variant="secondary"
+              size="sm"
             >
               Enable All
-            </button>
-            <button 
+            </Button>
+            <Button 
               onClick={() => toggleAllRepositories(false)}
               disabled={toggleAllLoading || refreshing}
-              className="btn btn-outline-danger flex items-center"
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               Disable All
-            </button>
-            <button 
+            </Button>
+            <Button 
               onClick={refreshRepositories}
               disabled={refreshing || toggleAllLoading}
-              className="btn btn-outline-primary flex items-center"
+              variant="secondary"
+              size="sm"
+              icon={<FiRefreshCw className={refreshing ? 'animate-spin' : ''} />}
             >
-              <FiRefreshCw className={`mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               {refreshing ? 'Refreshing...' : 'Refresh Repositories'}
-            </button>
+            </Button>
           </div>
         </div>
         
@@ -255,28 +260,30 @@ export default function RepositoriesSettings() {
                   <span className="font-medium">{totalRepos}</span> repositories
                 </div>
                 <div className="flex space-x-2">
-                  <button
+                  <Button
                     onClick={() => {
                       if (currentPage > 1) {
                         setCurrentPage(currentPage - 1);
                       }
                     }}
                     disabled={currentPage === 1}
-                    className="px-2 py-1 border rounded-md disabled:opacity-50"
+                    variant="ghost"
+                    size="sm"
                   >
                     Previous
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => {
                       if (currentPage < totalPages) {
                         setCurrentPage(currentPage + 1);
                       }
                     }}
                     disabled={currentPage === totalPages}
-                    className="px-2 py-1 border rounded-md disabled:opacity-50"
+                    variant="ghost"
+                    size="sm"
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

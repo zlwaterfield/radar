@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
+import Button from '@/components/Button';
 import { FiGithub, FiSlack, FiArrowRight } from 'react-icons/fi';
 
 export default function Home() {
@@ -31,13 +32,15 @@ export default function Home() {
         {/* View Dashboard button for logged-in users */}
         {isAuthenticated && (
           <div className="absolute top-4 right-4 z-20">
-            <button
+            <Button
               onClick={() => router.push('/settings/notifications')}
-              className="btn btn-outline-primary flex items-center px-4 py-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white transition-colors"
+              variant="secondary"
+              icon={<FiArrowRight />}
+              iconPosition="right"
+              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
             >
               View Dashboard
-              <FiArrowRight className="ml-2" />
-            </button>
+            </Button>
           </div>
         )}
         <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center relative z-10">
@@ -56,13 +59,14 @@ export default function Home() {
             
             {!isAuthenticated && (
               <div className="flex item-center justify-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-                <button
+                <Button
                   onClick={login}
-                  className="btn btn-primary flex items-center justify-center text-lg px-8 py-3"
+                  variant="primary"
+                  size="lg"
+                  icon={<FiSlack />}
                 >
-                  <FiSlack className="mr-2" />
                   Login with Slack
-                </button>
+                </Button>
               </div>
             )}
           </div>

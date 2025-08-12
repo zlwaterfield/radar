@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Button from '@/components/Button';
 import { FiLogOut, FiArrowLeft, FiGithub, FiSettings } from 'react-icons/fi';
 
 interface LayoutProps {
@@ -38,13 +39,15 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             
             {showBackButton && (
               <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-                <button
+                <Button
                   onClick={() => router.push('/settings/notifications')}
-                  className="flex items-center w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
+                  variant="ghost"
+                  size="sm"
+                  icon={<FiArrowLeft />}
+                  className="w-full justify-start"
                 >
-                  <FiArrowLeft className="mr-2 h-4 w-4" />
                   Go Back
-                </button>
+                </Button>
               </div>
             )}
             
@@ -62,13 +65,15 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
                 </div>
               </div>
-              <button 
+              <Button 
                 onClick={logout}
-                className="flex items-center w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
+                variant="ghost"
+                size="sm"
+                icon={<FiLogOut />}
+                className="w-full justify-start"
               >
-                <FiLogOut className="mr-2 h-4 w-4" />
                 Logout
-              </button>
+              </Button>
             </div>
           </aside>
 
