@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
@@ -95,15 +96,25 @@ export default function Home() {
         </main>
         
         <footer className="w-full h-24 border-t border-gray-100 dark:border-gray-700 flex justify-center items-center">
-          <a
-            className="flex items-center justify-center"
-            href="https://github.com/zlwaterfield/radar"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <FiGithub className="mr-2" />
-            View on GitHub
-          </a>
+          <div className="flex items-center space-x-6">
+            <a
+              className="flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              href="https://github.com/zlwaterfield/radar"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FiGithub className="mr-2" />
+              View on GitHub
+            </a>
+            <span className="text-gray-400 dark:text-gray-600">·</span>
+            <Link href="/terms" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+              Terms
+            </Link>
+            <span className="text-gray-400 dark:text-gray-600">·</span>
+            <Link href="/privacy" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+              Privacy
+            </Link>
+          </div>
         </footer>
       </div>
     </>

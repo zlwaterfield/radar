@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
@@ -59,6 +60,19 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             {/* Navigation */}
             <nav className="flex-1 px-4 py-6">
             </nav>
+            
+            {/* Footer Links */}
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-center space-x-4 text-xs">
+                <Link href="/terms" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  Terms
+                </Link>
+                <span className="text-gray-400 dark:text-gray-600">·</span>
+                <Link href="/privacy" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  Privacy
+                </Link>
+              </div>
+            </div>
             
             <div className="p-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center mb-3">
