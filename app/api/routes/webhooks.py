@@ -117,11 +117,34 @@ def extract_mentioned_usernames(text: str) -> List[str]:
     if not text:
         return []
     
-    # Find all @username mentions
+    # Find all @username mentions, but exclude @org/team mentions
     # GitHub usernames can contain letters, numbers, and hyphens
     # They cannot start with a hyphen and are case insensitive
-    # Use word boundary to avoid matching emails
-    mentions = re.findall(r'(?:^|[^a-zA-Z0-9.])@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)', text)
+    # Use negative lookahead to exclude org/team format
+    mentions = re.findall(r'(?:^|[^a-zA-Z0-9.])@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)(?![a-zA-Z0-9\-_]*\/)', text)
+    return list(set(mentions))  # Remove duplicates
+
+
+def extract_team_mentions(text: str, org_login: str) -> List[str]:
+    """
+    Extract GitHub team mentions in text using @org/team-name syntax.
+    
+    Args:
+        text: Text to search for team mentions
+        org_login: GitHub organization login
+        
+    Returns:
+        List of mentioned team slugs (without @org/ prefix)
+    """
+    if not text or not org_login:
+        return []
+    
+    # Find all @organization/team-name mentions
+    # GitHub team names can contain letters, numbers, hyphens, and underscores
+    # They cannot start with a hyphen or underscore
+    org_escaped = re.escape(org_login)
+    pattern = rf'@{org_escaped}/([a-zA-Z0-9][a-zA-Z0-9\-_]*)'
+    mentions = re.findall(pattern, text)
     return list(set(mentions))  # Remove duplicates
 
 
@@ -147,6 +170,39 @@ async def get_mentioned_users(comment_body: str) -> List[Dict[str, Any]]:
             logger.error(f"Error finding user by GitHub login {username}: {e}")
     
     return mentioned_users
+
+
+async def get_mentioned_team_members(text: str, org_login: str) -> List[Dict[str, Any]]:
+    """
+    Get users who are members of teams mentioned in text.
+    
+    Args:
+        text: Text to search for team mentions
+        org_login: GitHub organization login
+        
+    Returns:
+        List of user objects for team members
+    """
+    mentioned_teams = extract_team_mentions(text, org_login)
+    team_members = []
+    
+    for team_slug in mentioned_teams:
+        try:
+            # Get team members from database
+            members = await SupabaseManager.get_team_members(org_login, team_slug)
+            team_members.extend(members)
+        except Exception as e:
+            logger.error(f"Error finding team members for {org_login}/{team_slug}: {e}")
+    
+    # Remove duplicates by user ID
+    unique_members = []
+    seen_ids = set()
+    for member in team_members:
+        if member["id"] not in seen_ids:
+            unique_members.append(member)
+            seen_ids.add(member["id"])
+    
+    return unique_members
 
 
 @router.post("/github")
@@ -385,7 +441,34 @@ async def process_pull_request_event(payload: Dict[str, Any], users: list, event
         from app.models.slack import PullRequestMessage
         from app.services.openai_analyzer_service import OpenAIAnalyzerService
         
-        for user in users:
+        # Get team members mentioned in the PR title/body
+        repository = payload.get("repository", {})
+        org_login = repository.get("owner", {}).get("login")
+        team_mentioned_users = []
+        if org_login:
+            pr_content = f"{pr.get('title', '')} {pr.get('body', '')}"
+            team_mentioned_users = await get_mentioned_team_members(pr_content, org_login)
+        
+        # Also get team members from requested_teams
+        if pr.get("requested_teams"):
+            for requested_team in pr["requested_teams"]:
+                team_slug = requested_team.get("slug")
+                if team_slug and org_login:
+                    try:
+                        team_members = await SupabaseManager.get_team_members(org_login, team_slug)
+                        team_mentioned_users.extend(team_members)
+                    except Exception as e:
+                        logger.error(f"Error getting team members for requested team {org_login}/{team_slug}: {e}")
+        
+        # Combine repository watchers and team members
+        all_users = list(users)  # Start with repository watchers
+        
+        # Add team members if they're not already in the list
+        for team_user in team_mentioned_users:
+            if not any(u["id"] == team_user["id"] for u in all_users):
+                all_users.append(team_user)
+        
+        for user in all_users:
             # Check if user should be notified
             should_notify, matched_keywords, match_details = await NotificationService.process_pull_request_event(
                 user["id"], payload, event_id
@@ -711,7 +794,23 @@ async def process_issue_event(payload: Dict[str, Any], users: list, event_id: st
         from app.services.notification_service import NotificationService
         from app.models.slack import IssueMessage
         
-        for user in users:
+        # Get team members mentioned in the issue title/body
+        repository = payload.get("repository", {})
+        org_login = repository.get("owner", {}).get("login")
+        team_mentioned_users = []
+        if org_login:
+            issue_content = f"{issue.get('title', '')} {issue.get('body', '')}"
+            team_mentioned_users = await get_mentioned_team_members(issue_content, org_login)
+        
+        # Combine repository watchers and team members
+        all_users = list(users)  # Start with repository watchers
+        
+        # Add team members if they're not already in the list
+        for team_user in team_mentioned_users:
+            if not any(u["id"] == team_user["id"] for u in all_users):
+                all_users.append(team_user)
+        
+        for user in all_users:
             # Check if user should be notified
             should_notify, matched_keywords, match_details = await NotificationService.process_issue_event(
                 user["id"], payload, event_id
@@ -861,13 +960,25 @@ async def process_issue_comment_event(payload: Dict[str, Any], users: list, even
         comment_body = comment.get("body", "")
         mentioned_users = await get_mentioned_users(comment_body)
         
-        # Combine repository watchers and mentioned users
+        # Get team members mentioned in the comment
+        repository = payload.get("repository", {})
+        org_login = repository.get("owner", {}).get("login")
+        team_mentioned_users = []
+        if org_login:
+            team_mentioned_users = await get_mentioned_team_members(comment_body, org_login)
+        
+        # Combine repository watchers, mentioned users, and team members
         all_users = list(users)  # Start with repository watchers
         
         # Add mentioned users if they're not already in the list
         for mentioned_user in mentioned_users:
             if not any(u["id"] == mentioned_user["id"] for u in all_users):
                 all_users.append(mentioned_user)
+        
+        # Add team members if they're not already in the list
+        for team_user in team_mentioned_users:
+            if not any(u["id"] == team_user["id"] for u in all_users):
+                all_users.append(team_user)
         
         for user in all_users:
             # Check if user should be notified

@@ -207,6 +207,7 @@ class NotificationPreferencesUpdate(BaseModel):
     
     # Mentions
     mentioned_in_comments: Optional[bool] = None
+    team_mentioned: Optional[bool] = None
     
     # Noise Control
     mute_own_activity: Optional[bool] = None

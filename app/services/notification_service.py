@@ -104,8 +104,44 @@ class NotificationService:
         if body and f"@{github_username}" in body:
             watching_reasons.add(WatchingReason.MENTIONED)
         
-        # Check if user's team is mentioned
-        # This would require additional logic to get user's teams
+        # Check if user's team is mentioned in PR/issue content
+        body = data.get("body", "")
+        title = data.get("title", "")
+        combined_text = f"{title} {body}"
+        
+        # Get repository owner for team mention detection
+        repository = data.get("repository")
+        if not repository:
+            # Try to get repository from nested data (e.g., issue comments)
+            repository = data.get("pull_request", {}).get("base", {}).get("repo") or data.get("issue", {}).get("repository")
+        
+        if repository:
+            org_login = repository.get("owner", {}).get("login")
+            if org_login:
+                # Import here to avoid circular imports
+                from app.api.routes.webhooks import extract_team_mentions
+                
+                mentioned_teams = extract_team_mentions(combined_text, org_login)
+                if mentioned_teams:
+                    # Check if user is a member of any mentioned teams
+                    user_teams = await SupabaseManager.get_user_teams(user_id, org_login)
+                    user_team_slugs = [team["team_slug"] for team in user_teams]
+                    
+                    for team_slug in mentioned_teams:
+                        if team_slug in user_team_slugs:
+                            watching_reasons.add(WatchingReason.TEAM_MENTIONED)
+                            break
+        
+        # Check if user's team is requested as reviewers (for PRs)
+        if "requested_teams" in data and data.get("requested_teams"):
+            user_teams = await SupabaseManager.get_user_teams(user_id)
+            user_team_slugs = [team["team_slug"] for team in user_teams]
+            
+            for requested_team in data["requested_teams"]:
+                team_slug = requested_team.get("slug")
+                if team_slug and team_slug in user_team_slugs:
+                    watching_reasons.add(WatchingReason.TEAM_MENTIONED)
+                    break
         
         return watching_reasons
     
@@ -166,6 +202,10 @@ class NotificationService:
             # Always notify if mentioned (regardless of other preferences)
             if WatchingReason.MENTIONED in watching_reasons:
                 return preferences.mentioned_in_comments
+            
+            # Always notify if team is mentioned (if user has team mention preference enabled)
+            if WatchingReason.TEAM_MENTIONED in watching_reasons:
+                return preferences.team_mentioned
             
             # Check preferences based on activity type
             if trigger == NotificationTrigger.COMMENTED:
@@ -546,6 +586,10 @@ class NotificationService:
             if WatchingReason.MENTIONED in watching_reasons:
                 should_notify_preferences = True
             
+            # Always notify if team is mentioned
+            if WatchingReason.TEAM_MENTIONED in watching_reasons:
+                should_notify_preferences = preferences.team_mentioned
+            
             return should_notify_preferences, [], {}
             
         except Exception as e:
@@ -632,6 +676,10 @@ class NotificationService:
             # Always notify if mentioned (regardless of other preferences)
             if WatchingReason.MENTIONED in watching_reasons:
                 return preferences.mentioned_in_comments, [], {}
+            
+            # Always notify if team is mentioned
+            if WatchingReason.TEAM_MENTIONED in watching_reasons:
+                return preferences.team_mentioned, [], {}
             
             # Check notification preferences based on issue action
             if action in ["opened", "reopened", "closed"]:

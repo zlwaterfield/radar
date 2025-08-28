@@ -61,6 +61,7 @@ class NotificationPreferences(BaseModel):
     
     # Mentions
     mentioned_in_comments: bool = True  # Someone mentions you in a comment
+    team_mentioned: bool = True  # Your team is mentioned or requested for review
     
     # Noise Control
     mute_own_activity: bool = True

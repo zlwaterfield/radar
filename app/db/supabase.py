@@ -1030,3 +1030,238 @@ class SupabaseManager:
         except Exception as e:
             logger.error(f"Error getting reviews for repository {repo_id}: {e}")
             return []
+    
+    # GitHub Teams methods
+    
+    @staticmethod
+    @track_performance("database_create_team")
+    async def create_or_update_team(team_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Create or update a GitHub team in the database.
+        
+        Args:
+            team_data: Team data from GitHub API
+            
+        Returns:
+            Created/updated team record
+        """
+        try:
+            # Prepare team data for database
+            db_team_data = {
+                "team_id": str(team_data["id"]),
+                "team_slug": team_data["slug"],
+                "team_name": team_data["name"],
+                "organization_login": team_data["organization"]["login"],
+                "organization_id": str(team_data["organization"]["id"]),
+                "team_data": team_data
+            }
+            
+            # Use upsert to create or update
+            response = SupabaseManager.supabase.table("github_teams").upsert(
+                db_team_data, 
+                on_conflict="team_id"
+            ).execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error creating/updating team {team_data.get('slug', 'unknown')}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_create_team_membership")
+    async def create_or_update_team_membership(
+        user_id: str, 
+        team_id: str, 
+        github_team_id: str, 
+        role: str = "member"
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Create or update team membership for a user.
+        
+        Args:
+            user_id: User ID
+            team_id: Internal team ID (UUID)
+            github_team_id: GitHub team ID
+            role: User role in team (member, maintainer)
+            
+        Returns:
+            Created/updated membership record
+        """
+        try:
+            membership_data = {
+                "user_id": user_id,
+                "team_id": team_id,
+                "github_team_id": github_team_id,
+                "role": role
+            }
+            
+            # Use upsert to create or update
+            response = SupabaseManager.supabase.table("user_team_memberships").upsert(
+                membership_data,
+                on_conflict="user_id,team_id"
+            ).execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error creating/updating team membership for user {user_id}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_get_team_members")
+    async def get_team_members(org_login: str, team_slug: str) -> List[Dict[str, Any]]:
+        """
+        Get members of a team from the database.
+        
+        Args:
+            org_login: GitHub organization login
+            team_slug: Team slug
+            
+        Returns:
+            List of team members (users)
+        """
+        try:
+            response = (
+                SupabaseManager.supabase
+                .table("user_team_memberships")
+                .select("""
+                    *,
+                    users(*),
+                    github_teams(*)
+                """)
+                .eq("github_teams.organization_login", org_login)
+                .eq("github_teams.team_slug", team_slug)
+                .execute()
+            )
+            
+            members = []
+            for membership in response.data:
+                if membership.get("users"):
+                    member = membership["users"]
+                    member["team_role"] = membership["role"]
+                    members.append(member)
+            
+            return members
+            
+        except Exception as e:
+            logger.error(f"Error getting team members for {org_login}/{team_slug}: {e}")
+            return []
+    
+    @staticmethod
+    @track_performance("database_get_user_teams")
+    async def get_user_teams(user_id: str, org_login: str = None) -> List[Dict[str, Any]]:
+        """
+        Get teams a user belongs to.
+        
+        Args:
+            user_id: User ID
+            org_login: Optional organization filter
+            
+        Returns:
+            List of teams the user belongs to
+        """
+        try:
+            query = (
+                SupabaseManager.supabase
+                .table("user_team_memberships")
+                .select("""
+                    *,
+                    github_teams(*)
+                """)
+                .eq("user_id", user_id)
+            )
+            
+            if org_login:
+                query = query.eq("github_teams.organization_login", org_login)
+            
+            response = query.execute()
+            
+            teams = []
+            for membership in response.data:
+                if membership.get("github_teams"):
+                    team = membership["github_teams"]
+                    team["user_role"] = membership["role"]
+                    teams.append(team)
+            
+            return teams
+            
+        except Exception as e:
+            logger.error(f"Error getting user teams for user {user_id}: {e}")
+            return []
+    
+    @staticmethod
+    @track_performance("database_get_team_by_slug")
+    async def get_team_by_slug(org_login: str, team_slug: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a team by organization and slug.
+        
+        Args:
+            org_login: GitHub organization login
+            team_slug: Team slug
+            
+        Returns:
+            Team data or None if not found
+        """
+        try:
+            response = (
+                SupabaseManager.supabase
+                .table("github_teams")
+                .select("*")
+                .eq("organization_login", org_login)
+                .eq("team_slug", team_slug)
+                .execute()
+            )
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting team {org_login}/{team_slug}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_get_active_users_with_github")
+    async def get_active_users_with_github() -> List[Dict[str, Any]]:
+        """
+        Get all active users who have GitHub tokens.
+        
+        Returns:
+            List of active users with GitHub integration
+        """
+        try:
+            response = (
+                SupabaseManager.supabase
+                .table("users")
+                .select("*")
+                .eq("is_active", True)
+                .is_("github_access_token", "not.null")
+                .is_("github_id", "not.null")
+                .is_("github_login", "not.null")
+                .execute()
+            )
+            
+            users = response.data or []
+            
+            # Decrypt tokens
+            for user in users:
+                if user.get("github_access_token"):
+                    try:
+                        from app.utils.auth import TokenManager
+                        decrypted = TokenManager.decrypt_external_token(user["github_access_token"])
+                        if decrypted:
+                            user["github_access_token"] = decrypted
+                    except Exception as e:
+                        logger.error(f"Error decrypting token for user {user['id']}: {e}")
+                        user["github_access_token"] = None
+            
+            return users
+            
+        except Exception as e:
+            logger.error(f"Error getting active users with GitHub: {e}")
+            return []

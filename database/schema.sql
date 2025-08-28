@@ -171,6 +171,54 @@ CREATE INDEX IF NOT EXISTS idx_user_digests_user_id ON user_digests(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_digests_sent_at ON user_digests(sent_at);
 CREATE INDEX IF NOT EXISTS idx_user_settings_notification_preferences ON user_settings USING GIN (notification_preferences);
 
+-- Create GitHub teams table for tracking team memberships
+CREATE TABLE IF NOT EXISTS github_teams (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    team_id VARCHAR NOT NULL, -- GitHub team ID (numeric)
+    team_slug VARCHAR NOT NULL, -- Team slug (e.g., "frontend-team")  
+    team_name VARCHAR NOT NULL, -- Display name
+    organization_login VARCHAR NOT NULL, -- GitHub org login
+    organization_id VARCHAR NOT NULL, -- GitHub org ID (numeric)
+    team_data JSONB, -- Full team data from GitHub API
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(team_id)
+);
+
+-- Create user-team membership tracking table
+CREATE TABLE IF NOT EXISTS user_team_memberships (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES github_teams(id) ON DELETE CASCADE,
+    github_team_id VARCHAR NOT NULL, -- Direct reference to GitHub team ID for faster lookups
+    role VARCHAR DEFAULT 'member', -- member, maintainer
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, team_id)
+);
+
+-- Create triggers for updated_at on new tables
+DROP TRIGGER IF EXISTS update_github_teams_updated_at ON github_teams;
+CREATE TRIGGER update_github_teams_updated_at
+BEFORE UPDATE ON github_teams
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_team_memberships_updated_at ON user_team_memberships;
+CREATE TRIGGER update_user_team_memberships_updated_at
+BEFORE UPDATE ON user_team_memberships
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- Create indexes for GitHub teams tables
+CREATE INDEX IF NOT EXISTS idx_github_teams_team_id ON github_teams(team_id);
+CREATE INDEX IF NOT EXISTS idx_github_teams_team_slug ON github_teams(team_slug);
+CREATE INDEX IF NOT EXISTS idx_github_teams_organization_login ON github_teams(organization_login);
+CREATE INDEX IF NOT EXISTS idx_github_teams_organization_id ON github_teams(organization_id);
+CREATE INDEX IF NOT EXISTS idx_user_team_memberships_user_id ON user_team_memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_team_memberships_team_id ON user_team_memberships(team_id);
+CREATE INDEX IF NOT EXISTS idx_user_team_memberships_github_team_id ON user_team_memberships(github_team_id);
+
 -- Row Level Security (RLS) - Uncomment to enable
 -- Note: RLS policies must be implemented before enabling RLS, otherwise all queries are blocked
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -179,6 +227,8 @@ ALTER TABLE user_repositories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_digests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE github_teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_team_memberships ENABLE ROW LEVEL SECURITY;
 
 -- Example RLS policies (customize based on your authentication approach)
 -- CREATE POLICY "Users can view their own data" ON users

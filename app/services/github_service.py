@@ -710,3 +710,127 @@ class GitHubService:
         except Exception as e:
             logger.error(f"Error getting installation repositories: {e}")
             return []
+    
+    def get_organization_teams(self, org: str) -> List[Dict[str, Any]]:
+        """
+        Get teams for an organization.
+        
+        Args:
+            org: Organization name
+            
+        Returns:
+            List of teams
+        """
+        try:
+            org_obj = self.client.get_organization(org)
+            teams = []
+            
+            for team in org_obj.get_teams():
+                team_data = {
+                    "id": team.id,
+                    "slug": team.slug,
+                    "name": team.name,
+                    "description": team.description,
+                    "privacy": team.privacy,
+                    "permission": team.permission,
+                    "members_count": team.members_count,
+                    "repos_count": team.repos_count,
+                    "organization": {
+                        "login": org_obj.login,
+                        "id": org_obj.id,
+                        "url": org_obj.html_url,
+                        "avatar_url": org_obj.avatar_url
+                    },
+                    "html_url": team.html_url,
+                    "created_at": team.created_at.isoformat() if team.created_at else None,
+                    "updated_at": team.updated_at.isoformat() if team.updated_at else None,
+                }
+                teams.append(team_data)
+            
+            return teams
+        except Exception as e:
+            logger.error(f"Error getting teams for organization {org}: {e}")
+            return []
+    
+    def get_team_members(self, org: str, team_slug: str) -> List[Dict[str, Any]]:
+        """
+        Get members of a GitHub team.
+        
+        Args:
+            org: Organization name
+            team_slug: Team slug
+            
+        Returns:
+            List of team members
+        """
+        try:
+            org_obj = self.client.get_organization(org)
+            team = org_obj.get_team_by_slug(team_slug)
+            members = []
+            
+            for member in team.get_members():
+                member_data = {
+                    "id": member.id,
+                    "login": member.login,
+                    "avatar_url": member.avatar_url,
+                    "html_url": member.html_url,
+                    "type": member.type,
+                    "site_admin": member.site_admin,
+                }
+                
+                # Try to get membership info (role)
+                try:
+                    membership = team.get_team_membership(member)
+                    member_data["role"] = membership.role  # member or maintainer
+                    member_data["state"] = membership.state  # active or pending
+                except Exception:
+                    # Default to member role if we can't get membership details
+                    member_data["role"] = "member"
+                    member_data["state"] = "active"
+                
+                members.append(member_data)
+            
+            return members
+        except Exception as e:
+            logger.error(f"Error getting team members for {org}/{team_slug}: {e}")
+            return []
+    
+    def get_user_teams_in_org(self, org: str, username: str) -> List[Dict[str, Any]]:
+        """
+        Get teams a user belongs to in an organization.
+        
+        Args:
+            org: Organization name
+            username: GitHub username
+            
+        Returns:
+            List of teams the user belongs to
+        """
+        try:
+            org_obj = self.client.get_organization(org)
+            user_obj = self.client.get_user(username)
+            user_teams = []
+            
+            # Get all teams and check membership
+            for team in org_obj.get_teams():
+                try:
+                    # Check if user is a member of this team
+                    membership = team.get_team_membership(user_obj)
+                    if membership and membership.state == "active":
+                        team_data = {
+                            "id": team.id,
+                            "slug": team.slug,
+                            "name": team.name,
+                            "description": team.description,
+                            "role": membership.role,  # member or maintainer
+                            "html_url": team.html_url,
+                        }
+                        user_teams.append(team_data)
+                except Exception:
+                    # User is not a member of this team, continue
+                    continue
+            
+            return user_teams
+        except Exception as e:
+            logger.error(f"Error getting user teams for {username} in {org}: {e}")
+            return []
