@@ -112,8 +112,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   // Handle route protection separately, only redirect when necessary
   useEffect(() => {
+    // Public routes that don't require authentication
+    const publicRoutes = ['/', '/auth/', '/terms', '/privacy', '/support'];
+    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+    
     // If we're not authenticated and navigating to a protected route, check for cookies first
-    if (!loading && !isAuthenticated && !pathname.startsWith('/auth/') && !isValidating.current) {
+    if (!loading && !isAuthenticated && !isPublicRoute && !isValidating.current) {
       const authToken = Cookies.get('auth_token');
       
       if (authToken && !isTokenExpired(authToken)) {
