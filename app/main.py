@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, github, slack, users, webhooks, settings
+from app.api.routes import auth, github, slack, users, webhooks, settings, testing
 from app.core.config import settings as app_settings
 from app.core.logging import setup_logging
 from app.services.task_service import TaskService
@@ -47,6 +47,7 @@ app.include_router(slack.router, prefix="/api/slack", tags=["Slack"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
+app.include_router(testing.router, prefix="/api/testing", tags=["Testing"])
 
 @app.get("/", tags=["Health"])
 async def root():
