@@ -161,7 +161,7 @@ export default function Home() {
                   <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-3 border-l-4 border-green-600 mt-2">
                     <div className="text-left">
                       <div className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1">🆕 Pull Request Opened</div>
-                      <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-1">"Add user authentication endpoint"</div>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-1">Add user authentication endpoint</div>
                       <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">your-app/backend</div>
                       <div className="text-gray-700 dark:text-gray-300 text-xs mb-3">@john.doe</div>
                       <button className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded font-medium transition-colors">
