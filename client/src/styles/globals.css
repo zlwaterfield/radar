@@ -114,7 +114,7 @@ body {
   .orb {
     position: absolute;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(38, 64, 139, 0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(38, 64, 139, 0.08) 0%, transparent 70%);
     animation: float 15s ease-in-out infinite;
   }
 
@@ -158,7 +158,7 @@ body {
     position: absolute;
     width: 100%;
     height: 100%;
-    opacity: 0.3;
+    opacity: 0.15;
     background-image: 
       linear-gradient(rgba(166, 207, 213, 0.1) 1px, transparent 1px),
       linear-gradient(90deg, rgba(166, 207, 213, 0.1) 1px, transparent 1px);
