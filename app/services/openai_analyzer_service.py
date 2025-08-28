@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from app.db.supabase import SupabaseManager
 from app.core.config import settings
+from app.services.entitlement_service import EntitlementService
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,32 @@ class KeywordMatchResponse(BaseModel):
 
 class OpenAIAnalyzerService:
     """Service for OpenAI-powered content analysis."""
+    
+    @classmethod
+    async def match_keywords_with_openai_for_user(cls, user_id: str, content: str, keywords: List[str]) -> Tuple[List[str], Dict[str, Any]]:
+        """
+        Match keywords using OpenAI's API with entitlement checks.
+        
+        Args:
+            user_id: User ID for entitlement check
+            content: Content to analyze
+            keywords: List of keywords to match
+            
+        Returns:
+            Tuple of (matched_keywords, match_details)
+        """
+        # Check if user can use AI features
+        can_use_ai = await EntitlementService.can_use_ai_features(user_id)
+        
+        if not can_use_ai:
+            logger.info(f"User {user_id} does not have AI features enabled, using fallback matching")
+            return cls.fallback_keyword_match(content, keywords)
+        
+        # Track AI usage
+        await EntitlementService.increment_usage(user_id, "ai_requests")
+        
+        # Use OpenAI matching
+        return await cls.match_keywords_with_openai(content, keywords)
     
     @classmethod
     async def match_keywords_with_openai(cls, content: str, keywords: List[str]) -> Tuple[List[str], Dict[str, Any]]:

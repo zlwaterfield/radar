@@ -127,6 +127,57 @@ CREATE TABLE IF NOT EXISTS user_digests (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create subscription_plans table
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR NOT NULL UNIQUE, -- 'free', 'pro', 'enterprise'
+    stripe_price_id VARCHAR UNIQUE, -- null for free plan
+    monthly_price INTEGER DEFAULT 0, -- price in cents
+    features JSONB NOT NULL DEFAULT '{
+        "repositories_limit": null,
+        "notifications_limit": null,
+        "ai_features": false,
+        "digest_notifications": false,
+        "priority_support": false,
+        "team_features": false
+    }'::jsonb,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create user_subscriptions table
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id UUID NOT NULL REFERENCES subscription_plans(id),
+    stripe_subscription_id VARCHAR UNIQUE, -- null for free plan
+    stripe_customer_id VARCHAR,
+    status VARCHAR DEFAULT 'active', -- active, canceled, past_due, unpaid, incomplete
+    current_period_start TIMESTAMP WITH TIME ZONE,
+    current_period_end TIMESTAMP WITH TIME ZONE,
+    cancel_at_period_end BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id)
+);
+
+-- Create user_usage table for tracking monthly usage
+CREATE TABLE IF NOT EXISTS user_usage (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    repositories_tracked INTEGER DEFAULT 0,
+    notifications_sent INTEGER DEFAULT 0,
+    digest_notifications INTEGER DEFAULT 0,
+    keyword_notifications INTEGER DEFAULT 0,
+    ai_requests INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, period_start, period_end)
+);
+
 -- Create functions and triggers for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -155,6 +206,25 @@ BEFORE UPDATE ON user_repositories
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
+-- Create triggers for billing tables
+DROP TRIGGER IF EXISTS update_subscription_plans_updated_at ON subscription_plans;
+CREATE TRIGGER update_subscription_plans_updated_at
+BEFORE UPDATE ON subscription_plans
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_subscriptions_updated_at ON user_subscriptions;
+CREATE TRIGGER update_user_subscriptions_updated_at
+BEFORE UPDATE ON user_subscriptions
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_usage_updated_at ON user_usage;
+CREATE TRIGGER update_user_usage_updated_at
+BEFORE UPDATE ON user_usage
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_slack_id ON users(slack_id);
 CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);
@@ -171,6 +241,15 @@ CREATE INDEX IF NOT EXISTS idx_user_digests_user_id ON user_digests(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_digests_sent_at ON user_digests(sent_at);
 CREATE INDEX IF NOT EXISTS idx_user_settings_notification_preferences ON user_settings USING GIN (notification_preferences);
 
+-- Create indexes for billing tables
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_name ON subscription_plans(name);
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_stripe_price_id ON subscription_plans(stripe_price_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user_id ON user_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_stripe_subscription_id ON user_subscriptions(stripe_subscription_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_user_usage_user_id ON user_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_usage_period ON user_usage(period_start, period_end);
+
 -- Row Level Security (RLS) - Uncomment to enable
 -- Note: RLS policies must be implemented before enabling RLS, otherwise all queries are blocked
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -179,6 +258,9 @@ ALTER TABLE user_repositories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_digests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_usage ENABLE ROW LEVEL SECURITY;
 
 -- Example RLS policies (customize based on your authentication approach)
 -- CREATE POLICY "Users can view their own data" ON users

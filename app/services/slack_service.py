@@ -23,6 +23,7 @@ from app.models.slack import (
     StatsMessage,
 )
 from app.db.supabase import SupabaseManager
+from app.services.entitlement_service import EntitlementService
 
 logger = logging.getLogger(__name__)
 
@@ -317,6 +318,50 @@ class SlackService:
         """
         self.client = WebClient(token=token or settings.SLACK_BOT_TOKEN)
         
+    async def send_message_with_entitlement_check(self, message: SlackMessage, user_id: str) -> Dict[str, Any]:
+        """
+        Send a message to Slack with entitlement checks.
+        
+        Args:
+            message: Slack message to send
+            user_id: User ID for entitlement check
+            
+        Returns:
+            Slack API response or error dict
+        """
+        try:
+            # Check if user can send notifications
+            can_send = await EntitlementService.can_send_notification(user_id)
+            
+            if not can_send:
+                # Log the failed send but don't error - this is a soft limit
+                plan_name = await EntitlementService.get_user_plan(user_id)
+                features = await EntitlementService.get_plan_features(plan_name)
+                logger.warning(f"User {user_id} has reached notification limit for {plan_name} plan (limit: {features.notifications_limit})")
+                
+                return {
+                    "ok": False,
+                    "error": "notification_limit_reached",
+                    "detail": f"Monthly notification limit reached for {plan_name} plan"
+                }
+            
+            # Send the message
+            response = await self.send_message(message)
+            
+            # Track the usage
+            if response.get("ok", False):
+                await EntitlementService.increment_usage(user_id, "notifications_sent")
+                
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error sending message with entitlement check: {e}")
+            return {
+                "ok": False,
+                "error": "send_error",
+                "detail": str(e)
+            }
+
     async def send_message(self, message: SlackMessage) -> Dict[str, Any]:
         """
         Send a message to Slack.

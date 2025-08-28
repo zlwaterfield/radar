@@ -99,6 +99,13 @@ class Settings(BaseSettings):
     
     # OpenAI settings
     OPENAI_API_KEY: Optional[str] = None
+    
+    # Billing settings
+    ENABLE_BILLING: bool = False  # Set to True to enable billing features
+    STRIPE_PUBLISHABLE_KEY: Optional[str] = None
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    DEFAULT_SELF_HOSTED_PLAN: str = "enterprise"  # Plan for self-hosted installations
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

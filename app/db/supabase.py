@@ -1030,3 +1030,302 @@ class SupabaseManager:
         except Exception as e:
             logger.error(f"Error getting reviews for repository {repo_id}: {e}")
             return []
+    
+    # Billing-related methods
+    
+    @staticmethod
+    @track_performance("database_get_subscription_plan")
+    async def get_subscription_plan(plan_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a subscription plan by ID.
+        
+        Args:
+            plan_id: The plan ID
+            
+        Returns:
+            Plan data or None if not found
+        """
+        try:
+            response = SupabaseManager.supabase.table("subscription_plans").select("*").eq("id", plan_id).execute()
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting subscription plan {plan_id}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_get_subscription_plan_by_name")
+    async def get_subscription_plan_by_name(plan_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a subscription plan by name.
+        
+        Args:
+            plan_name: The plan name (free, pro, enterprise)
+            
+        Returns:
+            Plan data or None if not found
+        """
+        try:
+            response = SupabaseManager.supabase.table("subscription_plans").select("*").eq("name", plan_name).execute()
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting subscription plan by name {plan_name}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_get_all_subscription_plans")
+    async def get_all_subscription_plans() -> List[Dict[str, Any]]:
+        """
+        Get all active subscription plans.
+        
+        Returns:
+            List of plan data
+        """
+        try:
+            response = SupabaseManager.supabase.table("subscription_plans").select("*").eq("is_active", True).execute()
+            return response.data or []
+            
+        except Exception as e:
+            logger.error(f"Error getting all subscription plans: {e}")
+            return []
+    
+    @staticmethod
+    @track_performance("database_get_user_subscription")
+    async def get_user_subscription(user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get user's current subscription.
+        
+        Args:
+            user_id: The user ID
+            
+        Returns:
+            Subscription data or None if not found
+        """
+        try:
+            response = SupabaseManager.supabase.table("user_subscriptions").select("*").eq("user_id", user_id).execute()
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting user subscription for {user_id}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_get_user_subscription_with_plan")
+    async def get_user_subscription_with_plan(user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get user's current subscription with plan details.
+        
+        Args:
+            user_id: The user ID
+            
+        Returns:
+            Subscription data with plan or None if not found
+        """
+        try:
+            response = (SupabaseManager.supabase.table("user_subscriptions")
+                       .select("*, plan:plan_id(*)")
+                       .eq("user_id", user_id)
+                       .execute())
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting user subscription with plan for {user_id}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_create_user_subscription")
+    async def create_user_subscription(subscription_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Create a new user subscription.
+        
+        Args:
+            subscription_data: The subscription data
+            
+        Returns:
+            Created subscription data or None if failed
+        """
+        try:
+            response = SupabaseManager.supabase.table("user_subscriptions").insert(subscription_data).execute()
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error creating user subscription: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_update_user_subscription")
+    async def update_user_subscription(user_id: str, subscription_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update user subscription.
+        
+        Args:
+            user_id: The user ID
+            subscription_data: The subscription data to update
+            
+        Returns:
+            Updated subscription data or None if failed
+        """
+        try:
+            response = (SupabaseManager.supabase.table("user_subscriptions")
+                       .update(subscription_data)
+                       .eq("user_id", user_id)
+                       .execute())
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error updating user subscription for {user_id}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_get_user_usage")
+    async def get_user_usage(user_id: str, period_start: "date", period_end: "date") -> Optional[Dict[str, Any]]:
+        """
+        Get user usage for a specific period.
+        
+        Args:
+            user_id: The user ID
+            period_start: Start date of the period
+            period_end: End date of the period
+            
+        Returns:
+            Usage data or None if not found
+        """
+        try:
+            response = (SupabaseManager.supabase.table("user_usage")
+                       .select("*")
+                       .eq("user_id", user_id)
+                       .eq("period_start", period_start.isoformat())
+                       .eq("period_end", period_end.isoformat())
+                       .execute())
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting user usage for {user_id}: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_create_user_usage")
+    async def create_user_usage(usage_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Create a new user usage record.
+        
+        Args:
+            usage_data: The usage data
+            
+        Returns:
+            Created usage data or None if failed
+        """
+        try:
+            response = SupabaseManager.supabase.table("user_usage").insert(usage_data).execute()
+            data = response.data
+            
+            if data and len(data) > 0:
+                return data[0]
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error creating user usage: {e}")
+            return None
+    
+    @staticmethod
+    @track_performance("database_increment_user_usage")
+    async def increment_user_usage(
+        user_id: str, 
+        period_start: "date", 
+        period_end: "date", 
+        usage_type: str, 
+        amount: int = 1
+    ) -> bool:
+        """
+        Increment user usage counter for a specific type.
+        
+        Args:
+            user_id: The user ID
+            period_start: Start date of the period
+            period_end: End date of the period
+            usage_type: Type of usage (notifications_sent, ai_requests, etc.)
+            amount: Amount to increment by
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # First, try to get existing usage record
+            existing_usage = await SupabaseManager.get_user_usage(user_id, period_start, period_end)
+            
+            if existing_usage:
+                # Update existing record
+                current_value = existing_usage.get(usage_type, 0)
+                update_data = {usage_type: current_value + amount}
+                response = (SupabaseManager.supabase.table("user_usage")
+                           .update(update_data)
+                           .eq("id", existing_usage["id"])
+                           .execute())
+                return len(response.data) > 0
+            else:
+                # Create new record
+                usage_data = {
+                    "user_id": user_id,
+                    "period_start": period_start.isoformat(),
+                    "period_end": period_end.isoformat(),
+                    usage_type: amount
+                }
+                response = SupabaseManager.supabase.table("user_usage").insert(usage_data).execute()
+                return len(response.data) > 0
+                
+        except Exception as e:
+            logger.error(f"Error incrementing user usage for {user_id}: {e}")
+            return False
+    
+    @staticmethod
+    @track_performance("database_count_user_repositories")
+    async def count_user_repositories(user_id: str) -> int:
+        """
+        Count the number of active repositories for a user.
+        
+        Args:
+            user_id: The user ID
+            
+        Returns:
+            Number of active repositories
+        """
+        try:
+            response = (SupabaseManager.supabase.table("user_repositories")
+                       .select("id", count="exact")
+                       .eq("user_id", user_id)
+                       .eq("is_active", True)
+                       .execute())
+            return response.count or 0
+            
+        except Exception as e:
+            logger.error(f"Error counting user repositories for {user_id}: {e}")
+            return 0

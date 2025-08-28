@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
-import { FiGithub, FiLogOut, FiBell, FiGitBranch, FiSearch, FiCalendar } from 'react-icons/fi';
+import { FiGithub, FiLogOut, FiBell, FiGitBranch, FiSearch, FiCalendar, FiCreditCard } from 'react-icons/fi';
 
 export default function SettingsLayout({
   children,
@@ -89,6 +89,17 @@ export default function SettingsLayout({
               Keywords
             </Link>
           </li>
+          <li>
+            <Link href="/settings/billing"
+              className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
+                isActive('/settings/billing')
+                  ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}>
+              <FiCreditCard className="mr-3 flex-shrink-0 h-5 w-5" />
+              Billing & Usage
+            </Link>
+          </li>
           </ul>
           
           {/* Always show GitHub integration */}
@@ -141,6 +152,7 @@ export default function SettingsLayout({
               {/* {pathname === '/settings/digest' && 'Daily digest'} */}
               {pathname === '/settings/repositories' && 'Repositories'}
               {pathname === '/settings/keywords' && 'Keywords'}
+              {pathname === '/settings/billing' && 'Billing & Usage'}
               {pathname === '/settings/github' && 'GitHub integration'}
             </h2>
             <div className="flex items-center space-x-4">

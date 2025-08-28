@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.db.supabase import SupabaseManager
 from app.models.user import User, UserUpdate, Repository
 from app.services.github_service import GitHubService
+from app.services.entitlement_service import EntitlementService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -203,6 +204,18 @@ async def add_user_repository(user_id: str, repository: Dict[str, Any]):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
+        )
+    
+    # Check if user can add more repositories
+    can_add = await EntitlementService.can_add_repository(user_id)
+    if not can_add:
+        current_count = await SupabaseManager.count_user_repositories(user_id)
+        plan_name = await EntitlementService.get_user_plan(user_id)
+        features = await EntitlementService.get_plan_features(plan_name)
+        
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Repository limit reached. Your {plan_name} plan allows {features.repositories_limit} repositories, you currently have {current_count}. Upgrade your plan to add more repositories."
         )
     
     # Add repository
