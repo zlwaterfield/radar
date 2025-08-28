@@ -359,7 +359,7 @@ class SlackService:
             payload["username"] = "Radar"
             
         # Use app icon
-        payload["icon_url"] = "https://raw.githubusercontent.com/zlwaterfield/radar/main/client/public/logo.png"
+        payload["icon_url"] = "https://raw.githubusercontent.com/zlwaterfield/radar/main/client/public/logo-square-dark.png"
         
         # Send message
         response = self.client.chat_postMessage(**payload)
@@ -553,13 +553,43 @@ class SlackService:
         # Format action text
         action_text = pr_message.action.replace("_", " ").capitalize()
             
+        # Create GitHub user link
+        # TODO: If we have the Slack user ID, we can @ them directly
+        github_user_link = f"<https://github.com/{pr_message.user}|{pr_message.user}>"
+        
+        # Create contextual text based on action
+        if pr_message.action == "opened":
+            context_text = f"{github_user_link} opened this pull request in `{pr_message.repository}`"
+        elif pr_message.action == "closed":
+            context_text = f"{github_user_link} closed this pull request in `{pr_message.repository}`"
+        elif pr_message.action == "merged":
+            context_text = f"{github_user_link} merged this pull request in `{pr_message.repository}`"
+        elif pr_message.action == "reopened":
+            context_text = f"{github_user_link} reopened this pull request in `{pr_message.repository}`"
+        elif pr_message.action == "assigned":
+            # TODO: Need assignee field to show "X assigned Y to this PR"  
+            # Currently user is the assigner, not the assignee
+            context_text = f"{github_user_link} assigned someone to this pull request in `{pr_message.repository}`"
+        elif pr_message.action == "unassigned":
+            # TODO: Need assignee field to show "X unassigned Y from this PR"
+            # Currently user is the unassigner, not the person being unassigned
+            context_text = f"{github_user_link} unassigned someone from this pull request in `{pr_message.repository}`"
+        elif pr_message.action == "review_requested":
+            context_text = f"Review requested from {github_user_link} for this pull request in `{pr_message.repository}`"
+        elif pr_message.action == "review_request_removed":
+            context_text = f"Review request removed for {github_user_link} on this pull request in `{pr_message.repository}`"
+        elif pr_message.action == "edited":
+            context_text = f"{github_user_link} edited this pull request in `{pr_message.repository}`"
+        else:
+            context_text = f"{github_user_link} {pr_message.action} this pull request in `{pr_message.repository}`"
+
         # Create blocks with attachment styling
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"{icon} *Pull Request {action_text}*"
+                    "text": f"{icon} *Pull Request {action_text}* by {github_user_link}"
                 }
             },
             {
@@ -569,9 +599,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{pr_message.pull_request_url}|*PR #{pr_message.pull_request_number}* {pr_message.pull_request_title}>\n"
-                           f"*Repository:* `{pr_message.repository}`\n"
-                           f"*Type:* Pull Request"
+                    "text": f"<{pr_message.pull_request_url}|*PR #{pr_message.pull_request_number}* {pr_message.pull_request_title}>"
                 },
                 "accessory": {
                     "type": "button",
@@ -589,7 +617,7 @@ class SlackService:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"<@{pr_message.user}> {pr_message.action} this pull request"
+                        "text": context_text
                     }
                 ]
             }
@@ -638,13 +666,16 @@ class SlackService:
         # Format state text
         state_text = review_message.review_state.replace("_", " ").capitalize()
             
+        # Create GitHub user link
+        github_user_link = f"<https://github.com/{review_message.user}|{review_message.user}>"
+        
         # Create blocks with attachment styling
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"{icon} *Pull Request Review: {state_text}*"
+                    "text": f"{icon} *Pull Request Review: {state_text}* by {github_user_link}"
                 }
             },
             {
@@ -654,9 +685,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{review_message.pull_request_url}|*PR #{review_message.pull_request_number}* {review_message.pull_request_title}>\n"
-                           f"*Repository:* `{review_message.repository}`\n"
-                           f"*Type:* Pull Request"
+                    "text": f"<{review_message.pull_request_url}|*PR #{review_message.pull_request_number}* {review_message.pull_request_title}>"
                 },
                 "accessory": {
                     "type": "button",
@@ -680,6 +709,17 @@ class SlackService:
                     "text": f"*Comment:*\n{review_message.review_comment}"
                 }
             })
+        
+        # Add context section
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"{github_user_link} {review_message.review_state.replace('_', ' ')} this pull request in `{review_message.repository}`"
+                }
+            ]
+        })
         
         # Update the message blocks
         review_message.blocks = []
@@ -710,13 +750,16 @@ class SlackService:
         # Use the commented color from our color scheme
         color = SlackService.EVENT_COLORS["commented"]
         
+        # Create GitHub user link
+        github_user_link = f"<https://github.com/{comment_message.user}|{comment_message.user}>"
+        
         # Create blocks with attachment styling
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "💬 *Pull Request Comment*"
+                    "text": f"💬 *Pull Request Comment* by {github_user_link}"
                 }
             },
             {
@@ -726,8 +769,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{comment_message.pull_request_url}|*PR #{comment_message.pull_request_number}* {comment_message.pull_request_title}>\n"
-                           f"*Repository:* `{comment_message.repository}`\n"
+                    "text": f"<{comment_message.pull_request_url}|*PR #{comment_message.pull_request_number}* {comment_message.pull_request_title}>"
                 },
                 "accessory": {
                     "type": "button",
@@ -752,7 +794,7 @@ class SlackService:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"<@{comment_message.user}> commented on this pull request"
+                        "text": f"{github_user_link} commented on this pull request in `{comment_message.repository}`"
                     }
                 ]
             }
@@ -821,6 +863,17 @@ class SlackService:
             view_text = "View Issue"
             context_text = f"<@{issue_message.user}> {issue_message.action} this issue"
             
+        # Create GitHub user link
+        github_user_link = f"<https://github.com/{issue_message.user}|{issue_message.user}>"
+        
+        # Set the appropriate title and context based on whether it's a PR or issue
+        if is_pull_request:
+            title = f"{icon} *Pull Request {action_text}* by {github_user_link}"
+            context_text = f"{github_user_link} {issue_message.action} this pull request in `{issue_message.repository}`"
+        else:
+            title = f"{icon} *GitHub Issue {action_text}* by {github_user_link}"
+            context_text = f"{github_user_link} {issue_message.action} this issue in `{issue_message.repository}`"
+        
         # Create blocks with attachment styling
         blocks = [
             {
@@ -837,8 +890,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{issue_message.issue_url}|*{item_prefix} #{issue_message.issue_number}* {issue_message.issue_title}>\n"
-                           f"*Repository:* `{issue_message.repository}`\n"
+                    "text": f"<{issue_message.issue_url}|*{item_prefix} #{issue_message.issue_number}* {issue_message.issue_title}>"
                 },
                 "accessory": {
                     "type": "button",
@@ -920,6 +972,17 @@ class SlackService:
             view_text = "View Issue"
             context_text = f"<@{comment_message.user}> commented on this issue"
         
+        # Create GitHub user link
+        github_user_link = f"<https://github.com/{comment_message.user}|{comment_message.user}>"
+        
+        # Set the appropriate title and context based on whether it's a PR or issue
+        if is_pull_request:
+            title = f"💬 *Pull Request Comment* by {github_user_link}"
+            context_text = f"{github_user_link} commented on this pull request in `{comment_message.repository}`"
+        else:
+            title = f"💬 *Issue Comment* by {github_user_link}"
+            context_text = f"{github_user_link} commented on this issue in `{comment_message.repository}`"
+        
         # Create blocks as dictionaries directly
         blocks = [
             {
@@ -936,8 +999,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{comment_message.issue_url}|*{item_prefix} #{comment_message.issue_number}* {comment_message.issue_title}>\n"
-                           f"*Repository:* `{comment_message.repository}`\n"
+                    "text": f"<{comment_message.issue_url}|*{item_prefix} #{comment_message.issue_number}* {comment_message.issue_title}>"
                 },
                 "accessory": {
                     "type": "button",
@@ -1041,6 +1103,13 @@ class SlackService:
         # Create category text if available
         category_text = f"\n*Category:* {discussion_message.category}" if discussion_message.category else ""
         
+        # Create GitHub user link
+        github_user_link = f"<https://github.com/{discussion_message.user}|{discussion_message.user}>"
+        
+        # Create title and context text
+        title = f"{icon} *GitHub Discussion {action_text}* by {github_user_link}"
+        context_text = f"{github_user_link} {discussion_message.action} this discussion in `{discussion_message.repository}`"
+        
         # Create blocks with attachment styling
         blocks = [
             {
@@ -1057,8 +1126,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{discussion_message.discussion_url}|*Discussion #{discussion_message.discussion_number}* {discussion_message.discussion_title}>\n"
-                           f"*Repository:* `{discussion_message.repository}`{category_text}\n"
+                    "text": f"<{discussion_message.discussion_url}|*Discussion #{discussion_message.discussion_number}* {discussion_message.discussion_title}>{category_text}"
                 },
                 "accessory": {
                     "type": "button",
@@ -1113,13 +1181,16 @@ class SlackService:
         # Use discussion comment color
         color = SlackService.EVENT_COLORS.get("discussion_comment", SlackService.EVENT_COLORS["default"])
         
+        # Create GitHub user link
+        github_user_link = f"<https://github.com/{comment_message.user}|{comment_message.user}>"
+        
         # Create blocks with attachment styling
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "💬 *New Discussion Comment*"
+                    "text": f"💬 *Discussion Comment* by {github_user_link}"
                 }
             },
             {
@@ -1129,8 +1200,7 @@ class SlackService:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<{comment_message.discussion_url}|*Discussion #{comment_message.discussion_number}* {comment_message.discussion_title}>\n"
-                           f"*Repository:* `{comment_message.repository}`\n"
+                    "text": f"<{comment_message.discussion_url}|*Discussion #{comment_message.discussion_number}* {comment_message.discussion_title}>"
                 },
                 "accessory": {
                     "type": "button",
@@ -1165,7 +1235,7 @@ class SlackService:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"<@{comment_message.user}> commented on this discussion"
+                        "text": f"{github_user_link} commented on this discussion in `{comment_message.repository}`"
                     }
                 ]
             }
