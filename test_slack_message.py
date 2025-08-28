@@ -151,7 +151,7 @@ Examples:
     pr_group.add_argument("--pr-url", help="Pull request URL")
     pr_group.add_argument(
         "--pr-action", 
-        choices=["opened", "closed", "merged", "reopened", "assigned", "review_requested"],
+        choices=["opened", "closed", "merged", "reopened", "assigned", "unassigned", "review_requested", "review_request_removed", "edited"],
         help="Pull request action"
     )
     
@@ -171,7 +171,7 @@ Examples:
     issue_group.add_argument("--issue-url", help="Issue URL")
     issue_group.add_argument(
         "--issue-action",
-        choices=["opened", "closed", "reopened", "assigned"],
+        choices=["opened", "closed", "reopened", "assigned", "unassigned", "edited"],
         help="Issue action"
     )
     

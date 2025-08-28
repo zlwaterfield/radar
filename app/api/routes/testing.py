@@ -34,7 +34,7 @@ class TestMessageRequest(BaseModel):
     pr_number: Optional[int] = Field(None, description="Pull request number")
     pr_title: Optional[str] = Field(None, description="Pull request title")
     pr_url: Optional[str] = Field(None, description="Pull request URL")
-    pr_action: Optional[str] = Field(None, description="PR action (opened, closed, merged, etc.)")
+    pr_action: Optional[str] = Field(None, description="PR action (opened, closed, merged, reopened, assigned, unassigned, review_requested, review_request_removed, edited)")
     
     # Review fields
     review_state: Optional[str] = Field(None, description="Review state (approved, changes_requested, commented)")
@@ -44,7 +44,7 @@ class TestMessageRequest(BaseModel):
     issue_number: Optional[int] = Field(None, description="Issue number")
     issue_title: Optional[str] = Field(None, description="Issue title")
     issue_url: Optional[str] = Field(None, description="Issue URL")
-    issue_action: Optional[str] = Field(None, description="Issue action (opened, closed, etc.)")
+    issue_action: Optional[str] = Field(None, description="Issue action (opened, closed, reopened, assigned, unassigned, edited)")
     
     # Comment fields
     comment: Optional[str] = Field(None, description="Comment text")
@@ -88,7 +88,6 @@ async def send_test_message(request: TestMessageRequest) -> TestMessageResponse:
         if request.message_type == "pull_request":
             message = PullRequestMessage(
                 channel=request.channel,
-                text=f"Pull request {request.pr_action or 'opened'}",
                 message_type=MessageType.PULL_REQUEST,
                 pull_request_number=request.pr_number or 123,
                 pull_request_title=request.pr_title or "Test Pull Request",
@@ -104,7 +103,6 @@ async def send_test_message(request: TestMessageRequest) -> TestMessageResponse:
         elif request.message_type == "pull_request_review":
             message = PullRequestReviewMessage(
                 channel=request.channel,
-                text=f"Pull request review {request.review_state or 'submitted'}",
                 message_type=MessageType.PULL_REQUEST_REVIEW,
                 pull_request_number=request.pr_number or 123,
                 pull_request_title=request.pr_title or "Test Pull Request",
@@ -121,7 +119,6 @@ async def send_test_message(request: TestMessageRequest) -> TestMessageResponse:
         elif request.message_type == "pull_request_comment":
             message = PullRequestCommentMessage(
                 channel=request.channel,
-                text="Pull request comment",
                 message_type=MessageType.PULL_REQUEST_COMMENT,
                 pull_request_number=request.pr_number or 123,
                 pull_request_title=request.pr_title or "Test Pull Request",
@@ -137,7 +134,6 @@ async def send_test_message(request: TestMessageRequest) -> TestMessageResponse:
         elif request.message_type == "issue":
             message = IssueMessage(
                 channel=request.channel,
-                text=f"Issue {request.issue_action or 'opened'}",
                 message_type=MessageType.ISSUE,
                 issue_number=request.issue_number or 456,
                 issue_title=request.issue_title or "Test Issue",
@@ -153,7 +149,6 @@ async def send_test_message(request: TestMessageRequest) -> TestMessageResponse:
         elif request.message_type == "issue_comment":
             message = IssueCommentMessage(
                 channel=request.channel,
-                text="Issue comment",
                 message_type=MessageType.ISSUE_COMMENT,
                 issue_number=request.issue_number or 456,
                 issue_title=request.issue_title or "Test Issue",
@@ -169,7 +164,6 @@ async def send_test_message(request: TestMessageRequest) -> TestMessageResponse:
         elif request.message_type == "digest":
             message = DigestMessage(
                 channel=request.channel,
-                text="Daily digest",
                 message_type=MessageType.DIGEST,
                 date=request.date or "2023-12-01",
                 time_period="daily",
@@ -203,7 +197,6 @@ async def send_test_message(request: TestMessageRequest) -> TestMessageResponse:
         elif request.message_type == "stats":
             message = StatsMessage(
                 channel=request.channel,
-                text="GitHub stats",
                 message_type=MessageType.STATS,
                 date=request.date or "2023-12-01",
                 stats={

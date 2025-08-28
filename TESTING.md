@@ -57,6 +57,8 @@ curl -X POST "http://localhost:8000/api/testing/send-test-message" \
 
 ## Message Types
 
+> 📋 **Complete Command Reference**: See [TESTING_COMMANDS.md](TESTING_COMMANDS.md) for a comprehensive list of all supported actions and example commands.
+
 ### Pull Request Messages
 
 Test pull request notifications (opened, closed, merged, etc.):
@@ -316,6 +318,51 @@ python test_slack_message.py --api-url http://localhost:3000/api/testing --token
 - Consider using user tokens vs bot tokens based on your needs
 - Be mindful of rate limits when testing frequently
 
+## Quick Reference - All Supported Actions
+
+### Pull Request Actions
+- `opened` - PR was opened
+- `closed` - PR was closed (not merged)
+- `merged` - PR was merged
+- `reopened` - PR was reopened
+- `assigned` - User was assigned to PR
+- `unassigned` - User was unassigned from PR
+- `review_requested` - Review was requested from user
+- `review_request_removed` - Review request was removed
+- `edited` - PR title/description was edited
+
+### Review States
+- `approved` - Review approved the changes
+- `changes_requested` - Review requested changes
+- `commented` - Review left comments without approval/rejection
+- `dismissed` - Review was dismissed
+
+### Issue Actions
+- `opened` - Issue was opened
+- `closed` - Issue was closed
+- `reopened` - Issue was reopened
+- `assigned` - User was assigned to issue
+- `unassigned` - User was unassigned from issue
+- `edited` - Issue title/description was edited
+
+### Batch Testing
+```bash
+# Test all PR actions quickly
+for action in opened closed merged reopened assigned review_requested; do
+  python test_slack_message.py --token TOKEN --channel "#test" --type pull_request --pr-action $action --pr-number $((RANDOM % 1000))
+done
+
+# Test all review states
+for state in approved changes_requested commented dismissed; do
+  python test_slack_message.py --token TOKEN --channel "#test" --type pull_request_review --review-state $state --pr-number $((RANDOM % 1000))
+done
+
+# Test all issue actions
+for action in opened closed reopened assigned; do
+  python test_slack_message.py --token TOKEN --channel "#test" --type issue --issue-action $action --issue-number $((RANDOM % 1000))
+done
+```
+
 ## Contributing
 
 If you add new message types or modify existing ones:
@@ -323,4 +370,5 @@ If you add new message types or modify existing ones:
 1. Update the testing API endpoint to support the new parameters
 2. Add CLI arguments for the new parameters
 3. Update this documentation with examples
-4. Test thoroughly with different parameter combinations
+4. Update TESTING_COMMANDS.md with new test commands
+5. Test thoroughly with different parameter combinations
