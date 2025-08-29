@@ -93,12 +93,21 @@ MIT License - see LICENSE file for details.
 
 ## 🎯 Roadmap
 
-- [ ] Testing all events in production
-- [ ] Team mentions
-- [ ] Improving onboarding experience
-- [ ] Improve Slack "homepage"
-- [ ] Review Slack backslash command
-- [ ] Billing and subscription management
-- [ ] Github Discussions support
-- [ ] Daily Digests support
-- [ ] Metrics / analytics via PostHog
+- Soon
+   - Team mentions
+   - Github Discussions support
+   - Improving onboarding experience
+   - Testing all events in production
+   - Improve event messages (general copying and PR descriptions, +/- changes, etc)
+   - Document all supported events
+- Next
+   - Daily Digests support
+   - Customizable Digests to custom channels
+   - Better Slack homepage
+   - Slack / Github user connecting to @ in notifications
+- Later
+   - Statistics
+   - Billing and subscription management
+
+## Bugs
+- Same github user multiple slack workspaces
