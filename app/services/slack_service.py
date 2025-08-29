@@ -81,7 +81,7 @@ async def publish_home_view(user_id: str):
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": "Welcome to Radar! 📡",
+                            "text": "Welcome to Radar!",
                             "emoji": True
                         }
                     },
@@ -107,16 +107,25 @@ async def publish_home_view(user_id: str):
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "Welcome to Radar! 📡",
+                    "text": "Welcome to Radar!",
                     "emoji": True
                 }
             },
             {
                 "type": "divider"
-            }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": " "
+                    }
+                ]
+            },
         ]
         
-        if user:
+        if False:
             # User has an account - show a simplified view with a button to open dashboard
             blocks.extend([
                 {
@@ -149,7 +158,25 @@ async def publish_home_view(user_id: str):
                     ]
                 },
                 {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": " "
+                        }
+                    ]
+                },
+                {
                     "type": "divider"
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": " "
+                        }
+                    ]
                 },
                 {
                     "type": "section",
@@ -242,16 +269,72 @@ async def publish_home_view(user_id: str):
                 }
             ])
         
-        # Add footer
-        blocks.append({
-            "type": "context",
-            "elements": [
-                {
+        # Add footer   
+        blocks.extend([
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": " "
+                    }
+                ]
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": " "
+                    }
+                ]
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "🔍 Need help? Use `/radar help` or message this bot directly."
+                    }
+                ]
+            }
+        ])
+
+
+        # Add Digest coming soon
+        blocks.extend([
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": " "
+                    }
+                ]
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": " "
+                    }
+                ]
+            },
+            {
+                "type": "section",
+                "text": {
                     "type": "mrkdwn",
-                    "text": "🔍 Need help? Use `/radar help` or message this bot directly."
+                    "text": "More features coming soon! 🚀"
                 }
-            ]
-        })
+            }
+        ])
         
         # Update the home view with the full content
         client.views_publish(
