@@ -8,15 +8,15 @@ import hmac
 import json
 import logging
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Header
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.core.config import settings
 from app.db.supabase import SupabaseManager
 from app.services.slack_service import SlackService
-from app.services.monitoring_service import MonitoringService, track_performance
-from app.utils.validation import validate_webhook_payload, sanitize_string
+from app.services.monitoring_service import MonitoringService
+from app.utils.validation import sanitize_string
 import re
 
 router = APIRouter()
@@ -150,7 +150,6 @@ async def get_mentioned_users(comment_body: str) -> List[Dict[str, Any]]:
 
 
 @router.post("/github")
-@track_performance("webhook_processing")
 async def github_webhook(request: Request):
     """
     Handle GitHub webhook events.
@@ -212,23 +211,7 @@ async def github_webhook(request: Request):
         #         detail="Invalid webhook payload structure"
         #     )
         
-        # Sanitize and validate repository name
         repo_name = body.get("repository", {}).get("full_name", "")
-        if not repo_name or len(repo_name) > 200:
-            logger.error(f"Invalid repository name: {repo_name}")
-            MonitoringService.track_webhook_received(
-                event_type=event_type,
-                repository=repository_name,
-                action=action,
-                success=False,
-                error="Invalid repository name"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid repository name"
-            )
-        
-        # Store event in database
         event_data = {
             "event_type": sanitize_string(event_type, max_length=50),
             "action": sanitize_string(body.get("action", ""), max_length=50),
@@ -296,19 +279,16 @@ async def process_github_event(event_type: str, payload: Dict[str, Any], event_i
         event_id: Event ID in database
     """
     try:
-        # Get repository
         repository = payload.get("repository", {})
         repo_id = str(repository.get("id"))
         repo_name = repository.get("full_name")
         
-        # Find users who are watching this repository
         users = await SupabaseManager.get_users_by_repository(repo_id)
         
         if not users:
             logger.info(f"No users watching repository {repo_name}")
             return
         
-        # Process event based on type
         if event_type == "pull_request":
             await process_pull_request_event(payload, users, event_id)
         elif event_type == "pull_request_review":
@@ -327,43 +307,29 @@ async def process_github_event(event_type: str, payload: Dict[str, Any], event_i
             await process_push_event(payload, users, event_id)
         else:
             logger.info(f"Unhandled GitHub event type: {event_type}")
+            MonitoringService.track_event(
+                "unhandled_webhook_event_type",
+                properties={
+                    "event_type": event_type,
+                    "action": payload.get("action"),
+                    "error": str(e)
+                }
+            )
         
-        # Mark event as processed
         await SupabaseManager.update_event(event_id, {"processed": True})
         
     except Exception as e:
         logger.error(f"Error processing GitHub event: {e}", exc_info=True)
-        
-        # Create failed webhook event for retry
-        try:
-            repository = payload.get("repository", {})
-            sender = payload.get("sender", {})
-            action = payload.get("action")
-            
-            await SupabaseManager.create_failed_webhook_event(
-                event_id=event_id,
-                event_type=event_type,
-                action=action,
-                repository_name=repository.get("full_name", "unknown"),
-                repository_id=str(repository.get("id", "")),
-                sender_login=sender.get("login", "unknown"),
-                payload=payload,
-                error_message=str(e),
-                error_details={"exception_type": type(e).__name__}
-            )
-            
-            # Track failed event creation
-            MonitoringService.track_event(
-                "webhook_failed_event_created",
-                properties={
-                    "event_type": event_type,
-                    "repository": repository.get("full_name", "unknown"),
-                    "error": str(e)
-                }
-            )
-            
-        except Exception as retry_error:
-            logger.error(f"Failed to create failed webhook event: {retry_error}", exc_info=True)
+
+        repository = payload.get("repository", {})
+        MonitoringService.track_event(
+            "webhook_failed_event_created",
+            properties={
+                "event_type": event_type,
+                "action": payload.get("action"),
+                "error": str(e)
+            }
+        )
 
 
 async def process_pull_request_event(payload: Dict[str, Any], users: list, event_id: str):

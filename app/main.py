@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes import auth, github, slack, users, webhooks, settings, testing
 from app.core.config import settings as app_settings
 from app.core.logging import setup_logging
-from app.services.task_service import TaskService
+# from app.services.task_service import TaskService
 from app.services.monitoring_service import MonitoringService
 
 # Setup logging
@@ -121,41 +121,16 @@ async def startup_event():
     """Startup event handler."""
     logger.info("Starting up Radar API")
     
-    # Track application startup
-    MonitoringService.track_event(
-        "application_startup",
-        properties={
-            "environment": app_settings.ENVIRONMENT,
-            "debug": app_settings.DEBUG,
-            "posthog_enabled": bool(app_settings.POSTHOG_API_KEY)
-        }
-    )
-    
     # Validate environment variables
     try:
         validate_environment()
     except RuntimeError as e:
         logger.error(f"Environment validation failed: {e}")
-        # Track validation failure
-        MonitoringService.track_event(
-            "environment_validation_failed",
-            properties={"error": str(e)}
-        )
     
     # #Schedule digest notifications
     # task_service = TaskService()
     # await task_service.schedule_digest_notifications()
-    
-    # Track successful startup
-    MonitoringService.track_event(
-        "application_ready",
-        properties={
-            "tasks_scheduled": True,
-            "monitoring_enabled": bool(app_settings.POSTHOG_API_KEY)
-        }
-    )
-    
-    logger.info("Scheduled background tasks")
+    # logger.info("Scheduled background tasks")
 
 @app.on_event("shutdown")
 def shutdown_event():

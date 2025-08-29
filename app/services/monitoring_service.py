@@ -11,21 +11,22 @@ from typing import Any, Dict, Optional, Union
 from functools import wraps
 import traceback
 
-import posthog
+from posthog import Posthog
 
 from app.core.config import settings
 
-# Configure structured logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
     format='%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Initialize PostHog if API key is provided
 if settings.POSTHOG_API_KEY:
-    posthog.api_key = settings.POSTHOG_API_KEY
-    posthog.host = settings.POSTHOG_HOST
+    posthog = Posthog(
+        settings.POSTHOG_API_KEY, 
+        host=settings.POSTHOG_HOST,
+        enable_exception_autocapture=True,
+    )
     logger.info("PostHog analytics initialized")
 else:
     logger.warning("PostHog API key not configured - analytics disabled")
@@ -41,15 +42,6 @@ class MonitoringService:
         properties: Optional[Dict[str, Any]] = None,
         context: Optional[Dict[str, Any]] = None
     ):
-        """
-        Track an analytics event.
-        
-        Args:
-            event_name: Name of the event
-            user_id: User ID (optional)
-            properties: Event properties
-            context: Additional context
-        """
         try:
             if not settings.POSTHOG_API_KEY:
                 return
@@ -82,13 +74,6 @@ class MonitoringService:
     
     @staticmethod
     def track_user(user_id: str, properties: Optional[Dict[str, Any]] = None):
-        """
-        Track or update user properties.
-        
-        Args:
-            user_id: User ID
-            properties: User properties
-        """
         try:
             if not settings.POSTHOG_API_KEY:
                 return
@@ -118,15 +103,6 @@ class MonitoringService:
         context: Optional[Dict[str, Any]] = None,
         extra_data: Optional[Dict[str, Any]] = None
     ):
-        """
-        Track an error event.
-        
-        Args:
-            error: The exception that occurred
-            user_id: User ID (optional)
-            context: Error context
-            extra_data: Additional error data
-        """
         try:
             error_properties = {
                 "error_type": type(error).__name__,
@@ -163,17 +139,6 @@ class MonitoringService:
         error: Optional[str] = None,
         matched_keywords: Optional[list] = None
     ):
-        """
-        Track a notification delivery event.
-        
-        Args:
-            user_id: User ID
-            notification_type: Type of notification
-            repository: Repository name
-            success: Whether delivery was successful
-            error: Error message if failed
-            matched_keywords: Keywords that triggered the notification
-        """
         properties = {
             "notification_type": notification_type,
             "repository": repository,
@@ -203,17 +168,6 @@ class MonitoringService:
         success: bool = True,
         error: Optional[str] = None
     ):
-        """
-        Track a webhook event.
-        
-        Args:
-            event_type: GitHub event type
-            repository: Repository name
-            action: Event action
-            processing_time: Time taken to process
-            success: Whether processing was successful
-            error: Error message if failed
-        """
         properties = {
             "event_type": event_type,
             "repository": repository,
@@ -243,16 +197,6 @@ class MonitoringService:
         resource_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ):
-        """
-        Track a user action.
-        
-        Args:
-            user_id: User ID
-            action: Action performed
-            resource_type: Type of resource acted upon
-            resource_id: ID of the resource
-            metadata: Additional action metadata
-        """
         properties = {
             "action": action,
             "performed_at": datetime.utcnow().isoformat()
@@ -281,16 +225,6 @@ class MonitoringService:
         provider: Optional[str] = None,
         error: Optional[str] = None
     ):
-        """
-        Track authentication events.
-        
-        Args:
-            user_id: User ID
-            auth_method: Authentication method
-            success: Whether authentication was successful
-            provider: Auth provider (slack, github)
-            error: Error message if failed
-        """
         properties = {
             "auth_method": auth_method,
             "success": success,
@@ -311,141 +245,7 @@ class MonitoringService:
             properties=properties
         )
 
-
-def track_performance(event_name: str, user_id: Optional[str] = None):
-    """
-    Decorator to track performance of functions.
-    
-    Args:
-        event_name: Name for the performance event
-        user_id: User ID (optional)
-    """
-    def decorator(func):
-        @wraps(func)
-        async def async_wrapper(*args, **kwargs):
-            start_time = time.time()
-            success = True
-            error_msg = None
-            
-            try:
-                result = await func(*args, **kwargs)
-                return result
-            except Exception as e:
-                success = False
-                error_msg = str(e)
-                raise
-            finally:
-                duration = time.time() - start_time
-                
-                properties = {
-                    "function_name": func.__name__,
-                    "duration_ms": round(duration * 1000, 2),
-                    "success": success
-                }
-                
-                if error_msg:
-                    properties["error"] = error_msg
-                
-                MonitoringService.track_event(
-                    f"performance_{event_name}",
-                    user_id=user_id,
-                    properties=properties
-                )
-        
-        @wraps(func)
-        def sync_wrapper(*args, **kwargs):
-            start_time = time.time()
-            success = True
-            error_msg = None
-            
-            try:
-                result = func(*args, **kwargs)
-                return result
-            except Exception as e:
-                success = False
-                error_msg = str(e)
-                raise
-            finally:
-                duration = time.time() - start_time
-                
-                properties = {
-                    "function_name": func.__name__,
-                    "duration_ms": round(duration * 1000, 2),
-                    "success": success
-                }
-                
-                if error_msg:
-                    properties["error"] = error_msg
-                
-                MonitoringService.track_event(
-                    f"performance_{event_name}",
-                    user_id=user_id,
-                    properties=properties
-                )
-        
-        # Return appropriate wrapper based on function type
-        import asyncio
-        if asyncio.iscoroutinefunction(func):
-            return async_wrapper
-        else:
-            return sync_wrapper
-    
-    return decorator
-
-
-def track_errors(user_id: Optional[str] = None, context: Optional[Dict[str, Any]] = None):
-    """
-    Decorator to automatically track errors in functions.
-    
-    Args:
-        user_id: User ID (optional)
-        context: Additional context
-    """
-    def decorator(func):
-        @wraps(func)
-        async def async_wrapper(*args, **kwargs):
-            try:
-                return await func(*args, **kwargs)
-            except Exception as e:
-                MonitoringService.track_error(
-                    error=e,
-                    user_id=user_id,
-                    context={
-                        "function_name": func.__name__,
-                        **(context or {})
-                    }
-                )
-                raise
-        
-        @wraps(func)
-        def sync_wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                MonitoringService.track_error(
-                    error=e,
-                    user_id=user_id,
-                    context={
-                        "function_name": func.__name__,
-                        **(context or {})
-                    }
-                )
-                raise
-        
-        # Return appropriate wrapper based on function type
-        import asyncio
-        if asyncio.iscoroutinefunction(func):
-            return async_wrapper
-        else:
-            return sync_wrapper
-    
-    return decorator
-
-
-# Create a structured logger for the application
 class RadarLogger:
-    """Enhanced logger with structured logging capabilities."""
-    
     def __init__(self, name: str):
         self.logger = logging.getLogger(name)
     

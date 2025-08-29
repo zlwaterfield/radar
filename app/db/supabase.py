@@ -10,7 +10,6 @@ from supabase import create_client, Client
 
 from app.core.config import settings
 from app.utils.auth import TokenManager
-from app.services.monitoring_service import MonitoringService, track_performance
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,6 @@ class SupabaseManager:
     supabase = supabase
 
     @staticmethod
-    @track_performance("database_get_user")
     async def get_user(user_id: str, decrypt_tokens: bool = True) -> Optional[Dict[str, Any]]:
         """
         Get a user by ID.
@@ -61,7 +59,6 @@ class SupabaseManager:
             return None
 
     @staticmethod
-    @track_performance("database_get_all_users")
     async def get_all_users() -> List[Dict[str, Any]]:
         """
         Get all users.
@@ -77,7 +74,6 @@ class SupabaseManager:
             return []
 
     @staticmethod
-    @track_performance("database_get_users_with_digest_enabled")
     async def get_users_with_digest_enabled() -> List[Dict[str, Any]]:
         """
         Get all users who have digest notifications enabled.
