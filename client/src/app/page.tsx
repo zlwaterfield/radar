@@ -44,8 +44,8 @@ export default function Home() {
             </Button>
           </div>
         )}
-        <main className="flex flex-col items-center justify-center w-full flex-1 px-4 sm:px-8 lg:px-20 text-center relative z-10">
-          <div className="backdrop-blur-sm bg-white dark:bg-gray-800/50 rounded-3xl p-8 mb-8 border border-gray-100 dark:border-gray-700 shadow-xl">
+        <main className="flex flex-col items-center justify-center py-20 w-full flex-1 px-4 sm:px-8 lg:px-20 text-center relative z-10">
+          <div className="backdrop-blur-sm bg-white dark:bg-gray-800/50 rounded-3xl px-12 py-8 mb-8 border border-gray-100 dark:border-gray-700 shadow-xl">
             <div className="mb-6 flex justify-center">
               <img 
                 src="/logo-full-dark.png" 
@@ -59,8 +59,8 @@ export default function Home() {
               />
             </div>
             
-            <p className="mt-3 text-xl max-w-2xl mb-8 text-gray-700 dark:text-gray-200">
-              Never miss important GitHub activity - save 2+ hours daily with intelligent Slack notifications
+            <p className="mt-3 text-2xl max-w-2xl mb-8 text-gray-700 dark:text-gray-200">
+              Never miss important GitHub activity.<br/>Get instant notifications in Slack.
             </p>
             
             {!isAuthenticated && (
