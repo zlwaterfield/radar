@@ -289,9 +289,6 @@ async def github_callback(code: str, state: str):
         
         # Exchange code for token
         async with httpx.AsyncClient() as client:
-            print(f"Exchanging GitHub OAuth code for token with client_id: {settings.GITHUB_CLIENT_ID}")
-            print(f"Redirect URI: {settings.CALLBACK_API_HOST}/api/auth/github/callback")
-            
             response = await client.post(
                 "https://github.com/login/oauth/access_token",
                 data={
@@ -303,8 +300,6 @@ async def github_callback(code: str, state: str):
                 headers={"Accept": "application/json"}
             )
             
-            print(f"GitHub OAuth response status: {response.status_code}")
-            
             if response.status_code != 200:
                 logger.error(f"GitHub OAuth error: {response.text}")
                 raise HTTPException(
@@ -313,23 +308,6 @@ async def github_callback(code: str, state: str):
                 )
             
             oauth_data = response.json()
-            
-            # Log token info for debugging
-            print("GitHub OAuth response keys:", oauth_data.keys())
-            if "access_token" in oauth_data:
-                token = oauth_data["access_token"]
-                print("Token type:", type(token))
-                print("Token length:", len(token))
-                print("Token prefix:", token[:4] if len(token) > 4 else token)
-                print("Token suffix:", token[-4:] if len(token) > 4 else token)
-            
-            if "refresh_token" in oauth_data:
-                refresh_token = oauth_data["refresh_token"]
-                print("Refresh token length:", len(refresh_token))
-                print("Refresh token prefix:", refresh_token[:4] if len(refresh_token) > 4 else refresh_token)
-            
-            if "expires_in" in oauth_data:
-                print("Token expires in:", oauth_data["expires_in"], "seconds")
             
             if "error" in oauth_data:
                 logger.error(f"GitHub OAuth error: {oauth_data['error']}")

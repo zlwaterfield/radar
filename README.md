@@ -95,14 +95,15 @@ MIT License - see LICENSE file for details.
 
 - Soon
    - Team mentions
-   - Github Discussions support
    - Improving onboarding experience
    - Testing all events in production
    - Improve event messages (general copying and PR descriptions, +/- changes, etc)
    - Document all supported events
 - Next
+   - Github Discussions support
    - Daily Digests support
    - Customizable Digests to custom channels
+   - Events to custom channels - more configurations
    - Better Slack homepage
    - Slack / Github user connecting to @ in notifications
 - Later
