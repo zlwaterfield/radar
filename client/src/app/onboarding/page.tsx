@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -23,7 +23,7 @@ interface IntegrationStatus {
   };
 }
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const { user, loading } = useAuth();
   const searchParams = useSearchParams();
   const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus>({
@@ -301,5 +301,22 @@ export default function OnboardingPage() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </Layout>
+    }>
+      <OnboardingContent />
+    </Suspense>
   );
 }
