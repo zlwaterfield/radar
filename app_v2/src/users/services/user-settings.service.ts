@@ -40,7 +40,7 @@ export class UserSettingsService {
           notificationPreferences: data.notificationPreferences,
           notificationSchedule: data.notificationSchedule,
           statsTimeWindow: data.statsTimeWindow,
-          keywords: data.keywords,
+          keywordPreferences: data.keywordPreferences,
         },
       });
 
@@ -125,138 +125,9 @@ export class UserSettingsService {
   }
 
   /**
-   * Get notification preferences for user
-   */
-  async getNotificationPreferences(userId: string): Promise<any> {
-    const settings = await this.getUserSettings(userId);
-    return (
-      settings?.notificationPreferences ||
-      this.getDefaultNotificationPreferences()
-    );
-  }
-
-  /**
-   * Update notification preferences
-   */
-  async updateNotificationPreferences(
-    userId: string,
-    preferences: any,
-  ): Promise<UserSettings> {
-    const existingSettings = await this.getUserSettings(userId);
-
-    if (existingSettings) {
-      return this.updateUserSettings(userId, {
-        notificationPreferences: preferences,
-      });
-    } else {
-      return this.createUserSettings(userId, {
-        notificationPreferences: preferences,
-        notificationSchedule: this.getDefaultNotificationSchedule(),
-        statsTimeWindow: 14,
-        keywords: [],
-      });
-    }
-  }
-
-  /**
-   * Get notification schedule for user
-   */
-  async getNotificationSchedule(userId: string): Promise<any> {
-    const settings = await this.getUserSettings(userId);
-    return (
-      settings?.notificationSchedule || this.getDefaultNotificationSchedule()
-    );
-  }
-
-  /**
-   * Update notification schedule
-   */
-  async updateNotificationSchedule(
-    userId: string,
-    schedule: any,
-  ): Promise<UserSettings> {
-    const existingSettings = await this.getUserSettings(userId);
-
-    if (existingSettings) {
-      return this.updateUserSettings(userId, {
-        notificationSchedule: schedule,
-      });
-    } else {
-      return this.createUserSettings(userId, {
-        notificationPreferences: this.getDefaultNotificationPreferences(),
-        notificationSchedule: schedule,
-        statsTimeWindow: 14,
-        keywords: [],
-      });
-    }
-  }
-
-  /**
-   * Get keywords for user
-   */
-  async getKeywords(userId: string): Promise<string[]> {
-    const settings = await this.getUserSettings(userId);
-    return (settings?.keywords as string[]) || [];
-  }
-
-  /**
-   * Update keywords
-   */
-  async updateKeywords(
-    userId: string,
-    keywords: string[],
-  ): Promise<UserSettings> {
-    const existingSettings = await this.getUserSettings(userId);
-
-    if (existingSettings) {
-      return this.updateUserSettings(userId, {
-        keywords: keywords,
-      });
-    } else {
-      return this.createUserSettings(userId, {
-        notificationPreferences: this.getDefaultNotificationPreferences(),
-        notificationSchedule: this.getDefaultNotificationSchedule(),
-        statsTimeWindow: 14,
-        keywords: keywords,
-      });
-    }
-  }
-
-  /**
-   * Get stats time window for user
-   */
-  async getStatsTimeWindow(userId: string): Promise<number> {
-    const settings = await this.getUserSettings(userId);
-    return settings?.statsTimeWindow || 14;
-  }
-
-  /**
-   * Update stats time window
-   */
-  async updateStatsTimeWindow(
-    userId: string,
-    timeWindow: number,
-  ): Promise<UserSettings> {
-    const existingSettings = await this.getUserSettings(userId);
-
-    if (existingSettings) {
-      return this.updateUserSettings(userId, {
-        statsTimeWindow: timeWindow,
-      });
-    } else {
-      return this.createUserSettings(userId, {
-        notificationPreferences: this.getDefaultNotificationPreferences(),
-        notificationSchedule: this.getDefaultNotificationSchedule(),
-        statsTimeWindow: timeWindow,
-        keywords: [],
-      });
-    }
-  }
-
-  /**
    * Get default notification preferences
    */
-  private getDefaultNotificationPreferences(): any {
+  getDefaultNotificationPreferences(): any {
     return {
       pull_request_opened: true,
       pull_request_closed: true,
@@ -274,7 +145,7 @@ export class UserSettingsService {
   /**
    * Get default notification schedule
    */
-  private getDefaultNotificationSchedule(): any {
+  getDefaultNotificationSchedule(): any {
     return {
       real_time: true,
       digest_time: '09:00',
@@ -282,6 +153,17 @@ export class UserSettingsService {
       digest_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
       second_digest_time: null,
       second_digest_enabled: false,
+    };
+  }
+
+  /**
+   * Get default keyword preferences
+   */
+  getDefaultKeywordPreferences(): any {
+    return {
+      enabled: false,
+      keywords: [],
+      threshold: 0.3,
     };
   }
 }

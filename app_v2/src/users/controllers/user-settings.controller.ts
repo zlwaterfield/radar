@@ -76,7 +76,7 @@ export class UserSettingsController {
           defaultSettings.notificationSchedule,
         ),
         statsTimeWindow: defaultSettings.statsTimeWindow,
-        keywordPreferences: defaultSettings.keywords,
+        keywordPreferences: defaultSettings.keywordPreferences,
         createdAt: defaultSettings.createdAt,
         updatedAt: defaultSettings.updatedAt,
       };
@@ -92,7 +92,7 @@ export class UserSettingsController {
         settings.notificationSchedule,
       ),
       statsTimeWindow: settings.statsTimeWindow,
-      keywordPreferences: settings.keywords,
+      keywordPreferences: settings.keywordPreferences,
       createdAt: settings.createdAt,
       updatedAt: settings.updatedAt,
     };
@@ -128,7 +128,7 @@ export class UserSettingsController {
     }
     
     if (updateData.keywordPreferences !== undefined) {
-      updateFields.keywords = updateData.keywordPreferences;
+      updateFields.keywordPreferences = updateData.keywordPreferences;
     }
 
     const settings = await this.userSettingsService.upsertUserSettings(
@@ -146,7 +146,7 @@ export class UserSettingsController {
         settings.notificationSchedule,
       ),
       statsTimeWindow: settings.statsTimeWindow,
-      keywordPreferences: settings.keywords,
+      keywordPreferences: settings.keywordPreferences,
       createdAt: settings.createdAt,
       updatedAt: settings.updatedAt,
     };

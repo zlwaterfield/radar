@@ -95,6 +95,7 @@ export class GitHubService {
       if (
         userIdOrAccessToken.startsWith('gho_') ||
         userIdOrAccessToken.startsWith('ghp_') ||
+        userIdOrAccessToken.startsWith('ghu_') ||
         userIdOrAccessToken.length > 50
       ) {
         // It's likely an access token

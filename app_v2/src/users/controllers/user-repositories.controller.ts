@@ -20,8 +20,11 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UserRepositoriesService } from '../services/user-repositories.service';
+import { UsersService } from '../services/users.service';
 import { AuthGuard } from '@/auth/guards/auth.guard';
 import { GetUser } from '@/auth/decorators/user.decorator';
+import { PaginationQueryDto } from '@/common/dto/pagination.dto';
+import { createPaginatedResponse } from '@/common/utils/pagination.util';
 import type { User } from '@prisma/client';
 
 @ApiTags('user-repositories')
@@ -33,6 +36,7 @@ export class UserRepositoriesController {
 
   constructor(
     private readonly userRepositoriesService: UserRepositoriesService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -41,31 +45,40 @@ export class UserRepositoriesController {
   @Get('me/repositories')
   @ApiOperation({ summary: 'Get current user repositories' })
   @ApiResponse({ status: 200, description: 'User repositories' })
-  async getUserRepositories(@GetUser() user: User) {
-    const repositories = await this.userRepositoriesService.getUserRepositories(
+  async getUserRepositories(
+    @GetUser() user: User,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const { repositories, total } = await this.userRepositoriesService.getUserRepositoriesPaginated(
       user.id,
+      pagination.page || 1,
+      pagination.per_page || 20,
     );
 
-    return {
-      repositories: repositories.map((repo) => ({
-        id: repo.id,
-        githubId: repo.githubId,
-        name: repo.name,
-        fullName: repo.fullName,
-        description: repo.description,
-        url: repo.url,
-        isPrivate: repo.isPrivate,
-        isFork: repo.isFork,
-        enabled: repo.enabled,
-        isActive: repo.isActive,
-        ownerName: repo.ownerName,
-        ownerAvatarUrl: repo.ownerAvatarUrl,
-        organization: repo.organization,
-        createdAt: repo.createdAt,
-        updatedAt: repo.updatedAt,
-      })),
-      count: repositories.length,
-    };
+    const mappedRepositories = repositories.map((repo) => ({
+      id: repo.id,
+      githubId: repo.githubId,
+      name: repo.name,
+      fullName: repo.fullName,
+      description: repo.description,
+      url: repo.url,
+      isPrivate: repo.isPrivate,
+      isFork: repo.isFork,
+      enabled: repo.enabled,
+      isActive: repo.isActive,
+      ownerName: repo.ownerName,
+      ownerAvatarUrl: repo.ownerAvatarUrl,
+      organization: repo.organization,
+      createdAt: repo.createdAt,
+      updatedAt: repo.updatedAt,
+    }));
+
+    return createPaginatedResponse(
+      mappedRepositories,
+      total,
+      pagination.page || 1,
+      pagination.per_page || 20,
+    );
   }
 
   /**
@@ -74,25 +87,36 @@ export class UserRepositoriesController {
   @Get('me/repositories/enabled')
   @ApiOperation({ summary: 'Get enabled repositories for current user' })
   @ApiResponse({ status: 200, description: 'Enabled repositories' })
-  async getEnabledRepositories(@GetUser() user: User) {
-    const repositories =
-      await this.userRepositoriesService.getEnabledRepositories(user.id);
+  async getEnabledRepositories(
+    @GetUser() user: User,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const { repositories, total } =
+      await this.userRepositoriesService.getEnabledRepositoriesPaginated(
+        user.id,
+        pagination.page || 1,
+        pagination.per_page || 20,
+      );
 
-    return {
-      repositories: repositories.map((repo) => ({
-        id: repo.id,
-        githubId: repo.githubId,
-        name: repo.name,
-        fullName: repo.fullName,
-        description: repo.description,
-        url: repo.url,
-        isPrivate: repo.isPrivate,
-        enabled: repo.enabled,
-        ownerName: repo.ownerName,
-        organization: repo.organization,
-      })),
-      count: repositories.length,
-    };
+    const mappedRepositories = repositories.map((repo) => ({
+      id: repo.id,
+      githubId: repo.githubId,
+      name: repo.name,
+      fullName: repo.fullName,
+      description: repo.description,
+      url: repo.url,
+      isPrivate: repo.isPrivate,
+      enabled: repo.enabled,
+      ownerName: repo.ownerName,
+      organization: repo.organization,
+    }));
+
+    return createPaginatedResponse(
+      mappedRepositories,
+      total,
+      pagination.page || 1,
+      pagination.per_page || 20,
+    );
   }
 
   /**
@@ -105,7 +129,9 @@ export class UserRepositoriesController {
     this.logger.log(`Repository sync requested for user ${user.id}`);
 
     // Check if user has GitHub access token
-    if (!user.githubAccessToken) {
+    const fullUser = await this.usersService.getUserById(user.id);
+    console.log('fullUser', fullUser);
+    if (!fullUser || !fullUser.githubAccessToken) {
       throw new BadRequestException(
         'GitHub account not connected. Please connect your GitHub account first.',
       );
@@ -114,7 +140,7 @@ export class UserRepositoriesController {
     try {
       const result = await this.userRepositoriesService.syncUserRepositories(
         user.id,
-        user.githubAccessToken,
+        fullUser.githubAccessToken!,
       );
 
       this.logger.log(
@@ -142,17 +168,6 @@ export class UserRepositoriesController {
         'Failed to sync repositories from GitHub. Please try again later.',
       );
     }
-  }
-
-  /**
-   * Refresh repositories from GitHub (alias for sync)
-   */
-  @Post('me/repositories/refresh')
-  @ApiOperation({ summary: 'Refresh repositories from GitHub' })
-  @ApiResponse({ status: 200, description: 'Repositories refreshed' })
-  async refreshRepositories(@GetUser() user: User) {
-    // Delegate to sync method
-    return this.syncRepositories(user);
   }
 
   /**

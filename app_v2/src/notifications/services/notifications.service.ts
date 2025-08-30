@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '@/database/database.service';
 import { SlackMessageService } from '@/slack/services/slack-message.service';
 import { UserSettingsService } from '@/users/services/user-settings.service';
+import { getPaginationSkip } from '@/common/utils/pagination.util';
 import type {
   GitHubPullRequest,
   GitHubIssue,
@@ -128,11 +129,11 @@ export class NotificationsService {
     payload: any,
   ): Promise<boolean> {
     try {
+      const settings = await this.userSettingsService.getUserSettings(user.id);
       const preferences =
-        await this.userSettingsService.getNotificationPreferences(user.id);
-      const schedule = await this.userSettingsService.getNotificationSchedule(
-        user.id,
-      );
+        settings?.notificationPreferences || this.userSettingsService.getDefaultNotificationPreferences();
+      const schedule = settings?.notificationSchedule || this.userSettingsService.getDefaultNotificationSchedule();
+      const keywordPrefs = settings?.keywordPreferences || this.userSettingsService.getDefaultKeywordPreferences();
 
       // Check if real-time notifications are enabled
       if (!schedule.real_time) {
@@ -146,9 +147,10 @@ export class NotificationsService {
       }
 
       // Check keywords filtering
-      const keywords = await this.userSettingsService.getKeywords(user.id);
-      if (keywords.length > 0 && !this.matchesKeywords(payload, keywords)) {
-        return false;
+      if (keywordPrefs && keywordPrefs.enabled && keywordPrefs.keywords?.length > 0) {
+        if (!this.matchesKeywords(payload, keywordPrefs.keywords, keywordPrefs.threshold || 0.7)) {
+          return false;
+        }
       }
 
       // Don't notify users about their own actions
@@ -422,7 +424,7 @@ export class NotificationsService {
   /**
    * Check if payload matches user's keywords
    */
-  private matchesKeywords(payload: any, keywords: string[]): boolean {
+  private matchesKeywords(payload: any, keywords: string[], threshold = 0.7): boolean {
     if (keywords.length === 0) {
       return true;
     }
@@ -439,6 +441,8 @@ export class NotificationsService {
       .join(' ')
       .toLowerCase();
 
+    // For now, use simple substring matching
+    // In the future, this could be enhanced with fuzzy matching based on threshold
     return keywords.some((keyword) =>
       searchText.includes(keyword.toLowerCase()),
     );
@@ -468,6 +472,50 @@ export class NotificationsService {
         error instanceof Error ? error.message : String(error),
       );
       return [];
+    }
+  }
+
+  /**
+   * Get pending notifications for user with pagination
+   */
+  async getPendingNotificationsPaginated(
+    userId: string,
+    page: number,
+    per_page: number,
+  ): Promise<{ notifications: any[]; total: number }> {
+    try {
+      const skip = getPaginationSkip(page, per_page);
+      
+      const [notifications, total] = await Promise.all([
+        this.databaseService.notification.findMany({
+          where: {
+            userId,
+            messageTs: null, // Not yet sent to Slack
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+          skip,
+          take: per_page,
+          include: {
+            event: true,
+          },
+        }),
+        this.databaseService.notification.count({
+          where: {
+            userId,
+            messageTs: null,
+          },
+        }),
+      ]);
+
+      return { notifications, total };
+    } catch (error) {
+      this.logger.error(
+        `Error getting paginated pending notifications for user ${userId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+      return { notifications: [], total: 0 };
     }
   }
 

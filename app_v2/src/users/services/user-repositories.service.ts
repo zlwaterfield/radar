@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '@/database/database.service';
 import { GitHubService } from '@/github/services/github.service';
+import { getPaginationSkip } from '@/common/utils/pagination.util';
 import type { UserRepository } from '@prisma/client';
 
 @Injectable()
@@ -27,6 +28,39 @@ export class UserRepositoriesService {
         error,
       );
       return [];
+    }
+  }
+
+  /**
+   * Get user repositories with pagination
+   */
+  async getUserRepositoriesPaginated(
+    userId: string,
+    page: number,
+    per_page: number,
+  ): Promise<{ repositories: UserRepository[]; total: number }> {
+    try {
+      const skip = getPaginationSkip(page, per_page);
+      
+      const [repositories, total] = await Promise.all([
+        this.databaseService.userRepository.findMany({
+          where: { userId },
+          orderBy: { name: 'asc' },
+          skip,
+          take: per_page,
+        }),
+        this.databaseService.userRepository.count({
+          where: { userId },
+        }),
+      ]);
+
+      return { repositories, total };
+    } catch (error) {
+      this.logger.error(
+        `Error getting paginated repositories for user ${userId}:`,
+        error,
+      );
+      return { repositories: [], total: 0 };
     }
   }
 
@@ -136,9 +170,20 @@ export class UserRepositoriesService {
     total: number;
   }> {
     try {
-      // Get repositories from GitHub
-      const githubRepos =
-        await this.githubService.getUserRepositories(githubAccessToken);
+      // Get GitHub App installations for the user
+      const installations = await this.githubService.getUserInstallations(githubAccessToken);
+      
+      let githubRepos: any[] = [];
+      
+      // Get repositories from all installations (only repos user granted access to)
+      for (const installation of installations) {
+        try {
+          const installationRepos = await this.githubService.getInstallationRepositories(installation.id);
+          githubRepos.push(...installationRepos);
+        } catch (error) {
+          this.logger.warn(`Failed to get repositories for installation ${installation.id}:`, error);
+        }
+      }
 
       let added = 0;
       let updated = 0;
@@ -275,6 +320,47 @@ export class UserRepositoriesService {
         error,
       );
       return [];
+    }
+  }
+
+  /**
+   * Get enabled repositories with pagination
+   */
+  async getEnabledRepositoriesPaginated(
+    userId: string,
+    page: number,
+    per_page: number,
+  ): Promise<{ repositories: UserRepository[]; total: number }> {
+    try {
+      const skip = getPaginationSkip(page, per_page);
+      
+      const [repositories, total] = await Promise.all([
+        this.databaseService.userRepository.findMany({
+          where: {
+            userId,
+            enabled: true,
+            isActive: true,
+          },
+          orderBy: { name: 'asc' },
+          skip,
+          take: per_page,
+        }),
+        this.databaseService.userRepository.count({
+          where: {
+            userId,
+            enabled: true,
+            isActive: true,
+          },
+        }),
+      ]);
+
+      return { repositories, total };
+    } catch (error) {
+      this.logger.error(
+        `Error getting paginated enabled repositories for user ${userId}:`,
+        error,
+      );
+      return { repositories: [], total: 0 };
     }
   }
 }

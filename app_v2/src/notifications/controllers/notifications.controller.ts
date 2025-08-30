@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   UseGuards,
   Logger,
   Param,
@@ -16,6 +17,8 @@ import { NotificationsService } from '../services/notifications.service';
 import { NotificationDistributionService } from '../services/notification-distribution.service';
 import { AuthGuard } from '@/auth/guards/auth.guard';
 import { GetUser } from '@/auth/decorators/user.decorator';
+import { PaginationQueryDto } from '@/common/dto/pagination.dto';
+import { createPaginatedResponse } from '@/common/utils/pagination.util';
 import type { User } from '@prisma/client';
 
 @ApiTags('notifications')
@@ -36,27 +39,38 @@ export class NotificationsController {
   @Get('pending')
   @ApiOperation({ summary: 'Get pending notifications for current user' })
   @ApiResponse({ status: 200, description: 'Pending notifications' })
-  async getPendingNotifications(@GetUser() user: User) {
-    const notifications =
-      await this.notificationsService.getPendingNotifications(user.id);
+  async getPendingNotifications(
+    @GetUser() user: User,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const { notifications, total } =
+      await this.notificationsService.getPendingNotificationsPaginated(
+        user.id,
+        pagination.page || 1,
+        pagination.per_page || 20,
+      );
 
-    return {
-      notifications: notifications.map((n) => ({
-        id: n.id,
-        type: n.messageType,
-        payload: n.payload,
-        createdAt: n.createdAt,
-        event: n.event
-          ? {
-              eventType: n.event.eventType,
-              action: n.event.action,
-              repositoryName: n.event.repositoryName,
-              senderLogin: n.event.senderLogin,
-            }
-          : null,
-      })),
-      count: notifications.length,
-    };
+    const mappedNotifications = notifications.map((n) => ({
+      id: n.id,
+      type: n.messageType,
+      payload: n.payload,
+      createdAt: n.createdAt,
+      event: n.event
+        ? {
+            eventType: n.event.eventType,
+            action: n.event.action,
+            repositoryName: n.event.repositoryName,
+            senderLogin: n.event.senderLogin,
+          }
+        : null,
+    }));
+
+    return createPaginatedResponse(
+      mappedNotifications,
+      total,
+      pagination.page || 1,
+      pagination.per_page || 20,
+    );
   }
 
   /**
