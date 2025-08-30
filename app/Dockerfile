@@ -8,8 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
@@ -39,6 +39,14 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 
+# Install production dependencies and keep Prisma for migrations
+RUN npm ci --only=production && npm install prisma --save-dev && npm cache clean --force
+
+# Create startup script for migrations
+RUN printf '#!/bin/sh\necho "Running Prisma migrations..."\nnpx prisma migrate deploy\necho "Starting application..."\nexec "$@"' > /app/start.sh && \
+    chmod +x /app/start.sh && \
+    chown nestjs:nodejs /app/start.sh
+
 # Switch to non-root user
 USER nestjs
 
@@ -49,5 +57,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node dist/health-check.js || exit 1
 
-# Start the application
-CMD ["dumb-init", "node", "dist/main.js"]
+# Start the application with migrations
+CMD ["/app/start.sh", "dumb-init", "node", "dist/main.js"]
