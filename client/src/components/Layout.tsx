@@ -13,7 +13,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButton = false }) => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, signOut } = useAuth();
   const router = useRouter();
 
   return (
@@ -74,7 +74,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
                 </div>
               </div>
               <Button 
-                onClick={logout}
+                onClick={signOut}
                 variant="ghost"
                 size="sm"
                 icon={<FiLogOut size={20} />}

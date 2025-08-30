@@ -28,8 +28,7 @@ export default function Home() {
         </div>
       </div>
       <div className="flex flex-col items-center justify-center min-h-screen py-2 relative">
-        {/* View Dashboard button for logged-in users */}
-        {isAuthenticated && (
+        {isAuthenticated ? (
           <div className="absolute top-4 right-4 z-20">
             <Button
               onClick={() => router.push('/settings/notifications')}
@@ -40,6 +39,15 @@ export default function Home() {
             >
               View dashboard
             </Button>
+          </div>
+        ) : (
+          <div className="absolute top-4 right-4 z-20">
+              <Button
+                onClick={() => router.push('/auth/signin')}
+                variant="secondary"
+              >
+                Sign In
+              </Button>
           </div>
         )}
         <main className="flex flex-col items-center justify-center py-20 w-full flex-1 px-4 sm:px-8 lg:px-20 text-center relative z-10">
@@ -67,16 +75,8 @@ export default function Home() {
                   <Button
                     onClick={() => router.push('/auth/signup')}
                     variant="primary"
-                    size="lg"
                   >
                     Get Started
-                  </Button>
-                  <Button
-                    onClick={() => router.push('/auth/signin')}
-                    variant="secondary"
-                    size="lg"
-                  >
-                    Sign In
                   </Button>
                 </div>
                 {/* <div className="flex items-center space-x-4 sm:space-x-8 text-sm text-gray-600 dark:text-gray-400">

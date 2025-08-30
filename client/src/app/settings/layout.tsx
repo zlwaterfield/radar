@@ -12,7 +12,7 @@ export default function SettingsLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, signOut } = useAuth();
   const pathname = usePathname();
 
   const isActive = (path: string) => {
@@ -120,7 +120,7 @@ export default function SettingsLayout({
             </div>
           </div>
           <Button 
-            onClick={logout}
+            onClick={signOut}
             variant="ghost"
             size="sm"
             icon={<FiLogOut size={20} />}
