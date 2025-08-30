@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/passport-jwt": "^4.0.1"
+  }
+}

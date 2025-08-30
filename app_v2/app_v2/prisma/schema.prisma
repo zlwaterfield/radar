@@ -1,0 +1,216 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users table - core user authentication and profile data
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Profile data  
+  name            String?
+  email           String? @unique
+  emailVerified   Boolean @default(false) @map("email_verified")
+  image           String?
+  isActive        Boolean @default(true) @map("is_active")
+
+  // Slack integration
+  slackId           String  @unique @map("slack_id")
+  slackTeamId       String  @map("slack_team_id")
+  slackAccessToken  String  @map("slack_access_token") // encrypted
+  slackRefreshToken String? @map("slack_refresh_token") // encrypted
+
+  // GitHub integration  
+  githubId           String? @unique @map("github_id")
+  githubLogin        String? @unique @map("github_login")
+  githubAccessToken  String? @map("github_access_token") // encrypted
+  githubRefreshToken String? @map("github_refresh_token") // encrypted
+
+  // Relations
+  settings        UserSettings?
+  repositories    UserRepository[]
+  notifications   Notification[]
+  digests         UserDigest[]
+  events          Event[]
+  sessions        Session[]
+  accounts        Account[]
+
+  @@map("users")
+}
+
+// User settings and preferences
+model UserSettings {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notification preferences (JSON)
+  notificationPreferences Json @default("{}") @map("notification_preferences")
+  
+  // Notification schedule (JSON)
+  notificationSchedule Json @default("{}") @map("notification_schedule")
+  
+  // Stats configuration
+  statsTimeWindow Int @default(14) @map("stats_time_window")
+
+  // Keywords for filtering (JSON array)
+  keywords Json @default("[]")
+
+  @@map("user_settings")
+}
+
+// User repository relationships
+model UserRepository {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // GitHub repository data
+  githubId     String  @map("github_id")
+  name         String
+  fullName     String  @map("full_name")
+  description  String? @default("")
+  url          String  @default("")
+  isPrivate    Boolean @default(false) @map("is_private")
+  isFork       Boolean @default(false) @map("is_fork")
+  
+  // Owner information
+  ownerName      String @default("") @map("owner_name")
+  ownerAvatarUrl String @default("") @map("owner_avatar_url")
+  ownerUrl       String @default("") @map("owner_url")
+  
+  // Repository settings
+  organization String? 
+  isActive     Boolean @default(true) @map("is_active")
+  enabled      Boolean @default(false)
+
+  @@unique([userId, githubId])
+  @@map("user_repositories")
+}
+
+// GitHub events storage
+model Event {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Event metadata
+  eventType      String @map("event_type")
+  action         String?
+  repositoryId   String @map("repository_id")
+  repositoryName String @map("repository_name")
+  senderId       String @map("sender_id")
+  senderLogin    String @map("sender_login")
+
+  // Processing status
+  processed Boolean @default(false)
+
+  // Full GitHub payload (JSON)
+  payload Json
+
+  // Relations
+  userId        String?       @map("user_id")
+  user          User?         @relation(fields: [userId], references: [id])
+  notifications Notification[]
+
+  @@map("events")
+}
+
+// Notification tracking
+model Notification {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventId String? @map("event_id")
+  event   Event?  @relation(fields: [eventId], references: [id])
+
+  // Slack message details
+  messageType String @map("message_type")
+  channel     String?
+  messageTs   String? @map("message_ts")
+  
+  // Notification payload (JSON)
+  payload Json
+
+  @@map("notifications")
+}
+
+// User digest history
+model UserDigest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Digest details
+  sentAt DateTime @map("sent_at")
+  messageTs String @map("message_ts")
+  pullRequestCount Int @default(0) @map("pull_request_count")
+  issueCount Int @default(0) @map("issue_count")
+
+  @@map("user_digests")
+}
+
+// Better Auth required tables
+model Session {
+  id        String   @id
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("session")
+}
+
+model Account {
+  id                String  @id
+  accountId         String  @map("account_id")
+  providerId        String  @map("provider_id")
+  userId            String  @map("user_id")
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken       String? @map("access_token")
+  refreshToken      String? @map("refresh_token")
+  idToken           String? @map("id_token")
+  expiresAt         DateTime? @map("expires_at")
+  password          String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([providerId, accountId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([identifier, value])
+  @@map("verification")
+}
