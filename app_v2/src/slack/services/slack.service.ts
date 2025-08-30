@@ -256,7 +256,7 @@ export class SlackService {
       const response = await client.auth.test();
       return response.ok;
     } catch (error) {
-      this.logger.debug('Slack connection test failed:', error.message);
+      this.logger.debug('Slack connection test failed:', error instanceof Error ? error.message : String(error));
       return false;
     }
   }

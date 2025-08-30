@@ -93,10 +93,10 @@ export class UserRepositoriesService {
       this.logger.log(`Updated repository ${repositoryId} for user ${userId}`);
       return repository;
     } catch (error) {
-      if (error.code === 'P2025') {
+      if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
         throw new NotFoundException('Repository not found');
       }
-      this.logger.error(`Error updating repository ${repositoryId}:`, error);
+      this.logger.error(`Error updating repository ${repositoryId}:`, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }

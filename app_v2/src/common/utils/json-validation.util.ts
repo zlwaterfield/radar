@@ -12,13 +12,17 @@ export function validateNotificationPreferences(
   jsonValue: JsonValue,
 ): NotificationPreferencesDto {
   if (!jsonValue || typeof jsonValue !== 'object' || Array.isArray(jsonValue)) {
-    throw new BadRequestException('Invalid notification preferences format');
+    // Return default preferences for invalid/empty input
+    return createDefaultNotificationPreferences();
   }
 
   const obj = jsonValue as Record<string, unknown>;
 
-  // Validate required boolean fields
-  const requiredFields = [
+  // Get defaults and merge with provided values
+  const defaults = createDefaultNotificationPreferences();
+  
+  // Validate only provided boolean fields
+  const booleanFields = [
     'pull_request_opened',
     'pull_request_closed',
     'pull_request_merged',
@@ -31,24 +35,51 @@ export function validateNotificationPreferences(
     'issue_assigned',
   ];
 
-  for (const field of requiredFields) {
-    if (typeof obj[field] !== 'boolean') {
-      throw new BadRequestException(`Invalid ${field} value: expected boolean`);
+  const result: NotificationPreferencesDto = { ...defaults };
+
+  // Only validate and update fields that are present
+  for (const field of booleanFields) {
+    if (obj[field] !== undefined) {
+      if (typeof obj[field] !== 'boolean') {
+        throw new BadRequestException(`Invalid ${field} value: expected boolean`);
+      }
+      (result as any)[field] = obj[field];
     }
   }
 
-  return {
-    pull_request_opened: obj.pull_request_opened as boolean,
-    pull_request_closed: obj.pull_request_closed as boolean,
-    pull_request_merged: obj.pull_request_merged as boolean,
-    pull_request_reviewed: obj.pull_request_reviewed as boolean,
-    pull_request_commented: obj.pull_request_commented as boolean,
-    pull_request_assigned: obj.pull_request_assigned as boolean,
-    issue_opened: obj.issue_opened as boolean,
-    issue_closed: obj.issue_closed as boolean,
-    issue_commented: obj.issue_commented as boolean,
-    issue_assigned: obj.issue_assigned as boolean,
-  };
+  // Handle additional fields that might not be in the DTO (like those from frontend)
+  const additionalFields = [
+    'pr_comments',
+    'pr_reviews', 
+    'pr_status_changes',
+    'pr_assignments',
+    'pr_opened',
+    'issue_comments',
+    'issue_status_changes', 
+    'issue_assignments',
+    'check_failures',
+    'check_successes',
+    'mentioned_in_comments',
+    'mute_own_activity',
+    'mute_bot_comments',
+    'mute_draft_prs',
+  ];
+
+  for (const field of additionalFields) {
+    if (obj[field] !== undefined) {
+      if (typeof obj[field] !== 'boolean') {
+        throw new BadRequestException(`Invalid ${field} value: expected boolean`);
+      }
+      (result as any)[field] = obj[field];
+    }
+  }
+
+  // Handle keyword_notification_preferences if present
+  if (obj.keyword_notification_preferences !== undefined) {
+    (result as any).keyword_notification_preferences = obj.keyword_notification_preferences;
+  }
+
+  return result;
 }
 
 /**
@@ -58,41 +89,51 @@ export function validateNotificationSchedule(
   jsonValue: JsonValue,
 ): NotificationScheduleDto {
   if (!jsonValue || typeof jsonValue !== 'object' || Array.isArray(jsonValue)) {
-    throw new BadRequestException('Invalid notification schedule format');
+    // Return default schedule for invalid/empty input
+    return createDefaultNotificationSchedule();
   }
 
   const obj = jsonValue as Record<string, unknown>;
 
-  // Validate required fields
-  if (typeof obj.real_time !== 'boolean') {
-    throw new BadRequestException('Invalid real_time value: expected boolean');
+  // Get defaults and merge with provided values
+  const defaults = createDefaultNotificationSchedule();
+  const result: NotificationScheduleDto = { ...defaults };
+
+  // Only validate and update fields that are present
+  if (obj.real_time !== undefined) {
+    if (typeof obj.real_time !== 'boolean') {
+      throw new BadRequestException('Invalid real_time value: expected boolean');
+    }
+    result.real_time = obj.real_time;
   }
 
-  if (typeof obj.digest_time !== 'string') {
-    throw new BadRequestException('Invalid digest_time value: expected string');
+  if (obj.digest_time !== undefined) {
+    if (typeof obj.digest_time !== 'string') {
+      throw new BadRequestException('Invalid digest_time value: expected string');
+    }
+    result.digest_time = obj.digest_time;
   }
 
-  if (typeof obj.digest_enabled !== 'boolean') {
-    throw new BadRequestException(
-      'Invalid digest_enabled value: expected boolean',
-    );
+  if (obj.digest_enabled !== undefined) {
+    if (typeof obj.digest_enabled !== 'boolean') {
+      throw new BadRequestException(
+        'Invalid digest_enabled value: expected boolean',
+      );
+    }
+    result.digest_enabled = obj.digest_enabled;
   }
 
-  if (
-    !Array.isArray(obj.digest_days) ||
-    !obj.digest_days.every((day) => typeof day === 'string')
-  ) {
-    throw new BadRequestException(
-      'Invalid digest_days value: expected string array',
-    );
+  if (obj.digest_days !== undefined) {
+    if (
+      !Array.isArray(obj.digest_days) ||
+      !obj.digest_days.every((day) => typeof day === 'string')
+    ) {
+      throw new BadRequestException(
+        'Invalid digest_days value: expected string array',
+      );
+    }
+    result.digest_days = obj.digest_days;
   }
-
-  const result: NotificationScheduleDto = {
-    real_time: obj.real_time,
-    digest_time: obj.digest_time,
-    digest_enabled: obj.digest_enabled,
-    digest_days: obj.digest_days,
-  };
 
   // Handle optional fields
   if (obj.second_digest_time !== undefined) {

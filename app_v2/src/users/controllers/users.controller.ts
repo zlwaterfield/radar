@@ -1,12 +1,10 @@
 import {
   Controller,
   Get,
-  Post,
   Put,
   Delete,
   Body,
   Param,
-  Query,
   UseGuards,
   Logger,
   BadRequestException,
@@ -20,7 +18,6 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from '../services/users.service';
 import {
-  CreateUserDto,
   UpdateUserDto,
   UserResponseDto,
 } from '../dto/users.dto';
@@ -149,73 +146,6 @@ export class UsersController {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
-  }
-
-  /**
-   * Get all users with pagination
-   */
-  @Get()
-  @ApiOperation({ summary: 'Get all users with pagination' })
-  @ApiResponse({ status: 200, description: 'Paginated users list' })
-  async getUsers(@Query('page') page = 1, @Query('limit') limit = 20) {
-    const pageNum = Math.max(1, parseInt(page.toString()));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit.toString())));
-
-    const result = await this.usersService.getUsers(pageNum, limitNum);
-
-    return {
-      ...result,
-      users: result.users.map((user) => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        isActive: user.isActive,
-        slackId: user.slackId,
-        slackTeamId: user.slackTeamId,
-        githubId: user.githubId,
-        githubLogin: user.githubLogin,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      })),
-    };
-  }
-
-  /**
-   * Search users
-   */
-  @Get('search')
-  @ApiOperation({ summary: 'Search users by name or email' })
-  @ApiResponse({ status: 200, description: 'Search results' })
-  async searchUsers(@Query('q') query: string) {
-    if (!query || query.trim().length < 2) {
-      throw new BadRequestException('Query must be at least 2 characters long');
-    }
-
-    const users = await this.usersService.searchUsers(query.trim());
-
-    return {
-      results: users.map((user) => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        slackId: user.slackId,
-        githubId: user.githubId,
-        githubLogin: user.githubLogin,
-      })),
-      count: users.length,
-    };
-  }
-
-  /**
-   * Get user statistics
-   */
-  @Get('stats/overview')
-  @ApiOperation({ summary: 'Get user statistics overview' })
-  @ApiResponse({ status: 200, description: 'User statistics' })
-  async getUserStats() {
-    return this.usersService.getUserStats();
   }
 
   /**

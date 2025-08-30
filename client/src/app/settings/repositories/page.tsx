@@ -7,7 +7,7 @@ import axios from 'axios';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
 import { FiRefreshCw } from 'react-icons/fi';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import RepositoryTable from '@/components/RepositoryTable';
 
 interface Repository {
@@ -83,6 +83,7 @@ export default function RepositoriesSettings() {
       }
     } catch (error) {
       console.error('Error fetching repositories:', error);
+      toast.error('Failed to load repositories');
     } finally {
       setRepoLoading(false);
     }

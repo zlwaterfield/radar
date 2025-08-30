@@ -98,7 +98,7 @@ export class UpdateUserDto {
 
 export class UserResponseDto {
   @ApiProperty({ description: 'User ID' })
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'User name' })
   name?: string;
@@ -110,7 +110,7 @@ export class UserResponseDto {
   image?: string;
 
   @ApiProperty({ description: 'Whether the user account is active' })
-  isActive: boolean;
+  isActive!: boolean;
 
   @ApiPropertyOptional({ description: 'Slack user ID' })
   slackId?: string;
@@ -125,8 +125,8 @@ export class UserResponseDto {
   githubLogin?: string;
 
   @ApiProperty({ description: 'Account creation date' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({ description: 'Account last update date' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }

@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Delete,
+  Patch,
   Body,
   Param,
   Query,
@@ -128,10 +129,10 @@ export class UserRepositoriesController {
         total: result.total,
       };
     } catch (error) {
-      this.logger.error(`Repository sync failed for user ${user.id}:`, error);
+      this.logger.error(`Repository sync failed for user ${user.id}:`, error instanceof Error ? error.message : String(error));
 
       // Handle specific GitHub API errors
-      if (error.status === 401) {
+      if (error instanceof Error && 'status' in error && (error as any).status === 401) {
         throw new BadRequestException(
           'GitHub access token is invalid. Please reconnect your GitHub account.',
         );
@@ -195,12 +196,12 @@ export class UserRepositoriesController {
   /**
    * Toggle repository notifications
    */
-  @Put('me/repositories/:repositoryId/toggle')
+  @Patch('me/repositories/:repoId/toggle')
   @ApiOperation({ summary: 'Toggle repository notifications' })
   @ApiResponse({ status: 200, description: 'Repository notifications toggled' })
   async toggleRepositoryNotifications(
     @GetUser() user: User,
-    @Param('repositoryId') repositoryId: string,
+    @Param('repoId') repositoryId: string,
     @Body() body: { enabled: boolean },
   ) {
     try {
@@ -251,6 +252,38 @@ export class UserRepositoriesController {
 
     return {
       message: 'Repository removed successfully',
+    };
+  }
+
+  /**
+   * Toggle all repositories for current user
+   */
+  @Patch('me/repositories/toggle-all')
+  @ApiOperation({
+    summary: 'Toggle all repositories notifications for current user',
+  })
+  @ApiResponse({ status: 200, description: 'All repositories toggled' })
+  async toggleAllRepositoriesForMe(
+    @GetUser() user: User,
+    @Body() body: { enabled: boolean },
+  ) {
+    // Get all repositories and toggle them
+    const repositories = await this.userRepositoriesService.getUserRepositories(
+      user.id,
+    );
+    const updatePromises = repositories.map((repo) =>
+      this.userRepositoriesService.toggleRepositoryNotifications(
+        user.id,
+        repo.id,
+        body.enabled,
+      ),
+    );
+
+    await Promise.all(updatePromises);
+
+    return {
+      message: `Notifications ${body.enabled ? 'enabled' : 'disabled'} for all repositories`,
+      count: repositories.length,
     };
   }
 

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, ReactNode } from 'react';
+import { toast } from 'sonner';
 import { authClient } from '../../lib/auth-client';
 
 interface User {
@@ -80,8 +81,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     try {
       await authClient.signOut();
+      toast.success('Signed out successfully');
     } catch (err) {
       console.error('Error signing out:', err);
+      toast.error('Failed to sign out. Please try again.');
       throw err;
     }
   };
@@ -121,6 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return await response.json();
     } catch (error) {
       console.error('Error checking GitHub installations:', error);
+      toast.error('Failed to check GitHub installations');
       throw error;
     }
   };

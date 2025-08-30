@@ -66,8 +66,8 @@ model UserSettings {
   // Stats configuration
   statsTimeWindow         Int  @default(14) @map("stats_time_window")
 
-  // Keywords for filtering (JSON array)
-  keywords Json @default("[]")
+  // Keyword preferences for filtering (JSON object)
+  keywordPreferences Json @default("{\"enabled\": false, \"keywords\": [], \"threshold\": 0.7}") @map("keyword_preferences")
 
   @@map("user_setting")
 }

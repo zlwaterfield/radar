@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import Button from '@/components/Button';
 import Layout from '@/components/Layout';
 import { FiSlack, FiGithub, FiGrid } from 'react-icons/fi';
@@ -55,6 +56,7 @@ export default function OnboardingPage() {
       });
     } catch (error) {
       console.error('Error fetching integration status:', error);
+      toast.error('Failed to check integration status');
     } finally {
       setLoadingStatus(false);
     }
@@ -67,22 +69,31 @@ export default function OnboardingPage() {
     const error = searchParams.get('error');
 
     if (slack === 'connected') {
-      setMessage('Slack connected successfully!');
+      const message = 'Slack connected successfully!';
+      setMessage(message);
+      toast.success(message);
       refreshIntegrationStatus(); // Refresh status when Slack connected
     } else if (github === 'connected') {
-      setMessage('GitHub connected successfully!');
+      const message = 'GitHub connected successfully!';
+      setMessage(message);
+      toast.success(message);
       refreshIntegrationStatus(); // Refresh status when GitHub connected
     } else if (github === 'app_installed') {
-      setMessage('GitHub App installed successfully!');
+      const message = 'GitHub App installed successfully!';
+      setMessage(message);
+      toast.success(message);
       refreshIntegrationStatus(); // Refresh status when GitHub app installed
     } else if (error) {
+      let errorMessage = '';
       if (error.startsWith('slack_')) {
-        setMessage(`Slack connection failed: ${error.replace('slack_', '')}`);
+        errorMessage = `Slack connection failed: ${error.replace('slack_', '')}`;
       } else if (error.startsWith('github_')) {
-        setMessage(`GitHub connection failed: ${error.replace('github_', '')}`);
+        errorMessage = `GitHub connection failed: ${error.replace('github_', '')}`;
       } else {
-        setMessage(`Connection failed: ${error}`);
+        errorMessage = `Connection failed: ${error}`;
       }
+      setMessage(errorMessage);
+      toast.error(errorMessage);
     }
   }, [searchParams, user]);
 
@@ -161,15 +172,13 @@ export default function OnboardingPage() {
                     <FiSlack size={24} className="text-white" />
                   </div>
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 1</span>
-                      <h3 className="text-lg font-semibold text-gray-900">Slack</h3>
-                    </div>
+                    <div className="inline-block mb-1 bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 1</div>
+                    <h3 className="text-lg font-semibold text-gray-900">Slack</h3>
                     <p className="text-gray-600">
                       Receive notifications directly in your Slack workspace
                     </p>
                     {integrationStatus.slack.connected && (
-                      <p className="text-sm text-green-600">
+                      <p className="text-sm text-green-600 mt-1">
                         Connected to {integrationStatus.slack.teamName}
                       </p>
                     )}
@@ -182,7 +191,6 @@ export default function OnboardingPage() {
                     </Button>
                   ) : (
                     <div className="flex items-center space-x-2">
-                      <span className="text-green-600">✓ Connected</span>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -204,15 +212,13 @@ export default function OnboardingPage() {
                     <FiGithub size={24} className="text-white" />
                   </div>
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 2</span>
-                      <h3 className="text-lg font-semibold text-gray-900">GitHub Account</h3>
-                    </div>
+                    <div className="inline-block mb-1 bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 2</div>
+                    <h3 className="text-lg font-semibold text-gray-900">GitHub Account</h3>
                     <p className="text-gray-600">
                       Connect your GitHub account to track repository activity
                     </p>
                     {integrationStatus.github.connected && (
-                      <p className="text-sm text-green-600">
+                      <p className="text-sm text-green-600 mt-1">
                         Connected as {integrationStatus.github.githubLogin}
                       </p>
                     )}
@@ -225,7 +231,6 @@ export default function OnboardingPage() {
                     </Button>
                   ) : (
                     <div className="flex items-center space-x-2">
-                      <span className="text-green-600">✓ Connected</span>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -243,19 +248,17 @@ export default function OnboardingPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                     <FiGrid size={24} className="text-white" />
                   </div>
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 3</span>
-                      <h3 className="text-lg font-semibold text-gray-900">GitHub App</h3>
-                    </div>
+                    <div className="inline-block mb-1 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 3</div>
+                    <h3 className="text-lg font-semibold text-gray-900">GitHub App</h3>
                     <p className="text-gray-600">
                       Install the GitHub App to enable repository access and webhooks
                     </p>
                     {integrationStatus.github.appInstalled && (
-                      <p className="text-sm text-green-600">
+                      <p className="text-sm text-green-600 mt-1">
                         ✓ GitHub App installed successfully
                       </p>
                     )}
@@ -271,7 +274,6 @@ export default function OnboardingPage() {
                     </Button>
                   ) : (
                     <div className="flex items-center space-x-2">
-                      <span className="text-green-600">✓ Installed</span>
                       <Button
                         variant="secondary"
                         size="sm"

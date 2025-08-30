@@ -70,7 +70,7 @@ export class NotificationsService {
       );
       return true;
     } catch (error) {
-      this.logger.error('Error processing event:', error);
+      this.logger.error('Error processing event:', error instanceof Error ? error.message : String(error));
       return false;
     }
   }
@@ -113,7 +113,7 @@ export class NotificationsService {
 
       return users;
     } catch (error) {
-      this.logger.error('Error getting relevant users:', error);
+      this.logger.error('Error getting relevant users:', error instanceof Error ? error.message : String(error));
       return [];
     }
   }
@@ -160,7 +160,7 @@ export class NotificationsService {
     } catch (error) {
       this.logger.error(
         `Error checking notification preferences for user ${user.id}:`,
-        error,
+        error instanceof Error ? error.message : String(error),
       );
       return false;
     }
@@ -202,7 +202,7 @@ export class NotificationsService {
 
       return notification;
     } catch (error) {
-      this.logger.error('Error creating notification:', error);
+      this.logger.error('Error creating notification:', error instanceof Error ? error.message : String(error));
       return null;
     }
   }
@@ -255,7 +255,7 @@ export class NotificationsService {
     } catch (error) {
       this.logger.error(
         `Error creating notification data for ${eventType}:`,
-        error,
+        error instanceof Error ? error.message : String(error),
       );
       return null;
     }
@@ -465,7 +465,7 @@ export class NotificationsService {
     } catch (error) {
       this.logger.error(
         `Error getting pending notifications for user ${userId}:`,
-        error,
+        error instanceof Error ? error.message : String(error),
       );
       return [];
     }
@@ -493,7 +493,7 @@ export class NotificationsService {
     } catch (error) {
       this.logger.error(
         `Error marking notification ${notificationId} as sent:`,
-        error,
+        error instanceof Error ? error.message : String(error),
       );
       return false;
     }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
+import { toast } from 'sonner';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
 
@@ -47,6 +48,8 @@ function AuthSuccessContent() {
         // Set axios auth header for immediate use
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
         
+        toast.success('Successfully authenticated! Redirecting...');
+        
         // Small delay to ensure cookies are set before redirect
         setTimeout(() => {
           // Use window.location.href to ensure a full navigation that triggers AuthContext
@@ -57,7 +60,9 @@ function AuthSuccessContent() {
       }
     } catch (err) {
       console.error('Token validation failed:', err);
-      setError('Authentication failed. Please try logging in again.');
+      const errorMessage = 'Authentication failed. Please try logging in again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 

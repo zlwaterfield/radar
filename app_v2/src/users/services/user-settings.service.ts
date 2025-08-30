@@ -71,10 +71,10 @@ export class UserSettingsService {
       this.logger.log(`Updated settings for user ${userId}`);
       return settings;
     } catch (error) {
-      if (error.code === 'P2025') {
+      if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
         throw new NotFoundException('User settings not found');
       }
-      this.logger.error(`Error updating settings for user ${userId}:`, error);
+      this.logger.error(`Error updating settings for user ${userId}:`, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }

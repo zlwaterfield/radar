@@ -420,7 +420,7 @@ export class NotificationDistributionService {
       return {
         success: false,
         processedCount: 0,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }

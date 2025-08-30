@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface NotificationSettings {
   // PR & Issue Activity
@@ -86,8 +86,8 @@ export default function NotificationsSettings() {
       const data = await response.json();
       
       // Update notification settings
-      if (data.notification_preferences) {
-        const prefs = data.notification_preferences;
+      if (data.notificationPreferences) {
+        const prefs = data.notificationPreferences;
         
         setNotificationSettings(prev => ({
           ...prev,
@@ -137,7 +137,7 @@ export default function NotificationsSettings() {
     try {
       // Format settings for API
       const settings = {
-        notification_preferences: {
+        notificationPreferences: {
           // PR & Issue Activity
           pr_comments: notificationSettings.pr_comments,
           pr_reviews: notificationSettings.pr_reviews,
