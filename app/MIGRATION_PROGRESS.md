@@ -13,7 +13,7 @@ This document tracks the migration of Radar from Python/FastAPI to TypeScript/Ne
 - **OAuth Providers**: Slack and GitHub
 - **API Documentation**: Swagger/OpenAPI
 - **Validation**: class-validator with DTOs
-- **Security**: Rate limiting, CORS, webhook signature verification
+- **Security**: CORS, webhook signature verification
 - **Integrations**: Slack SDK (@slack/web-api, @slack/bolt), GitHub Octokit
 
 ### Future Additions (Not Yet Implemented)
@@ -159,13 +159,11 @@ This document tracks the migration of Radar from Python/FastAPI to TypeScript/Ne
 
 16. **Add security hardening and validation** - PENDING
     - Enhanced input validation and sanitization
-    - Rate limiting improvements
     - Security headers middleware
     - Audit logging for sensitive operations
 
 17. **Set up monitoring and error tracking** - PENDING (OPTIONAL)
     - Enhanced error tracking and reporting
-    - Performance monitoring
     - Health check endpoints
     - Metrics collection and dashboards
 
@@ -354,7 +352,7 @@ GITHUB_WEBHOOK_SECRET=your-webhook-secret
 
 ### High Priority (Required for Production)
 1. **Notification Service**: Core functionality to process events and send notifications
-2. **Security Hardening**: Enhanced validation, rate limiting, audit logging
+2. **Security Hardening**: Enhanced validation, audit logging
 3. **Testing Suite**: Comprehensive test coverage for reliability
 
 ### Medium Priority (Quality of Life)

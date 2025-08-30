@@ -17,13 +17,6 @@ export default registerAs('app', () => ({
     'http://localhost:3001',
   ],
 
-  // Rate limiting
-  webhookRateLimit: parseInt(
-    process.env.WEBHOOK_RATE_LIMIT_PER_MINUTE || '60',
-    10,
-  ),
-  apiRateLimit: parseInt(process.env.API_RATE_LIMIT_PER_MINUTE || '100', 10),
-
   // Security
   secretKey: process.env.SECRET_KEY || 'your-secret-key-here',
   algorithm: process.env.ALGORITHM || 'HS256',
