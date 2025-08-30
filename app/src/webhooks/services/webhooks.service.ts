@@ -46,13 +46,11 @@ export class WebhooksService {
     payload: GitHubWebhookPayload,
   ): Promise<any> {
     try {
-      // Skip events we don't care about
       if (!this.isRelevantEvent(eventType, payload)) {
         this.logger.debug(`Skipping irrelevant event: ${eventType}`);
         return null;
       }
 
-      // Store event in database
       const event = await this.storeEvent(eventType, payload);
 
       if (!event) {
@@ -253,84 +251,6 @@ export class WebhooksService {
     } catch (error) {
       this.logger.error(`Error getting events for user ${userId}:`, error);
       return [];
-    }
-  }
-
-  /**
-   * Clean up old processed events
-   */
-  async cleanupOldEvents(daysToKeep = 30): Promise<number> {
-    try {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-
-      const result = await this.databaseService.event.deleteMany({
-        where: {
-          processed: true,
-          createdAt: {
-            lt: cutoffDate,
-          },
-        },
-      });
-
-      this.logger.log(`Cleaned up ${result.count} old events`);
-      return result.count;
-    } catch (error) {
-      this.logger.error('Error cleaning up old events:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Get event statistics
-   */
-  async getEventStats(): Promise<{
-    totalEvents: number;
-    unprocessedEvents: number;
-    eventsByType: Record<string, number>;
-    recentEventCount: number;
-  }> {
-    try {
-      const oneDayAgo = new Date();
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-
-      const [totalEvents, unprocessedEvents, eventTypes, recentEventCount] =
-        await Promise.all([
-          this.databaseService.event.count(),
-          this.databaseService.event.count({ where: { processed: false } }),
-          this.databaseService.event.groupBy({
-            by: ['eventType'],
-            _count: true,
-          }),
-          this.databaseService.event.count({
-            where: {
-              createdAt: { gte: oneDayAgo },
-            },
-          }),
-        ]);
-
-      const eventsByType = eventTypes.reduce(
-        (acc, item) => {
-          acc[item.eventType] = item._count;
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
-
-      return {
-        totalEvents,
-        unprocessedEvents,
-        eventsByType,
-        recentEventCount,
-      };
-    } catch (error) {
-      this.logger.error('Error getting event stats:', error);
-      return {
-        totalEvents: 0,
-        unprocessedEvents: 0,
-        eventsByType: {},
-        recentEventCount: 0,
-      };
     }
   }
 }

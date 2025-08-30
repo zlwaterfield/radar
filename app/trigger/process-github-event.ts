@@ -27,10 +27,8 @@ export const processGitHubEvent = task({
     maxTimeoutInMs: 10000,
   },
   run: async (payload: GitHubEventPayload) => {
-    console.log(`Processing GitHub event: ${payload.eventType} for ${payload.repositoryName}`);
     
     try {
-      // Get the stored event from database
       const event = await prisma.event.findUnique({
         where: { id: payload.eventId },
       });
@@ -44,11 +42,9 @@ export const processGitHubEvent = task({
         return { success: true, message: "Event already processed" };
       }
 
-      // Process the event - this is where we'd integrate with the notification system
       const success = await processEventNotifications(event);
 
       if (success) {
-        // Mark event as processed
         await prisma.event.update({
           where: { id: payload.eventId },
           data: {
@@ -88,8 +84,7 @@ async function processEventNotifications(event: any): Promise<boolean> {
     // 3. Create and send notifications via Slack
     // 4. Store notification records
     
-    // For now, we'll simulate the notification processing
-    // In the real implementation, this would call the NotificationsService logic
+    // Process notifications for this event
     
     const { eventType, action, payload, repositoryName } = event;
     

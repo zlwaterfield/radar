@@ -17,7 +17,6 @@ import { GitHubModule } from './github/github.module';
 import { SlackModule } from './slack/slack.module';
 import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
-import { NotificationsModule } from './notifications/notifications.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
@@ -52,7 +51,6 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     SlackModule,
     UsersModule,
     WebhooksModule,
-    NotificationsModule,
     IntegrationsModule,
   ],
   controllers: [AppController],
