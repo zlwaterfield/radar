@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "public"."users" (
+CREATE TABLE "public"."user" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -8,20 +8,21 @@ CREATE TABLE "public"."users" (
     "email_verified" BOOLEAN NOT NULL DEFAULT false,
     "image" TEXT,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "slack_id" TEXT NOT NULL,
-    "slack_team_id" TEXT NOT NULL,
-    "slack_access_token" TEXT NOT NULL,
+    "slack_id" TEXT,
+    "slack_team_id" TEXT,
+    "slack_access_token" TEXT,
     "slack_refresh_token" TEXT,
     "github_id" TEXT,
     "github_login" TEXT,
     "github_access_token" TEXT,
     "github_refresh_token" TEXT,
+    "github_installation_id" TEXT,
 
-    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "user_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."user_settings" (
+CREATE TABLE "public"."user_setting" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -29,13 +30,13 @@ CREATE TABLE "public"."user_settings" (
     "notification_preferences" JSONB NOT NULL DEFAULT '{}',
     "notification_schedule" JSONB NOT NULL DEFAULT '{}',
     "stats_time_window" INTEGER NOT NULL DEFAULT 14,
-    "keywords" JSONB NOT NULL DEFAULT '[]',
+    "keyword_preferences" JSONB NOT NULL DEFAULT '{"enabled": false, "keywords": [], "threshold": 0.7}',
 
-    CONSTRAINT "user_settings_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "user_setting_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."user_repositories" (
+CREATE TABLE "public"."user_repository" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -54,11 +55,11 @@ CREATE TABLE "public"."user_repositories" (
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "enabled" BOOLEAN NOT NULL DEFAULT false,
 
-    CONSTRAINT "user_repositories_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "user_repository_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."events" (
+CREATE TABLE "public"."event" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -72,11 +73,11 @@ CREATE TABLE "public"."events" (
     "payload" JSONB NOT NULL,
     "user_id" TEXT,
 
-    CONSTRAINT "events_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "event_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."notifications" (
+CREATE TABLE "public"."notification" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -87,11 +88,11 @@ CREATE TABLE "public"."notifications" (
     "message_ts" TEXT,
     "payload" JSONB NOT NULL,
 
-    CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "notification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."user_digests" (
+CREATE TABLE "public"."user_digest" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "user_id" TEXT NOT NULL,
@@ -100,7 +101,7 @@ CREATE TABLE "public"."user_digests" (
     "pull_request_count" INTEGER NOT NULL DEFAULT 0,
     "issue_count" INTEGER NOT NULL DEFAULT 0,
 
-    CONSTRAINT "user_digests_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "user_digest_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -149,46 +150,46 @@ CREATE TABLE "public"."verification" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_email_key" ON "public"."users"("email");
+CREATE UNIQUE INDEX "user_email_key" ON "public"."user"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_slack_id_key" ON "public"."users"("slack_id");
+CREATE UNIQUE INDEX "user_slack_id_key" ON "public"."user"("slack_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_github_id_key" ON "public"."users"("github_id");
+CREATE UNIQUE INDEX "user_github_id_key" ON "public"."user"("github_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_github_login_key" ON "public"."users"("github_login");
+CREATE UNIQUE INDEX "user_github_login_key" ON "public"."user"("github_login");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "user_settings_user_id_key" ON "public"."user_settings"("user_id");
+CREATE UNIQUE INDEX "user_setting_user_id_key" ON "public"."user_setting"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "user_repositories_user_id_github_id_key" ON "public"."user_repositories"("user_id", "github_id");
+CREATE UNIQUE INDEX "user_repository_user_id_github_id_key" ON "public"."user_repository"("user_id", "github_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "session_token_key" ON "public"."session"("token");
 
 -- AddForeignKey
-ALTER TABLE "public"."user_settings" ADD CONSTRAINT "user_settings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."user_setting" ADD CONSTRAINT "user_setting_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."user_repositories" ADD CONSTRAINT "user_repositories_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."user_repository" ADD CONSTRAINT "user_repository_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."events" ADD CONSTRAINT "events_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."event" ADD CONSTRAINT "event_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."notification" ADD CONSTRAINT "notification_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."notifications" ADD CONSTRAINT "notifications_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."notification" ADD CONSTRAINT "notification_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "public"."event"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."user_digests" ADD CONSTRAINT "user_digests_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."user_digest" ADD CONSTRAINT "user_digest_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
