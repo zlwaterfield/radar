@@ -20,7 +20,7 @@ export function validateNotificationPreferences(
 
   // Get defaults and merge with provided values
   const defaults = createDefaultNotificationPreferences();
-  
+
   // Validate only provided boolean fields
   const booleanFields = [
     'pull_request_opened',
@@ -41,7 +41,9 @@ export function validateNotificationPreferences(
   for (const field of booleanFields) {
     if (obj[field] !== undefined) {
       if (typeof obj[field] !== 'boolean') {
-        throw new BadRequestException(`Invalid ${field} value: expected boolean`);
+        throw new BadRequestException(
+          `Invalid ${field} value: expected boolean`,
+        );
       }
       (result as any)[field] = obj[field];
     }
@@ -50,12 +52,12 @@ export function validateNotificationPreferences(
   // Handle additional fields that might not be in the DTO (like those from frontend)
   const additionalFields = [
     'pr_comments',
-    'pr_reviews', 
+    'pr_reviews',
     'pr_status_changes',
     'pr_assignments',
     'pr_opened',
     'issue_comments',
-    'issue_status_changes', 
+    'issue_status_changes',
     'issue_assignments',
     'check_failures',
     'check_successes',
@@ -68,7 +70,9 @@ export function validateNotificationPreferences(
   for (const field of additionalFields) {
     if (obj[field] !== undefined) {
       if (typeof obj[field] !== 'boolean') {
-        throw new BadRequestException(`Invalid ${field} value: expected boolean`);
+        throw new BadRequestException(
+          `Invalid ${field} value: expected boolean`,
+        );
       }
       (result as any)[field] = obj[field];
     }
@@ -76,7 +80,8 @@ export function validateNotificationPreferences(
 
   // Handle keyword_notification_preferences if present
   if (obj.keyword_notification_preferences !== undefined) {
-    (result as any).keyword_notification_preferences = obj.keyword_notification_preferences;
+    (result as any).keyword_notification_preferences =
+      obj.keyword_notification_preferences;
   }
 
   return result;
@@ -102,14 +107,18 @@ export function validateNotificationSchedule(
   // Only validate and update fields that are present
   if (obj.real_time !== undefined) {
     if (typeof obj.real_time !== 'boolean') {
-      throw new BadRequestException('Invalid real_time value: expected boolean');
+      throw new BadRequestException(
+        'Invalid real_time value: expected boolean',
+      );
     }
     result.real_time = obj.real_time;
   }
 
   if (obj.digest_time !== undefined) {
     if (typeof obj.digest_time !== 'string') {
-      throw new BadRequestException('Invalid digest_time value: expected string');
+      throw new BadRequestException(
+        'Invalid digest_time value: expected string',
+      );
     }
     result.digest_time = obj.digest_time;
   }

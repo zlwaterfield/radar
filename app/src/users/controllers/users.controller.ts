@@ -17,10 +17,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UsersService } from '../services/users.service';
-import {
-  UpdateUserDto,
-  UserResponseDto,
-} from '../dto/users.dto';
+import { UpdateUserDto, UserResponseDto } from '../dto/users.dto';
 import { AuthGuard } from '@/auth/guards/auth.guard';
 import { GetUser } from '@/auth/decorators/user.decorator';
 import type { User } from '@prisma/client';

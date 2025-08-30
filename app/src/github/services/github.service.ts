@@ -348,7 +348,10 @@ export class GitHubService {
       await this.getAuthenticatedUser(accessToken);
       return true;
     } catch (error) {
-      this.logger.debug('GitHub connection test failed:', error instanceof Error ? error.message : String(error));
+      this.logger.debug(
+        'GitHub connection test failed:',
+        error instanceof Error ? error.message : String(error),
+      );
       return false;
     }
   }

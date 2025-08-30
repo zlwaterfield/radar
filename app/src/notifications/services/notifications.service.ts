@@ -71,7 +71,10 @@ export class NotificationsService {
       );
       return true;
     } catch (error) {
-      this.logger.error('Error processing event:', error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        'Error processing event:',
+        error instanceof Error ? error.message : String(error),
+      );
       return false;
     }
   }
@@ -114,7 +117,10 @@ export class NotificationsService {
 
       return users;
     } catch (error) {
-      this.logger.error('Error getting relevant users:', error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        'Error getting relevant users:',
+        error instanceof Error ? error.message : String(error),
+      );
       return [];
     }
   }
@@ -131,9 +137,14 @@ export class NotificationsService {
     try {
       const settings = await this.userSettingsService.getUserSettings(user.id);
       const preferences =
-        settings?.notificationPreferences || this.userSettingsService.getDefaultNotificationPreferences();
-      const schedule = settings?.notificationSchedule || this.userSettingsService.getDefaultNotificationSchedule();
-      const keywordPrefs = settings?.keywordPreferences || this.userSettingsService.getDefaultKeywordPreferences();
+        settings?.notificationPreferences ||
+        this.userSettingsService.getDefaultNotificationPreferences();
+      const schedule =
+        settings?.notificationSchedule ||
+        this.userSettingsService.getDefaultNotificationSchedule();
+      const keywordPrefs =
+        settings?.keywordPreferences ||
+        this.userSettingsService.getDefaultKeywordPreferences();
 
       // Check if real-time notifications are enabled
       if (!schedule.real_time) {
@@ -147,8 +158,18 @@ export class NotificationsService {
       }
 
       // Check keywords filtering
-      if (keywordPrefs && keywordPrefs.enabled && keywordPrefs.keywords?.length > 0) {
-        if (!this.matchesKeywords(payload, keywordPrefs.keywords, keywordPrefs.threshold || 0.7)) {
+      if (
+        keywordPrefs &&
+        keywordPrefs.enabled &&
+        keywordPrefs.keywords?.length > 0
+      ) {
+        if (
+          !this.matchesKeywords(
+            payload,
+            keywordPrefs.keywords,
+            keywordPrefs.threshold || 0.7,
+          )
+        ) {
           return false;
         }
       }
@@ -204,7 +225,10 @@ export class NotificationsService {
 
       return notification;
     } catch (error) {
-      this.logger.error('Error creating notification:', error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        'Error creating notification:',
+        error instanceof Error ? error.message : String(error),
+      );
       return null;
     }
   }
@@ -424,7 +448,11 @@ export class NotificationsService {
   /**
    * Check if payload matches user's keywords
    */
-  private matchesKeywords(payload: any, keywords: string[], threshold = 0.7): boolean {
+  private matchesKeywords(
+    payload: any,
+    keywords: string[],
+    threshold = 0.7,
+  ): boolean {
     if (keywords.length === 0) {
       return true;
     }
@@ -485,7 +513,7 @@ export class NotificationsService {
   ): Promise<{ notifications: any[]; total: number }> {
     try {
       const skip = getPaginationSkip(page, per_page);
-      
+
       const [notifications, total] = await Promise.all([
         this.databaseService.notification.findMany({
           where: {

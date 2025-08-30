@@ -50,7 +50,7 @@ export class CreateUserSettingsDto {
     example: {
       enabled: true,
       keywords: ['enterprise'],
-      threshold: 0.3
+      threshold: 0.3,
     },
   })
   @IsOptional()
@@ -101,7 +101,7 @@ export class UpdateUserSettingsDto {
     example: {
       enabled: true,
       keywords: ['enterprise'],
-      threshold: 0.3
+      threshold: 0.3,
     },
   })
   @IsOptional()
@@ -192,7 +192,7 @@ export class UserSettingsResponseDto {
     example: {
       enabled: true,
       keywords: ['enterprise'],
-      threshold: 0.3
+      threshold: 0.3,
     },
   })
   keywordPreferences!: any;

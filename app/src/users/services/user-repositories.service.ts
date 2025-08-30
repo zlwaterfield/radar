@@ -41,7 +41,7 @@ export class UserRepositoriesService {
   ): Promise<{ repositories: UserRepository[]; total: number }> {
     try {
       const skip = getPaginationSkip(page, per_page);
-      
+
       const [repositories, total] = await Promise.all([
         this.databaseService.userRepository.findMany({
           where: { userId },
@@ -127,10 +127,17 @@ export class UserRepositoriesService {
       this.logger.log(`Updated repository ${repositoryId} for user ${userId}`);
       return repository;
     } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as any).code === 'P2025'
+      ) {
         throw new NotFoundException('Repository not found');
       }
-      this.logger.error(`Error updating repository ${repositoryId}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Error updating repository ${repositoryId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
       throw error;
     }
   }
@@ -171,17 +178,24 @@ export class UserRepositoriesService {
   }> {
     try {
       // Get GitHub App installations for the user
-      const installations = await this.githubService.getUserInstallations(githubAccessToken);
-      
-      let githubRepos: any[] = [];
-      
+      const installations =
+        await this.githubService.getUserInstallations(githubAccessToken);
+
+      const githubRepos: any[] = [];
+
       // Get repositories from all installations (only repos user granted access to)
       for (const installation of installations) {
         try {
-          const installationRepos = await this.githubService.getInstallationRepositories(installation.id);
+          const installationRepos =
+            await this.githubService.getInstallationRepositories(
+              installation.id,
+            );
           githubRepos.push(...installationRepos);
         } catch (error) {
-          this.logger.warn(`Failed to get repositories for installation ${installation.id}:`, error);
+          this.logger.warn(
+            `Failed to get repositories for installation ${installation.id}:`,
+            error,
+          );
         }
       }
 
@@ -333,7 +347,7 @@ export class UserRepositoriesService {
   ): Promise<{ repositories: UserRepository[]; total: number }> {
     try {
       const skip = getPaginationSkip(page, per_page);
-      
+
       const [repositories, total] = await Promise.all([
         this.databaseService.userRepository.findMany({
           where: {

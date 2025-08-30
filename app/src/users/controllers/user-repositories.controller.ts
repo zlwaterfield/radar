@@ -49,11 +49,12 @@ export class UserRepositoriesController {
     @GetUser() user: User,
     @Query() pagination: PaginationQueryDto,
   ) {
-    const { repositories, total } = await this.userRepositoriesService.getUserRepositoriesPaginated(
-      user.id,
-      pagination.page || 1,
-      pagination.per_page || 20,
-    );
+    const { repositories, total } =
+      await this.userRepositoriesService.getUserRepositoriesPaginated(
+        user.id,
+        pagination.page || 1,
+        pagination.per_page || 20,
+      );
 
     const mappedRepositories = repositories.map((repo) => ({
       id: repo.id,
@@ -140,7 +141,7 @@ export class UserRepositoriesController {
     try {
       const result = await this.userRepositoriesService.syncUserRepositories(
         user.id,
-        fullUser.githubAccessToken!,
+        fullUser.githubAccessToken,
       );
 
       this.logger.log(
@@ -155,10 +156,17 @@ export class UserRepositoriesController {
         total: result.total,
       };
     } catch (error) {
-      this.logger.error(`Repository sync failed for user ${user.id}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Repository sync failed for user ${user.id}:`,
+        error instanceof Error ? error.message : String(error),
+      );
 
       // Handle specific GitHub API errors
-      if (error instanceof Error && 'status' in error && (error as any).status === 401) {
+      if (
+        error instanceof Error &&
+        'status' in error &&
+        (error as any).status === 401
+      ) {
         throw new BadRequestException(
           'GitHub access token is invalid. Please reconnect your GitHub account.',
         );

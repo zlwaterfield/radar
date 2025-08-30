@@ -35,9 +35,7 @@ import {
 export class UserSettingsController {
   private readonly logger = new Logger(UserSettingsController.name);
 
-  constructor(
-    private readonly userSettingsService: UserSettingsService,
-  ) {}
+  constructor(private readonly userSettingsService: UserSettingsService) {}
 
   /**
    * Get current user settings
@@ -114,19 +112,19 @@ export class UserSettingsController {
   ): Promise<UserSettingsResponseDto> {
     // Only update fields that are provided in the request
     const updateFields: any = {};
-    
+
     if (updateData.notificationPreferences !== undefined) {
       updateFields.notificationPreferences = updateData.notificationPreferences;
     }
-    
+
     if (updateData.notificationSchedule !== undefined) {
       updateFields.notificationSchedule = updateData.notificationSchedule;
     }
-    
+
     if (updateData.statsTimeWindow !== undefined) {
       updateFields.statsTimeWindow = updateData.statsTimeWindow;
     }
-    
+
     if (updateData.keywordPreferences !== undefined) {
       updateFields.keywordPreferences = updateData.keywordPreferences;
     }

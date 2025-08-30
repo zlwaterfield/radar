@@ -90,10 +90,25 @@ export class UpdateUserDto {
   @IsOptional()
   slackTeamId?: string;
 
+  @ApiPropertyOptional({ description: 'GitHub user ID' })
+  @IsString()
+  @IsOptional()
+  githubId?: string | null;
+
   @ApiPropertyOptional({ description: 'GitHub username' })
   @IsString()
   @IsOptional()
-  githubLogin?: string;
+  githubLogin?: string | null;
+
+  @ApiPropertyOptional({ description: 'Encrypted GitHub access token' })
+  @IsString()
+  @IsOptional()
+  githubAccessToken?: string | null;
+
+  @ApiPropertyOptional({ description: 'Encrypted GitHub refresh token' })
+  @IsString()
+  @IsOptional()
+  githubRefreshToken?: string | null;
 }
 
 export class UserResponseDto {

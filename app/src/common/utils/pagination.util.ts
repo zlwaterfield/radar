@@ -16,7 +16,7 @@ export function createPaginationMeta(
   per_page: number,
 ): PaginationMetaDto {
   const total_pages = Math.ceil(total / per_page);
-  
+
   return {
     total,
     page,

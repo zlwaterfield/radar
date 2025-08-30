@@ -45,7 +45,10 @@ export class AuthGuard implements CanActivate {
 
       throw new UnauthorizedException('Authentication required');
     } catch (error) {
-      this.logger.debug('Authentication failed:', error instanceof Error ? error.message : String(error));
+      this.logger.debug(
+        'Authentication failed:',
+        error instanceof Error ? error.message : String(error),
+      );
       throw new UnauthorizedException('Invalid authentication');
     }
   }
