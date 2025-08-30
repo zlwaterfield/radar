@@ -103,42 +103,33 @@ export class SlackController {
         return res.status(200).json({ challenge: body.challenge });
       }
       
-      // Process event through SlackService using Slack Bolt
-      try {
-        const result = await this.slackService.processEvent(body, req.headers);
-        return res.status(200).json(result);
-      } catch (boltError) {
-        this.logger.warn('Bolt processing failed, using fallback handler:', boltError);
+      // Handle event callbacks
+      if (body.type === 'event_callback') {
+        const event = body.event;
+        const eventType = event?.type;
         
-        // Fallback: handle event directly
-        if (body.type === 'event_callback') {
-          const event = body.event;
-          const eventType = event?.type;
+        this.logger.log(`Processing Slack event: ${eventType}`);
+        
+        // Special handling for app_home_opened events
+        if (eventType === 'app_home_opened') {
+          this.logger.log('Processing app_home_opened event...');
           
-          this.logger.log(`Processing Slack event directly: ${eventType}`);
+          // Get user ID from the event
+          const userId = event.user;
           
-          // Special handling for app_home_opened events
-          if (eventType === 'app_home_opened') {
-            this.logger.log('Processing app_home_opened event directly...');
-            
-            // Get user ID from the event
-            const userId = event.user;
-            
-            if (userId) {
-              // Use the SlackService to handle app home opened
-              await this.slackService.handleAppHomeOpened(userId);
-            }
-            
-            return res.status(200).json({ ok: true });
+          if (userId) {
+            await this.slackService.handleAppHomeOpened(userId);
           }
           
-          // Handle other event types here as needed
           return res.status(200).json({ ok: true });
         }
         
-        // Default response for other event types
-        return res.status(200).json({ challenge: body?.challenge || 'ok' });
+        // Handle other event types here as needed
+        return res.status(200).json({ ok: true });
       }
+      
+      // Default response for other event types
+      res.status(200).json({ challenge: body?.challenge || 'ok' });
     } catch (error) {
       this.logger.error('Error handling Slack event:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -165,13 +156,6 @@ export class SlackController {
       this.logger.log(
         `Received Slack command: ${command} from user ${user_id}`,
       );
-
-      console.log('command', command);
-      console.log('text', text);
-      console.log('user_id', user_id);
-      console.log('channel_id', channel_id);
-      console.log('response_url', response_url);
-      console.log('trigger_id', trigger_id);
 
       if (command === '/radar') {
         const response = await this.processRadarCommand(

@@ -22,15 +22,13 @@ export class SlackService {
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
   ) {
-    // Initialize bot client with bot token
     const botToken = this.configService.get('slack.botToken');
     this.botClient = new WebClient(botToken);
 
-    // Initialize Slack Bolt app
     this.slackApp = new SlackApp({
       token: botToken,
       signingSecret: this.configService.get('slack.signingSecret'),
-      socketMode: false, // Using HTTP mode for webhooks
+      socketMode: false,
     });
 
     this.setupSlackEventHandlers();
@@ -320,45 +318,6 @@ export class SlackService {
     return this.slackApp;
   }
 
-  /**
-   * Process incoming Slack event via HTTP
-   */
-  async processEvent(body: any, headers: any): Promise<any> {
-    try {
-      // Create a mock request/response for Bolt to process
-      const req = {
-        body: JSON.stringify(body),
-        headers,
-        method: 'POST',
-        url: '/slack/events',
-      };
-
-      // Use Bolt's receiver to process the request
-      const receiver = this.slackApp.receiver;
-      
-      if ('processEvent' in receiver && typeof receiver.processEvent === 'function') {
-        return await receiver.processEvent({
-          body: JSON.stringify(body),
-          headers,
-          ack: () => Promise.resolve(),
-        });
-      }
-      
-      // Fallback: manually trigger event handlers
-      if (body.type === 'event_callback' && body.event) {
-        const event = body.event;
-        if (event.type === 'app_home_opened') {
-          await this.handleAppHomeOpened(event.user);
-          return { ok: true };
-        }
-      }
-      
-      return { ok: true };
-    } catch (error) {
-      this.logger.error('Error processing Slack event:', error);
-      throw error;
-    }
-  }
 
   /**
    * Setup Slack event handlers

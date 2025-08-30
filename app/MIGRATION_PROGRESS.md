@@ -75,7 +75,7 @@ This document tracks the migration of Radar from Python/FastAPI to TypeScript/Ne
    - Resolved Octokit type conversion issues
 
 8. **Implement Slack service integration** - COMPLETED
-   - Comprehensive Slack service with WebClient and Bolt app
+   - Comprehensive Slack service with WebClient
    - Message operations (send, update, delete)
    - OAuth handling and home view publishing
    - Event handlers for app_home_opened, app_mention, messages, slash commands
@@ -214,7 +214,7 @@ app_v2/
 │   ├── slack/                          # Slack integration
 │   │   ├── slack.module.ts
 │   │   ├── services/
-│   │   │   ├── slack.service.ts        # Slack WebClient/Bolt integration
+│   │   │   ├── slack.service.ts        # Slack WebClient integration
 │   │   │   └── slack-message.service.ts # Message templates
 │   │   └── controllers/
 │   │       └── slack.controller.ts     # Slack API endpoints
@@ -280,7 +280,6 @@ app_v2/
 
 ### Slack Integration
 - **WebClient**: For API calls and message sending
-- **Bolt App**: For event handling and interactive components
 - **Message Templates**: Rich message formatting for different event types
 - **Home Views**: Dynamic home tab based on user authentication status
 
