@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
+import { toast } from 'sonner';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
 
@@ -47,6 +48,8 @@ function AuthSuccessContent() {
         // Set axios auth header for immediate use
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
         
+        toast.success('Successfully authenticated! Redirecting...');
+        
         // Small delay to ensure cookies are set before redirect
         setTimeout(() => {
           // Use window.location.href to ensure a full navigation that triggers AuthContext
@@ -57,7 +60,9 @@ function AuthSuccessContent() {
       }
     } catch (err) {
       console.error('Token validation failed:', err);
-      setError('Authentication failed. Please try logging in again.');
+      const errorMessage = 'Authentication failed. Please try logging in again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -66,7 +71,7 @@ function AuthSuccessContent() {
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="card max-w-md w-full text-center p-8">
           <div className="flex justify-center mb-4">
-            <FiAlertCircle className="text-red-500 text-6xl" />
+            <FiAlertCircle size={96} className="text-red-500" />
           </div>
           <h1 className="text-2xl font-bold mb-2">Authentication error</h1>
           <p className="mb-4 text-red-600">{error}</p>
@@ -85,7 +90,7 @@ function AuthSuccessContent() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="card max-w-md w-full text-center p-8">
         <div className="flex justify-center mb-4">
-          <FiCheckCircle className="text-green-500 text-6xl" />
+          <FiCheckCircle size={96} className="text-green-500" />
         </div>
         <h1 className="text-2xl font-bold mb-2">Authentication successful</h1>
         <p className="mb-4">

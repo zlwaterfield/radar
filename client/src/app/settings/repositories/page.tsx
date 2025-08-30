@@ -7,8 +7,9 @@ import axios from 'axios';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
 import { FiRefreshCw } from 'react-icons/fi';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import RepositoryTable from '@/components/RepositoryTable';
+import type { PaginatedResponse } from '@/types/pagination';
 
 interface Repository {
   id: string;
@@ -66,10 +67,10 @@ export default function RepositoriesSettings() {
     
     try {
       setRepoLoading(true);
-      const response = await axios.get(`/api/settings/user/${user.id}/repositories`, {
+      const response = await axios.get<PaginatedResponse<Repository>>(`/api/users/me/repositories`, {
         params: {
           page: currentPage,
-          page_size: pageSize,
+          per_page: pageSize,
           enabled: enabledFilter !== null ? enabledFilter : undefined,
           search: debouncedSearchTerm || undefined
         }
@@ -77,12 +78,13 @@ export default function RepositoriesSettings() {
       
       // Handle the paginated response
       if (response.data) {
-        setRepositories(response.data.items || []);
-        setTotalPages(response.data.total_pages || 1);
-        setTotalRepos(response.data.total || 0);
+        setRepositories(response.data.data || []);
+        setTotalPages(response.data.meta.total_pages || 1);
+        setTotalRepos(response.data.meta.total || 0);
       }
     } catch (error) {
       console.error('Error fetching repositories:', error);
+      toast.error('Failed to load repositories');
     } finally {
       setRepoLoading(false);
     }
@@ -91,7 +93,7 @@ export default function RepositoriesSettings() {
   const refreshRepositories = async () => {
     try {
       setRefreshing(true);
-      await axios.post(`/api/users/${user?.id}/repositories/refresh`);
+      await axios.post(`/api/users/me/repositories/sync`);
       await fetchRepositories();
       toast.success('Repositories refreshed successfully');
     } catch (error) {
@@ -124,7 +126,7 @@ export default function RepositoriesSettings() {
       );
       
       // Call API to update enabled status
-      await axios.patch(`/api/settings/user/${user?.id}/repositories/${repoId}/toggle`, {
+      await axios.patch(`/api/users/me/repositories/${repoId}/toggle`, {
         enabled: newEnabledState
       });
       
@@ -154,7 +156,7 @@ export default function RepositoriesSettings() {
       );
       
       // Call API to toggle all repositories
-      await axios.patch(`/api/settings/user/${user?.id}/repositories/toggle-all`, {
+      await axios.patch(`/api/users/me/repositories/toggle-all`, {
         enabled
       });
       
@@ -185,7 +187,7 @@ export default function RepositoriesSettings() {
             disabled={refreshing || toggleAllLoading}
             variant="primary"
             size="sm"
-            icon={<FiRefreshCw className={refreshing ? 'animate-spin' : ''} />}
+            icon={<FiRefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />}
           >
             {refreshing ? 'Refreshing...' : 'Refresh repositories'}
           </Button>

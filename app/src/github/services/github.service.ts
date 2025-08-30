@@ -1,0 +1,400 @@
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Octokit } from '@octokit/rest';
+import { DatabaseService } from '@/database/database.service';
+import type {
+  GitHubRepository,
+  GitHubPullRequest,
+  GitHubIssue,
+  GitHubUser,
+  GitHubInstallation,
+  GitHubAppToken,
+} from '@/common/types/github.types';
+import * as crypto from 'crypto';
+import * as jwt from 'jsonwebtoken';
+
+@Injectable()
+export class GitHubService {
+  private readonly logger = new Logger(GitHubService.name);
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly databaseService: DatabaseService,
+  ) {}
+
+  /**
+   * Create GitHub client with user access token
+   */
+  createUserClient(accessToken: string): Octokit {
+    return new Octokit({
+      auth: accessToken,
+      userAgent: `${this.configService.get('app.name')}/2.0.0`,
+    });
+  }
+
+  /**
+   * Create GitHub App client with JWT authentication
+   */
+  createAppClient(): Octokit {
+    const appId = this.configService.get('github.appId');
+    const privateKey = this.getPrivateKey();
+
+    if (!appId || !privateKey) {
+      throw new Error('GitHub App credentials not configured');
+    }
+
+    const jwt = this.generateAppJWT(appId, privateKey);
+    return new Octokit({
+      auth: jwt,
+      userAgent: `${this.configService.get('app.name')}/2.0.0`,
+    });
+  }
+
+  /**
+   * Create GitHub client for a specific installation
+   */
+  async createInstallationClient(installationId: number): Promise<Octokit> {
+    const appClient = this.createAppClient();
+
+    try {
+      const { data: installation } =
+        await appClient.apps.createInstallationAccessToken({
+          installation_id: installationId,
+        });
+
+      return new Octokit({
+        auth: installation.token,
+        userAgent: `${this.configService.get('app.name')}/2.0.0`,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to create installation client: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user repositories from GitHub API using access token
+   */
+  async getUserRepositories(
+    accessToken: string,
+    includePrivate?: boolean,
+  ): Promise<GitHubRepository[]>;
+  async getUserRepositories(
+    userId: string,
+    includePrivate?: boolean,
+  ): Promise<GitHubRepository[]>;
+  async getUserRepositories(
+    userIdOrAccessToken: string,
+    includePrivate = true,
+  ): Promise<GitHubRepository[]> {
+    try {
+      let accessToken: string;
+      let logContext: string;
+
+      // Check if the parameter is a user ID or access token
+      if (
+        userIdOrAccessToken.startsWith('gho_') ||
+        userIdOrAccessToken.startsWith('ghp_') ||
+        userIdOrAccessToken.startsWith('ghu_') ||
+        userIdOrAccessToken.length > 50
+      ) {
+        // It's likely an access token
+        accessToken = userIdOrAccessToken;
+        logContext = 'direct token';
+      } else {
+        // It's a user ID, fetch the user's token
+        const user = await this.databaseService.user.findUnique({
+          where: { id: userIdOrAccessToken },
+        });
+
+        if (!user?.githubAccessToken) {
+          throw new BadRequestException('User not connected to GitHub');
+        }
+
+        accessToken = user.githubAccessToken;
+        logContext = `user ${userIdOrAccessToken}`;
+      }
+
+      // For now, assume tokens are stored in plain text
+      // TODO: Implement proper token encryption/decryption
+      const octokit = this.createUserClient(accessToken);
+
+      const { data: repositories } =
+        await octokit.repos.listForAuthenticatedUser({
+          sort: 'updated',
+          per_page: 100,
+          type: includePrivate ? 'all' : 'public',
+        });
+
+      this.logger.log(
+        `Retrieved ${repositories.length} repositories for ${logContext}`,
+      );
+      return repositories as any[];
+    } catch (error) {
+      this.logger.error(`Error fetching repositories:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get specific repository details
+   */
+  async getRepository(
+    owner: string,
+    repo: string,
+    accessToken?: string,
+  ): Promise<GitHubRepository> {
+    try {
+      let octokit: Octokit;
+
+      if (accessToken) {
+        octokit = this.createUserClient(accessToken);
+      } else {
+        octokit = this.createAppClient();
+      }
+
+      const { data: repository } = await octokit.repos.get({
+        owner,
+        repo,
+      });
+
+      return repository as any;
+    } catch (error) {
+      this.logger.error(`Error fetching repository ${owner}/${repo}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get pull requests for a repository
+   */
+  async getPullRequests(
+    owner: string,
+    repo: string,
+    state: 'open' | 'closed' | 'all' = 'all',
+    accessToken?: string,
+  ): Promise<GitHubPullRequest[]> {
+    try {
+      const octokit = accessToken
+        ? this.createUserClient(accessToken)
+        : this.createAppClient();
+
+      const { data: pullRequests } = await octokit.pulls.list({
+        owner,
+        repo,
+        state,
+        sort: 'updated',
+        per_page: 100,
+      });
+
+      return pullRequests as any[];
+    } catch (error) {
+      this.logger.error(
+        `Error fetching pull requests for ${owner}/${repo}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get specific pull request details
+   */
+  async getPullRequest(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    accessToken?: string,
+  ): Promise<GitHubPullRequest> {
+    try {
+      const octokit = accessToken
+        ? this.createUserClient(accessToken)
+        : this.createAppClient();
+
+      const { data: pullRequest } = await octokit.pulls.get({
+        owner,
+        repo,
+        pull_number: pullNumber,
+      });
+
+      return pullRequest as any;
+    } catch (error) {
+      this.logger.error(
+        `Error fetching PR #${pullNumber} for ${owner}/${repo}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get issues for a repository
+   */
+  async getIssues(
+    owner: string,
+    repo: string,
+    state: 'open' | 'closed' | 'all' = 'all',
+    accessToken?: string,
+  ): Promise<GitHubIssue[]> {
+    try {
+      const octokit = accessToken
+        ? this.createUserClient(accessToken)
+        : this.createAppClient();
+
+      const { data: issues } = await octokit.issues.listForRepo({
+        owner,
+        repo,
+        state,
+        sort: 'updated',
+        per_page: 100,
+      });
+
+      // Filter out pull requests (GitHub API includes PRs in issues endpoint)
+      const filteredIssues = issues.filter((issue) => !issue.pull_request);
+
+      return filteredIssues as any[];
+    } catch (error) {
+      this.logger.error(`Error fetching issues for ${owner}/${repo}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get authenticated user info
+   */
+  async getAuthenticatedUser(accessToken: string): Promise<GitHubUser> {
+    try {
+      const octokit = this.createUserClient(accessToken);
+      const { data: user } = await octokit.users.getAuthenticated();
+
+      return user as any;
+    } catch (error) {
+      this.logger.error('Error fetching authenticated user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get GitHub App installations for the authenticated user
+   */
+  async getUserInstallations(
+    accessToken: string,
+  ): Promise<GitHubInstallation[]> {
+    try {
+      const octokit = this.createUserClient(accessToken);
+      const { data: installations } =
+        await octokit.apps.listInstallationsForAuthenticatedUser();
+
+      return installations.installations as any[];
+    } catch (error) {
+      this.logger.error('Error fetching user installations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get repositories for a GitHub App installation
+   */
+  async getInstallationRepositories(
+    installationId: number,
+  ): Promise<GitHubRepository[]> {
+    try {
+      const octokit = await this.createInstallationClient(installationId);
+      const { data } = await octokit.apps.listReposAccessibleToInstallation();
+
+      return data.repositories as any[];
+    } catch (error) {
+      this.logger.error(
+        `Error fetching repositories for installation ${installationId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Verify webhook signature from GitHub
+   */
+  verifyWebhookSignature(payload: string, signature: string): boolean {
+    const webhookSecret = this.configService.get('github.webhookSecret');
+    if (!webhookSecret) {
+      this.logger.warn('GitHub webhook secret not configured');
+      return false;
+    }
+
+    try {
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(payload, 'utf8')
+        .digest('hex');
+
+      const actualSignature = signature.replace('sha256=', '');
+
+      return crypto.timingSafeEqual(
+        Buffer.from(expectedSignature),
+        Buffer.from(actualSignature),
+      );
+    } catch (error) {
+      this.logger.error('Webhook signature verification failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Test GitHub connection with user token
+   */
+  async testConnection(accessToken: string): Promise<boolean> {
+    try {
+      await this.getAuthenticatedUser(accessToken);
+      return true;
+    } catch (error) {
+      this.logger.debug(
+        'GitHub connection test failed:',
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Generate GitHub App JWT
+   */
+  private generateAppJWT(appId: string, privateKey: string): string {
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      iat: now - 30, // 30 seconds in the past to account for clock skew
+      exp: now + 600, // 10 minutes from now
+      iss: appId,
+    };
+
+    return jwt.sign(payload, privateKey, { algorithm: 'RS256' });
+  }
+
+  /**
+   * Get GitHub App private key from config
+   */
+  private getPrivateKey(): string {
+    const privateKey = this.configService.get('github.privateKey');
+    const privateKeyPath = this.configService.get('github.privateKeyPath');
+
+    if (privateKey) {
+      // Handle escaped newlines in environment variable
+      return privateKey.replace(/\\n/g, '\n');
+    }
+
+    if (privateKeyPath) {
+      const fs = require('fs');
+      try {
+        return fs.readFileSync(privateKeyPath, 'utf8');
+      } catch (error) {
+        this.logger.error(
+          `Failed to read private key from ${privateKeyPath}:`,
+          error,
+        );
+        throw error;
+      }
+    }
+
+    throw new Error('GitHub App private key not configured');
+  }
+}

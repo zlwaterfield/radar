@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface KeywordSettings {
   enabled: boolean;
@@ -40,7 +40,7 @@ export default function KeywordsSettings() {
     try {
       if (!user?.id) return;
       
-      const response = await fetch(`/api/users/${user.id}/settings`);
+      const response = await fetch(`/api/users/me/settings`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch user settings');
@@ -48,9 +48,9 @@ export default function KeywordsSettings() {
       
       const data = await response.json();
       
-      // Update keyword notification settings
-      if (data.keyword_notification_preferences) {
-        const keywordPrefs = data.keyword_notification_preferences;
+      // Update keyword notification settings from keywordPreferences field
+      if (data.keywordPreferences && typeof data.keywordPreferences === 'object' && data.keywordPreferences.enabled !== undefined) {
+        const keywordPrefs = data.keywordPreferences;
         
         setKeywordSettings({
           enabled: keywordPrefs.enabled ?? false,
@@ -109,7 +109,7 @@ export default function KeywordsSettings() {
     try {
       // Format settings for API
       const settings = {
-        keyword_notification_preferences: {
+        keywordPreferences: {
           enabled: keywordSettings.enabled,
           keywords: keywordSettings.keywords,
           threshold: keywordSettings.threshold
@@ -117,7 +117,7 @@ export default function KeywordsSettings() {
       };
       
       // Save settings to API
-      const response = await fetch(`/api/users/${user?.id}/settings`, {
+      const response = await fetch(`/api/users/me/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

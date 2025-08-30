@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Development
+  postgres:
+    image: postgres:16-alpine
+    container_name: radar-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: radar_dev
+      POSTGRES_USER: radar_user
+      POSTGRES_PASSWORD: radar_dev_password
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - radar-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radar_user -d radar_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  radar-dev-network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+    driver: local

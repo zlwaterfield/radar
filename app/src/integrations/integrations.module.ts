@@ -1,0 +1,14 @@
+import { Module } from '@nestjs/common';
+import { SlackIntegrationController } from './controllers/slack-integration.controller';
+import { GitHubIntegrationController } from './controllers/github-integration.controller';
+import { SlackIntegrationService } from './services/slack-integration.service';
+import { GitHubIntegrationService } from './services/github-integration.service';
+import { DatabaseModule } from '../database/database.module';
+
+@Module({
+  imports: [DatabaseModule],
+  controllers: [SlackIntegrationController, GitHubIntegrationController],
+  providers: [SlackIntegrationService, GitHubIntegrationService],
+  exports: [SlackIntegrationService, GitHubIntegrationService],
+})
+export class IntegrationsModule {}

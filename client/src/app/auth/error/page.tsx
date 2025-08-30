@@ -24,7 +24,7 @@ function AuthErrorContent() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="card max-w-md w-full text-center p-8">
         <div className="flex justify-center mb-4">
-          <FiAlertTriangle className="text-red-500 text-6xl" />
+          <FiAlertTriangle size={96} className="text-red-500" />
         </div>
         <h1 className="text-2xl font-bold mb-2">Authentication Failed</h1>
         <p className="mb-4">

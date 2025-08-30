@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface DigestSettings {
   digest_enabled: boolean;
@@ -37,7 +37,7 @@ export default function DigestSettings() {
     try {
       if (!user?.id) return;
       
-      const response = await fetch(`/api/users/${user.id}/settings`);
+      const response = await fetch(`/api/users/me/settings`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch user settings');
@@ -46,8 +46,8 @@ export default function DigestSettings() {
       const data = await response.json();
       
       // Update digest settings
-      if (data.notification_schedule) {
-        const schedule = data.notification_schedule;
+      if (data.notificationSchedule) {
+        const schedule = data.notificationSchedule;
         
         setDigestSettings({
           digest_enabled: schedule.digest_enabled ?? false,
@@ -75,14 +75,14 @@ export default function DigestSettings() {
     try {
       // Format settings for API
       const settings = {
-        notification_schedule: {
+        notificationSchedule: {
           digest_enabled: digestSettings.digest_enabled,
           digest_time: digestSettings.digest_time
         }
       };
       
       // Save settings to API
-      const response = await fetch(`/api/users/${user?.id}/settings`, {
+      const response = await fetch(`/api/users/me/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

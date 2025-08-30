@@ -1,17 +1,21 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import axios from 'axios';
-import Cookies from 'js-cookie';
-import { useRouter, usePathname } from 'next/navigation';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { toast } from 'sonner';
+import { authClient } from '../../lib/auth-client';
 
 interface User {
   id: string;
   name?: string;
   email?: string;
-  slack_id?: string;
-  github_id?: string;
-  github_login?: string;
+  emailVerified?: boolean;
+  image?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  // Integration fields for backward compatibility
+  slackId?: string;
+  githubId?: string;
+  githubLogin?: string;
 }
 
 interface AuthContextType {
@@ -19,8 +23,10 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: () => void;
-  logout: () => void;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name?: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  // Keep existing integrations for backward compatibility
   connectGithub: () => void;
   reconnectGithub: () => void;
   installGithubApp: () => void;
@@ -43,152 +49,68 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const pathname = usePathname();
-  const isValidating = useRef(false);
+  const { useSession } = authClient;
+  const { data: session, isPending: loading, error } = useSession();
   
+  const user = session?.user || null;
   const isAuthenticated = !!user;
   
-  const isTokenExpired = (token: string): boolean => {
+  const signIn = async (email: string, password: string) => {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const currentTime = Math.floor(Date.now() / 1000);
-      return payload.exp < currentTime;
-    } catch (error) {
-      // If we can't parse the token, consider it expired
-      return true;
-    }
-  };
-  
-  useEffect(() => {
-    // Set up axios default auth header
-    const authToken = Cookies.get('auth_token');
-    
-    if (authToken) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-    }
-    
-    // Set up axios interceptor to handle 401 responses
-    const interceptor = axios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          // Token is invalid/expired, clear it
-          Cookies.remove('auth_token');
-          Cookies.remove('user_id');
-          delete axios.defaults.headers.common['Authorization'];
-          setUser(null);
-          setError('Session expired');
-        }
-        return Promise.reject(error);
-      }
-    );
-    
-    // Check if user is already authenticated (only run once on mount)
-    if (authToken && !isValidating.current) {
-      // Check if token is expired before making API call
-      if (isTokenExpired(authToken)) {
-        // Token is expired, clear it
-        Cookies.remove('auth_token');
-        Cookies.remove('user_id');
-        delete axios.defaults.headers.common['Authorization'];
-        setLoading(false);
-      } else {
-        isValidating.current = true;
-        validateToken(authToken);
-      }
-    } else if (!authToken) {
-      setLoading(false);
-    }
-    
-    // Cleanup interceptor on unmount
-    return () => {
-      axios.interceptors.response.eject(interceptor);
-    };
-  }, []); // Remove pathname dependency
-  
-  // Handle route protection separately, only redirect when necessary
-  useEffect(() => {
-    // Public routes that don't require authentication
-    const publicRoutes = ['/', '/auth/', '/terms', '/privacy', '/support'];
-    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
-    
-    // If we're not authenticated and navigating to a protected route, check for cookies first
-    if (!loading && !isAuthenticated && !isPublicRoute && !isValidating.current) {
-      const authToken = Cookies.get('auth_token');
-      
-      if (authToken && !isTokenExpired(authToken)) {
-        isValidating.current = true;
-        validateToken(authToken);
-        return; // Don't redirect while validating
-      }
-      
-      router.push('/');
-    }
-  }, [loading, isAuthenticated, pathname, router]);
-  
-  const validateToken = async (token: string) => {
-    try {
-      setLoading(true);
-      const response = await axios.post('/api/auth/validate', { token });
-      setUser(response.data.user);
-      setError(null);
+      await authClient.signIn.email({
+        email,
+        password,
+      });
     } catch (err) {
-      setError('Session expired or invalid');
-      Cookies.remove('auth_token');
-      Cookies.remove('user_id');
-      delete axios.defaults.headers.common['Authorization'];
-    } finally {
-      setLoading(false);
-      isValidating.current = false;
+      throw err;
     }
   };
   
-  const login = () => {
-    window.location.href = '/api/auth/slack/login';
-  };
-  
-  const logout = async () => {
+  const signUp = async (email: string, password: string, name?: string) => {
     try {
-      if (user) {
-        await axios.get(`/api/auth/logout?user_id=${user.id}`);
-      }
-      Cookies.remove('auth_token');
-      Cookies.remove('user_id');
-      delete axios.defaults.headers.common['Authorization'];
-      setUser(null);
-      router.push('/');
+      await authClient.signUp.email({
+        email,
+        password,
+        name,
+      });
     } catch (err) {
-      console.error('Error logging out:', err);
-      setError('Failed to log out');
+      throw err;
     }
   };
   
+  const signOut = async () => {
+    try {
+      await authClient.signOut();
+      toast.success('Signed out successfully');
+    } catch (err) {
+      console.error('Error signing out:', err);
+      toast.error('Failed to sign out. Please try again.');
+      throw err;
+    }
+  };
+  
+  // Legacy integration methods - these will redirect to the backend OAuth endpoints
   const connectGithub = () => {
     if (user) {
-      window.location.href = `/api/auth/github/login?user_id=${user.id}`;
+      window.location.href = `/api/integrations/github/connect`;
     } else {
-      setError('You must be logged in to connect GitHub');
+      throw new Error('You must be logged in to connect GitHub');
     }
   };
   
   const reconnectGithub = () => {
     if (user) {
-      // Same endpoint but we're explicitly reconnecting to update permissions
-      window.location.href = `/api/auth/github/login?user_id=${user.id}&reconnect=true`;
+      window.location.href = `/api/integrations/github/connect?reconnect=true`;
     } else {
-      setError('You must be logged in to update GitHub permissions');
+      throw new Error('You must be logged in to update GitHub permissions');
     }
   };
   
   const installGithubApp = () => {
     if (user) {
-      window.location.href = `/api/auth/github/install?user_id=${user.id}`;
+      window.location.href = `/api/integrations/github/install`;
     } else {
-      setError('You must be logged in to install the GitHub App');
+      throw new Error('You must be logged in to install the GitHub App');
     }
   };
   
@@ -198,10 +120,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     
     try {
-      const response = await axios.get(`/api/users/${user.id}/github-installations`);
-      return response.data;
+      const response = await fetch(`/api/integrations/github/installations`);
+      return await response.json();
     } catch (error) {
       console.error('Error checking GitHub installations:', error);
+      toast.error('Failed to check GitHub installations');
       throw error;
     }
   };
@@ -216,15 +139,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       value={{
         user,
         loading,
-        error,
+        error: error?.message || null,
         isAuthenticated,
-        login,
-        logout,
+        signIn,
+        signUp,
+        signOut,
         connectGithub,
         reconnectGithub,
         installGithubApp,
         manageGithubRepoAccess,
-        checkGithubInstallations
+        checkGithubInstallations,
       }}
     >
       {children}
