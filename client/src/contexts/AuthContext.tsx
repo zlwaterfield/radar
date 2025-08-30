@@ -9,7 +9,7 @@ interface User {
   name?: string;
   email?: string;
   emailVerified?: boolean;
-  image?: string;
+  image?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
   // Integration fields for backward compatibility
@@ -24,7 +24,7 @@ interface AuthContextType {
   error: string | null;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name?: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
   // Keep existing integrations for backward compatibility
   connectGithub: () => void;
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
   
-  const signUp = async (email: string, password: string, name?: string) => {
+  const signUp = async (email: string, password: string, name: string) => {
     try {
       await authClient.signUp.email({
         email,
