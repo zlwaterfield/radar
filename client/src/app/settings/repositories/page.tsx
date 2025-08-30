@@ -66,7 +66,7 @@ export default function RepositoriesSettings() {
     
     try {
       setRepoLoading(true);
-      const response = await axios.get(`/api/settings/user/${user.id}/repositories`, {
+      const response = await axios.get(`/api/users/me/repositories`, {
         params: {
           page: currentPage,
           page_size: pageSize,
@@ -91,7 +91,7 @@ export default function RepositoriesSettings() {
   const refreshRepositories = async () => {
     try {
       setRefreshing(true);
-      await axios.post(`/api/users/${user?.id}/repositories/refresh`);
+      await axios.post(`/api/users/me/repositories/refresh`);
       await fetchRepositories();
       toast.success('Repositories refreshed successfully');
     } catch (error) {
@@ -124,7 +124,7 @@ export default function RepositoriesSettings() {
       );
       
       // Call API to update enabled status
-      await axios.patch(`/api/settings/user/${user?.id}/repositories/${repoId}/toggle`, {
+      await axios.patch(`/api/users/me/repositories/${repoId}/toggle`, {
         enabled: newEnabledState
       });
       
@@ -154,7 +154,7 @@ export default function RepositoriesSettings() {
       );
       
       // Call API to toggle all repositories
-      await axios.patch(`/api/settings/user/${user?.id}/repositories/toggle-all`, {
+      await axios.patch(`/api/users/me/repositories/toggle-all`, {
         enabled
       });
       
@@ -185,7 +185,7 @@ export default function RepositoriesSettings() {
             disabled={refreshing || toggleAllLoading}
             variant="primary"
             size="sm"
-            icon={<FiRefreshCw className={refreshing ? 'animate-spin' : ''} />}
+            icon={<FiRefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />}
           >
             {refreshing ? 'Refreshing...' : 'Refresh repositories'}
           </Button>

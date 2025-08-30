@@ -37,7 +37,7 @@ export default function DigestSettings() {
     try {
       if (!user?.id) return;
       
-      const response = await fetch(`/api/users/${user.id}/settings`);
+      const response = await fetch(`/api/users/me/settings`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch user settings');
@@ -82,7 +82,7 @@ export default function DigestSettings() {
       };
       
       // Save settings to API
-      const response = await fetch(`/api/users/${user?.id}/settings`, {
+      const response = await fetch(`/api/users/me/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

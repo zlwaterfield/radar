@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: radar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: radar
+      POSTGRES_USER: radar_user
+      POSTGRES_PASSWORD: radar_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - radar-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radar_user -d radar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Radar NestJS Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: radar-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://radar_user:radar_password@postgres:5432/radar
+      - API_PORT=3000
+      - API_HOST=0.0.0.0
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - radar-network
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3003/api/health" , "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  radar-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
-import { FiGithub, FiCheck, FiSettings } from 'react-icons/fi';
+import { FiGithub, FiCheckCircle, FiSettings } from 'react-icons/fi';
 
 function GithubIntegrationContent() {
   const { user, isAuthenticated, loading, connectGithub, installGithubApp, checkGithubInstallations } = useAuth();
@@ -35,7 +35,7 @@ function GithubIntegrationContent() {
 
   // Check GitHub installations when user has GitHub connected
   useEffect(() => {
-    if (user?.github_id && !checkingInstallations && !installationStatus) {
+    if (user?.githubId && !checkingInstallations && !installationStatus) {
       setCheckingInstallations(true);
       checkGithubInstallations()
         .then(setInstallationStatus)
@@ -45,13 +45,13 @@ function GithubIntegrationContent() {
         })
         .finally(() => setCheckingInstallations(false));
     }
-  }, [user?.github_id, checkGithubInstallations, checkingInstallations, installationStatus]);
+  }, [user?.githubId, checkGithubInstallations, checkingInstallations, installationStatus]);
 
   if (loading) {
     return <Loader size="large" />;
   }
 
-  const hasGitHubAccount = user?.github_id;
+  const hasGitHubAccount = user?.githubId;
   const hasGitHubApp = installationStatus?.has_installations;
 
   return (
@@ -70,7 +70,7 @@ function GithubIntegrationContent() {
             <div className="flex-shrink-0">
               {hasGitHubAccount ? (
                 <div className="w-8 h-8 bg-mint-green-400 text-white rounded-full flex items-center justify-center">
-                  <FiCheck className="w-5 h-5" />
+                  <FiCheckCircle size={20} />
                 </div>
               ) : (
                 <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full flex items-center justify-center text-sm font-bold">
@@ -87,14 +87,14 @@ function GithubIntegrationContent() {
                 <Button 
                   onClick={connectGithub}
                   variant="primary"
-                  icon={<FiGithub />}
+                  icon={<FiGithub size={20} />}
                 >
                   Connect GitHub account
                 </Button>
               )}
               {hasGitHubAccount && (
                 <div className="text-sm text-mint-green-400 dark:text-mint-green-300 font-medium">
-                  ✓ Connected as {user?.github_login || 'GitHub user'}
+                  ✓ Connected as {user?.githubLogin || 'GitHub user'}
                 </div>
               )}
             </div>
@@ -112,7 +112,7 @@ function GithubIntegrationContent() {
                 </div>
               ) : hasGitHubApp ? (
                 <div className="w-8 h-8 bg-mint-green-400 text-white rounded-full flex items-center justify-center">
-                  <FiCheck className="w-5 h-5" />
+                  <FiCheckCircle size={20} />
                 </div>
               ) : (
                 <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full flex items-center justify-center text-sm font-bold">
@@ -136,7 +136,7 @@ function GithubIntegrationContent() {
                 <Button 
                   onClick={installGithubApp}
                   variant="secondary"
-                  icon={<FiSettings />}
+                  icon={<FiSettings size={20} />}
                 >
                   Install GitHub app
                 </Button>
@@ -163,7 +163,7 @@ function GithubIntegrationContent() {
                       onClick={installGithubApp}
                       variant="ghost"
                       size="sm"
-                      icon={<FiSettings />}
+                      icon={<FiSettings size={20} />}
                     >
                       Update installation
                     </Button>
@@ -171,7 +171,7 @@ function GithubIntegrationContent() {
                       onClick={() => window.open('https://github.com/settings/installations', '_blank')}
                       variant="ghost"
                       size="sm"
-                      icon={<FiGithub />}
+                      icon={<FiGithub size={20} />}
                     >
                       Manage on GitHub
                     </Button>

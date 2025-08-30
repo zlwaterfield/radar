@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
-import { FiGithub, FiLogOut, FiBell, FiGitBranch, FiSearch, FiCalendar } from 'react-icons/fi';
+import { FiBell, FiCalendar, FiGitBranch, FiSearch, FiGithub, FiLogOut } from 'react-icons/fi';
 
 export default function SettingsLayout({
   children,
@@ -52,7 +52,7 @@ export default function SettingsLayout({
                   ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
-              <FiBell className="mr-3 flex-shrink-0 h-5 w-5" />
+              <FiBell size={20} className="mr-3 flex-shrink-0" />
               Notifications
             </Link>
           </li>
@@ -63,7 +63,7 @@ export default function SettingsLayout({
                   ? 'bg-primary-50 text-primary-700 dark:bg-gray-700 dark:text-primary-400 font-medium'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}>
-              <FiCalendar className="mr-3 flex-shrink-0 h-5 w-5" />
+              <FiCalendar size={20} className="mr-3 flex-shrink-0" />
               Daily digest
             </Link>
           </li> */}
@@ -74,7 +74,7 @@ export default function SettingsLayout({
                   ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
-              <FiGitBranch className="mr-3 flex-shrink-0 h-5 w-5" />
+              <FiGitBranch size={20} className="mr-3 flex-shrink-0" />
               Repositories
             </Link>
           </li>
@@ -85,7 +85,7 @@ export default function SettingsLayout({
                   ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
-              <FiSearch className="mr-3 flex-shrink-0 h-5 w-5" />
+              <FiSearch size={20} className="mr-3 flex-shrink-0" />
               Keywords
             </Link>
           </li>
@@ -97,14 +97,14 @@ export default function SettingsLayout({
           </div>
           <ul className="space-y-1">
             <li>
-              <Link href="/settings/github" 
+              <Link href="/onboarding" 
                 className={`flex items-center px-4 py-2 mx-2 text-sm rounded-md transition-colors ${
-                  pathname === '/settings/github' 
+                  pathname === '/onboarding' 
                     ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md' 
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}>
-                <FiGithub className="mr-3 flex-shrink-0 h-5 w-5" />
-                GitHub integration
+                <FiGithub size={20} className="mr-3 flex-shrink-0" />
+                Setup Integrations
               </Link>
             </li>
           </ul>
@@ -123,7 +123,7 @@ export default function SettingsLayout({
             onClick={logout}
             variant="ghost"
             size="sm"
-            icon={<FiLogOut />}
+            icon={<FiLogOut size={20} />}
             className="w-full justify-start"
           >
             Logout
@@ -141,7 +141,7 @@ export default function SettingsLayout({
               {/* {pathname === '/settings/digest' && 'Daily digest'} */}
               {pathname === '/settings/repositories' && 'Repositories'}
               {pathname === '/settings/keywords' && 'Keywords'}
-              {pathname === '/settings/github' && 'GitHub integration'}
+              {pathname === '/onboarding' && 'Setup Integrations'}
             </h2>
             <div className="flex items-center space-x-4">
               {/* Add header actions here if needed */}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
-import { FiLogOut, FiArrowLeft, FiGithub, FiSettings } from 'react-icons/fi';
+import { FiArrowLeft, FiLogOut } from 'react-icons/fi';
 
 interface LayoutProps {
   children: ReactNode;
@@ -49,7 +49,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
                   onClick={() => router.push('/settings/notifications')}
                   variant="ghost"
                   size="sm"
-                  icon={<FiArrowLeft />}
+                  icon={<FiArrowLeft size={20} />}
                   className="w-full justify-start"
                 >
                   Go back
@@ -62,17 +62,6 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
             </nav>
             
             {/* Footer Links */}
-            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-center space-x-4 text-xs">
-                <Link href="/terms" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                  Terms
-                </Link>
-                <span className="text-gray-400 dark:text-gray-600">·</span>
-                <Link href="/privacy" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                  Privacy
-                </Link>
-              </div>
-            </div>
             
             <div className="p-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center mb-3">
@@ -88,11 +77,23 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
                 onClick={logout}
                 variant="ghost"
                 size="sm"
-                icon={<FiLogOut />}
+                icon={<FiLogOut size={20} />}
                 className="w-full justify-start"
               >
                 Logout
               </Button>
+            </div>
+
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-center space-x-4 text-xs">
+                <Link href="/terms" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  Terms
+                </Link>
+                <span className="text-gray-400 dark:text-gray-600">·</span>
+                <Link href="/privacy" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  Privacy
+                </Link>
+              </div>
             </div>
           </aside>
 

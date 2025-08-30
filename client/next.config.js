@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   env: {
-    API_URL: process.env.API_URL || 'http://localhost:8000',
+    API_URL: process.env.API_URL || 'http://localhost:3003',
   },
   async redirects() {
     return [
@@ -17,7 +17,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.API_URL || 'http://localhost:8000'}/api/:path*`,
+        destination: `${process.env.API_URL || 'http://localhost:3003'}/api/:path*`,
       },
     ];
   },

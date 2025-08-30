@@ -6,17 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
-import { FiGithub, FiSlack, FiArrowRight, FiBell, FiFilter, FiCpu } from 'react-icons/fi';
+import { FiArrowRight, FiGithub } from 'react-icons/fi';
 
 export default function Home() {
-  const { isAuthenticated, loading, login } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
-  // Remove auto-redirect - let users see the homepage even when logged in
-
-  if (loading) {
-    return <Loader fullScreen size="large" />;
-  }
+  // if (loading) {
+  //   return <Loader fullScreen size="large" />;
+  // }
 
   return (
     <>
@@ -36,7 +34,7 @@ export default function Home() {
             <Button
               onClick={() => router.push('/settings/notifications')}
               variant="secondary"
-              icon={<FiArrowRight />}
+              icon={<FiArrowRight size={20} />}
               iconPosition="right"
               className="bg-white/90 dark:bg-gray-800 backdrop-blur-sm"
             >
@@ -67,12 +65,18 @@ export default function Home() {
               <div className="flex flex-col items-center space-y-6">
                 <div className="flex item-center justify-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
                   <Button
-                    onClick={login}
+                    onClick={() => router.push('/auth/signup')}
                     variant="primary"
                     size="lg"
-                    icon={<FiSlack />}
                   >
-                    Login with Slack
+                    Get Started
+                  </Button>
+                  <Button
+                    onClick={() => router.push('/auth/signin')}
+                    variant="secondary"
+                    size="lg"
+                  >
+                    Sign In
                   </Button>
                 </div>
                 {/* <div className="flex items-center space-x-4 sm:space-x-8 text-sm text-gray-600 dark:text-gray-400">
@@ -183,7 +187,7 @@ export default function Home() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <FiGithub className="mr-2" />
+              <FiGithub size={20} className="mr-2" />
               View on GitHub
             </a>
             <span className="text-gray-400 dark:text-gray-600">·</span>
