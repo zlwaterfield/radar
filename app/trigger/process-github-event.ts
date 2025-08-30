@@ -297,8 +297,34 @@ async function sendSlackNotificationWithResult(user: any, notificationData: any)
   }
 }
 
+// Color scheme for different event types (matching Python example)
+const EVENT_COLORS: Record<string, string> = {
+  // Pull request actions
+  "opened": "#2EB67D",       // Green
+  "reopened": "#2EB67D",     // Green
+  "closed": "#E01E5A",       // Red
+  "merged": "#4A154B",       // Purple
+  "review_requested": "#ECB22E", // Yellow
+  "assigned": "#1D9BD1",     // Blue
+  
+  // Review states
+  "approved": "#2EB67D",     // Green
+  "changes_requested": "#E01E5A", // Red
+  "commented": "#1D9BD1",    // Blue
+  "dismissed": "#ECB22E",    // Yellow
+  
+  // Issue actions
+  "issue_opened": "#2EB67D", // Green
+  "issue_closed": "#E01E5A", // Red
+  "issue_reopened": "#2EB67D", // Green
+  "issue_commented": "#1D9BD1", // Blue
+  
+  // Default
+  "default": "#1D9BD1"       // Blue
+};
+
 /**
- * Create Slack message structure
+ * Create Slack message structure with proper formatting
  */
 function createSlackMessage(data: any) {
   const { eventType, action, repositoryName, title, message, url, payload } = data;
@@ -307,6 +333,12 @@ function createSlackMessage(data: any) {
     return createPRSlackMessage(data);
   } else if (eventType === 'issues') {
     return createIssueSlackMessage(data);
+  } else if (eventType === 'pull_request_review') {
+    return createPRReviewSlackMessage(data);
+  } else if (eventType === 'pull_request_review_comment') {
+    return createPRCommentSlackMessage(data);
+  } else if (eventType === 'issue_comment') {
+    return createIssueCommentSlackMessage(data);
   } else {
     return createGenericSlackMessage(data);
   }
@@ -316,55 +348,91 @@ function createSlackMessage(data: any) {
  * Create Slack message for pull request notifications
  */
 function createPRSlackMessage(data: any) {
-  const actionText = getPRActionText(`${data.eventType}.${data.action}`);
-  const color = getPRColor(`${data.eventType}.${data.action}`, data.payload);
+  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const color = EVENT_COLORS[action] || EVENT_COLORS.default;
+  
+  // Create icon based on action
+  let icon = "🔄";  // Default icon
+  if (action === "opened") icon = "🆕";
+  else if (action === "closed") icon = "🚫";
+  else if (action === "reopened") icon = "🔄";
+  else if (action === "merged") icon = "🔀";
+  else if (action === "review_requested") icon = "👀";
+  else if (action === "assigned") icon = "👤";
+  
+  // Format action text
+  const actionText = action.replace("_", " ").charAt(0).toUpperCase() + action.replace("_", " ").slice(1);
+  
+  // Create GitHub user link
+  const user = payload.pull_request?.user?.login || payload.sender?.login;
+  const githubUserLink = `<https://github.com/${user}|${user}>`;
+  
+  // Create contextual text based on action
+  let contextText;
+  if (action === "opened") {
+    contextText = `${githubUserLink} opened this pull request in \`${repositoryName}\``;
+  } else if (action === "closed") {
+    contextText = `${githubUserLink} closed this pull request in \`${repositoryName}\``;
+  } else if (action === "merged") {
+    contextText = `${githubUserLink} merged this pull request in \`${repositoryName}\``;
+  } else if (action === "reopened") {
+    contextText = `${githubUserLink} reopened this pull request in \`${repositoryName}\``;
+  } else if (action === "assigned") {
+    contextText = `${githubUserLink} assigned someone to this pull request in \`${repositoryName}\``;
+  } else if (action === "review_requested") {
+    contextText = `Review requested from ${githubUserLink} for this pull request in \`${repositoryName}\``;
+  } else {
+    contextText = `${githubUserLink} ${action} this pull request in \`${repositoryName}\``;
+  }
+
+  // Create blocks with attachment styling (like Python example)
+  const blocks = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `${icon} *Pull Request ${actionText}* by ${githubUserLink}`
+      }
+    },
+    {
+      type: 'divider'
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `<${url}|*PR #${payload.pull_request?.number}* ${title}>`
+      },
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: 'View PR',
+          emoji: true
+        },
+        url: url,
+        action_id: 'view_pr'
+      }
+    },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: contextText
+        }
+      ]
+    } as any
+  ];
 
   return {
-    text: `${actionText} pull request in ${data.repositoryName}`,
-    blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*${actionText}* pull request in \`${data.repositoryName}\``,
-        },
-      },
-      {
-        type: 'section',
-        fields: [
-          {
-            type: 'mrkdwn',
-            text: `*Title:*\n<${data.url}|${data.title}>`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Author:*\n@${data.payload.pull_request?.user?.login || data.payload.sender?.login}`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `*PR #:*\n${data.payload.pull_request?.number || 'N/A'}`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Branch:*\n\`${data.payload.pull_request?.head?.ref}\` → \`${data.payload.pull_request?.base?.ref}\``,
-          },
-        ],
-      },
-    ],
-    attachments: data.message && data.message !== data.title ? [
+    blocks: [],
+    attachments: [
       {
         color,
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*Description:*\n${truncateText(data.message, 300)}`,
-            },
-          },
-        ],
-      },
-    ] : [],
+        blocks
+      }
+    ]
   };
 }
 
@@ -372,55 +440,340 @@ function createPRSlackMessage(data: any) {
  * Create Slack message for issue notifications
  */
 function createIssueSlackMessage(data: any) {
-  const actionText = getIssueActionText(`${data.eventType}.${data.action}`);
-  const color = getIssueColor(`${data.eventType}.${data.action}`);
+  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  
+  // Map issue action to color
+  const actionColorKey = `issue_${action}`;
+  const color = EVENT_COLORS[actionColorKey] || EVENT_COLORS.default;
+  
+  // Create icon based on action
+  let icon = "🔄";  // Default icon
+  if (action === "opened") icon = "🆕";
+  else if (action === "closed") icon = "🚫";
+  else if (action === "reopened") icon = "🔄";
+  else if (action === "assigned") icon = "👤";
+  
+  // Format action text
+  const actionText = action.replace("_", " ").charAt(0).toUpperCase() + action.replace("_", " ").slice(1);
+  
+  // Create GitHub user link
+  const user = payload.issue?.user?.login || payload.sender?.login;
+  const githubUserLink = `<https://github.com/${user}|${user}>`;
+  
+  // Check if this is a pull request by examining the URL
+  const isPullRequest = url.includes('/pull/');
+  
+  // Set the appropriate title and context based on whether it's a PR or issue
+  let titleText, contextText, itemPrefix, viewText;
+  if (isPullRequest) {
+    titleText = `${icon} *Pull Request ${actionText}* by ${githubUserLink}`;
+    contextText = `${githubUserLink} ${action} this pull request in \`${repositoryName}\``;
+    itemPrefix = "PR";
+    viewText = "View PR";
+  } else {
+    titleText = `${icon} *GitHub Issue ${actionText}* by ${githubUserLink}`;
+    contextText = `${githubUserLink} ${action} this issue in \`${repositoryName}\``;
+    itemPrefix = "Issue";
+    viewText = "View Issue";
+  }
+
+  // Create blocks with attachment styling
+  const blocks = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: titleText
+      }
+    },
+    {
+      type: 'divider'
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `<${url}|*${itemPrefix} #${payload.issue?.number}* ${title}>`
+      },
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: viewText,
+          emoji: true
+        },
+        url: url,
+        action_id: 'view_issue'
+      }
+    },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: contextText
+        }
+      ]
+    } as any
+  ];
 
   return {
-    text: `${actionText} issue in ${data.repositoryName}`,
-    blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*${actionText}* issue in \`${data.repositoryName}\``,
-        },
-      },
-      {
-        type: 'section',
-        fields: [
-          {
-            type: 'mrkdwn',
-            text: `*Title:*\n<${data.url}|${data.title}>`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Author:*\n@${data.payload.issue?.user?.login || data.payload.sender?.login}`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Issue #:*\n${data.payload.issue?.number || 'N/A'}`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Labels:*\n${data.payload.issue?.labels?.map((l: any) => l.name).join(', ') || 'None'}`,
-          },
-        ],
-      },
-    ],
-    attachments: data.message && data.message !== data.title ? [
+    blocks: [],
+    attachments: [
       {
         color,
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*Description:*\n${truncateText(data.message, 300)}`,
-            },
-          },
-        ],
+        blocks
+      }
+    ]
+  };
+}
+
+/**
+ * Create Slack message for pull request review notifications
+ */
+function createPRReviewSlackMessage(data: any) {
+  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  
+  // Map review state to color
+  const reviewState = payload.review?.state || action;
+  const color = EVENT_COLORS[reviewState] || EVENT_COLORS.default;
+  
+  // Create icon based on review state
+  let icon = "💬";  // Default icon
+  if (reviewState === "approved") icon = "✅";
+  else if (reviewState === "changes_requested") icon = "❌";
+  else if (reviewState === "commented") icon = "💬";
+  else if (reviewState === "dismissed") icon = "🚫";
+  
+  // Format state text
+  const stateText = reviewState.replace("_", " ").charAt(0).toUpperCase() + reviewState.replace("_", " ").slice(1);
+  
+  // Create GitHub user link
+  const user = payload.review?.user?.login || payload.sender?.login;
+  const githubUserLink = `<https://github.com/${user}|${user}>`;
+  
+  // Create blocks with attachment styling
+  const blocks = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `${icon} *Pull Request Review: ${stateText}* by ${githubUserLink}`
+      }
+    },
+    {
+      type: 'divider'
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `<${url}|*PR #${payload.pull_request?.number}* ${title}>`
       },
-    ] : [],
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: 'View PR',
+          emoji: true
+        },
+        url: url,
+        action_id: 'view_pr'
+      }
+    }
+  ];
+  
+  // Add review comment if present
+  if (payload.review?.body) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*Comment:*\n${truncateText(payload.review.body, 300)}`
+      }
+    });
+  }
+  
+  // Add context section
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `${githubUserLink} ${reviewState.replace('_', ' ')} this pull request in \`${repositoryName}\``
+      }
+    ]
+  } as any);
+
+  return {
+    blocks: [],
+    attachments: [
+      {
+        color,
+        blocks
+      }
+    ]
+  };
+}
+
+/**
+ * Create Slack message for pull request comment notifications
+ */
+function createPRCommentSlackMessage(data: any) {
+  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const color = EVENT_COLORS.commented;
+  
+  // Create GitHub user link
+  const user = payload.comment?.user?.login || payload.sender?.login;
+  const githubUserLink = `<https://github.com/${user}|${user}>`;
+  
+  // Create blocks with attachment styling
+  const blocks = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `💬 *Pull Request Comment* by ${githubUserLink}`
+      }
+    },
+    {
+      type: 'divider'
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `<${url}|*PR #${payload.pull_request?.number}* ${title}>`
+      },
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: 'View PR',
+          emoji: true
+        },
+        url: url,
+        action_id: 'view_pr'
+      }
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: truncateText(payload.comment?.body || message, 300)
+      }
+    },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `${githubUserLink} commented on this pull request in \`${repositoryName}\``
+        }
+      ]
+    } as any
+  ];
+
+  return {
+    blocks: [],
+    attachments: [
+      {
+        color,
+        blocks
+      }
+    ]
+  };
+}
+
+/**
+ * Create Slack message for issue comment notifications
+ */
+function createIssueCommentSlackMessage(data: any) {
+  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const color = EVENT_COLORS.issue_commented;
+  
+  // Create GitHub user link
+  const user = payload.comment?.user?.login || payload.sender?.login;
+  const githubUserLink = `<https://github.com/${user}|${user}>`;
+  
+  // Check if this is a pull request by examining the URL
+  const isPullRequest = url.includes('/pull/');
+  
+  // Set the appropriate title and context based on whether it's a PR or issue
+  let titleText, contextText, itemPrefix, viewText;
+  if (isPullRequest) {
+    titleText = `💬 *Pull Request Comment* by ${githubUserLink}`;
+    contextText = `${githubUserLink} commented on this pull request in \`${repositoryName}\``;
+    itemPrefix = "PR";
+    viewText = "View PR";
+  } else {
+    titleText = `💬 *Issue Comment* by ${githubUserLink}`;
+    contextText = `${githubUserLink} commented on this issue in \`${repositoryName}\``;
+    itemPrefix = "Issue";
+    viewText = "View Issue";
+  }
+  
+  // Create blocks with attachment styling
+  const blocks = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: titleText
+      }
+    },
+    {
+      type: 'divider'
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `<${url}|*${itemPrefix} #${payload.issue?.number}* ${title}>`
+      },
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: viewText,
+          emoji: true
+        },
+        url: url,
+        action_id: 'view_issue'
+      }
+    }
+  ];
+  
+  // Add comment content if available
+  if (payload.comment?.body) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: truncateText(payload.comment.body, 300)
+      }
+    });
+  }
+  
+  // Add context about who commented
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: contextText
+      }
+    ]
+  } as any);
+
+  return {
+    blocks: [],
+    attachments: [
+      {
+        color,
+        blocks
+      }
+    ]
   };
 }
 
@@ -428,76 +781,75 @@ function createIssueSlackMessage(data: any) {
  * Create generic Slack message for other notification types
  */
 function createGenericSlackMessage(data: any) {
-  return {
-    text: `${data.title} in ${data.repositoryName}`,
-    blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*<${data.url}|${data.title}>*\nby @${data.payload.sender?.login} in \`${data.repositoryName}\``,
-        },
+  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const color = EVENT_COLORS.default;
+  
+  // Create GitHub user link
+  const user = payload.sender?.login;
+  const githubUserLink = user ? `<https://github.com/${user}|${user}>` : 'Someone';
+  
+  // Create blocks with attachment styling
+  const blocks = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `🔄 *GitHub Activity* by ${githubUserLink}`
+      }
+    },
+    {
+      type: 'divider'
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `<${url}|*${title}*>`
       },
-      data.message && data.message !== data.title ? {
-        type: 'section',
+      accessory: {
+        type: 'button',
         text: {
-          type: 'mrkdwn',
-          text: truncateText(data.message, 300),
+          type: 'plain_text',
+          text: 'View on GitHub',
+          emoji: true
         },
-      } : null,
-    ].filter(Boolean),
+        url: url,
+        action_id: 'view_github'
+      }
+    }
+  ];
+  
+  if (message && message !== title) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: truncateText(message, 300)
+      }
+    });
+  }
+  
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `${githubUserLink} performed ${eventType} action in \`${repositoryName}\``
+      }
+    ]
+  } as any);
+
+  return {
+    blocks: [],
+    attachments: [
+      {
+        color,
+        blocks
+      }
+    ]
   };
 }
 
-/**
- * Get PR action text
- */
-function getPRActionText(type: string): string {
-  const mapping: Record<string, string> = {
-    'pull_request.opened': '🟢 Opened',
-    'pull_request.closed': '🔴 Closed',
-    'pull_request.merged': '🟣 Merged',
-    'pull_request.reopened': '🟡 Reopened',
-    'pull_request_review.submitted': '✅ Reviewed',
-    'pull_request_review_comment.created': '💬 Commented',
-  };
-
-  return mapping[type] || '🔄 Updated';
-}
-
-/**
- * Get PR color
- */
-function getPRColor(type: string, payload: any): string {
-  if (payload.pull_request?.merged) return '#6f42c1';
-  if (type === 'pull_request.closed') return '#d73a49';
-  if (type === 'pull_request.opened') return '#28a745';
-  return '#0366d6';
-}
-
-/**
- * Get issue action text
- */
-function getIssueActionText(type: string): string {
-  const mapping: Record<string, string> = {
-    'issues.opened': '🟢 Opened',
-    'issues.closed': '🔴 Closed',
-    'issues.reopened': '🟡 Reopened',
-    'issues.assigned': '👤 Assigned',
-    'issue_comment.created': '💬 Commented',
-  };
-
-  return mapping[type] || '🔄 Updated';
-}
-
-/**
- * Get issue color
- */
-function getIssueColor(type: string): string {
-  if (type === 'issues.closed') return '#d73a49';
-  if (type === 'issues.opened') return '#28a745';
-  return '#0366d6';
-}
 
 /**
  * Truncate text to specified length
