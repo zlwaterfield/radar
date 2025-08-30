@@ -13,17 +13,13 @@ export default registerAs('app', () => ({
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3001',
 
   // CORS settings
-  corsOrigins: process.env.BACKEND_CORS_ORIGINS?.split(',') || [
+  corsOrigins: process.env.FRONTEND_URL?.split(',') || [
     'http://localhost:3001',
   ],
 
   // Security
-  secretKey: process.env.SECRET_KEY || 'your-secret-key-here',
-  algorithm: process.env.ALGORITHM || 'HS256',
-  accessTokenExpire: parseInt(
-    process.env.ACCESS_TOKEN_EXPIRE_MINUTES || '30',
-    10,
-  ),
+  secretKey: process.env.SECRET_KEY!,
+  algorithm: 'HS256',
 
   // Trigger.dev
   triggerProjectRef: process.env.TRIGGER_PROJECT_REF,
