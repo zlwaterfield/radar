@@ -94,9 +94,51 @@ export class SlackController {
   @ApiResponse({ status: 200, description: 'Event processed successfully' })
   async handleEvents(@Req() req: Request, @Res() res: Response) {
     try {
-      // For now, just acknowledge the event - the SlackService handles events internally
-      this.logger.log('Received Slack event');
-      res.status(200).json({ challenge: req.body?.challenge || 'ok' });
+      const body = req.body;
+      
+      this.logger.log('Received Slack event', JSON.stringify(body, null, 2));
+      
+      // Handle URL verification challenge
+      if (body.type === 'url_verification') {
+        return res.status(200).json({ challenge: body.challenge });
+      }
+      
+      // Process event through SlackService using Slack Bolt
+      try {
+        const result = await this.slackService.processEvent(body, req.headers);
+        return res.status(200).json(result);
+      } catch (boltError) {
+        this.logger.warn('Bolt processing failed, using fallback handler:', boltError);
+        
+        // Fallback: handle event directly
+        if (body.type === 'event_callback') {
+          const event = body.event;
+          const eventType = event?.type;
+          
+          this.logger.log(`Processing Slack event directly: ${eventType}`);
+          
+          // Special handling for app_home_opened events
+          if (eventType === 'app_home_opened') {
+            this.logger.log('Processing app_home_opened event directly...');
+            
+            // Get user ID from the event
+            const userId = event.user;
+            
+            if (userId) {
+              // Use the SlackService to handle app home opened
+              await this.slackService.handleAppHomeOpened(userId);
+            }
+            
+            return res.status(200).json({ ok: true });
+          }
+          
+          // Handle other event types here as needed
+          return res.status(200).json({ ok: true });
+        }
+        
+        // Default response for other event types
+        return res.status(200).json({ challenge: body?.challenge || 'ok' });
+      }
     } catch (error) {
       this.logger.error('Error handling Slack event:', error);
       res.status(500).json({ error: 'Internal server error' });

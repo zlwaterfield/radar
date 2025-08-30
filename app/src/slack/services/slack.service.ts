@@ -321,6 +321,46 @@ export class SlackService {
   }
 
   /**
+   * Process incoming Slack event via HTTP
+   */
+  async processEvent(body: any, headers: any): Promise<any> {
+    try {
+      // Create a mock request/response for Bolt to process
+      const req = {
+        body: JSON.stringify(body),
+        headers,
+        method: 'POST',
+        url: '/slack/events',
+      };
+
+      // Use Bolt's receiver to process the request
+      const receiver = this.slackApp.receiver;
+      
+      if ('processEvent' in receiver && typeof receiver.processEvent === 'function') {
+        return await receiver.processEvent({
+          body: JSON.stringify(body),
+          headers,
+          ack: () => Promise.resolve(),
+        });
+      }
+      
+      // Fallback: manually trigger event handlers
+      if (body.type === 'event_callback' && body.event) {
+        const event = body.event;
+        if (event.type === 'app_home_opened') {
+          await this.handleAppHomeOpened(event.user);
+          return { ok: true };
+        }
+      }
+      
+      return { ok: true };
+    } catch (error) {
+      this.logger.error('Error processing Slack event:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Setup Slack event handlers
    */
   private setupSlackEventHandlers(): void {
@@ -379,7 +419,7 @@ export class SlackService {
   /**
    * Handle app home opened event
    */
-  private async handleAppHomeOpened(userId: string): Promise<void> {
+  async handleAppHomeOpened(userId: string): Promise<void> {
     try {
       // Check if user exists in our database
       const user = await this.databaseService.user.findUnique({
@@ -421,16 +461,6 @@ export class SlackService {
         },
       },
       {
-        type: 'divider',
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '*📊 Quick Stats*\n• Connected repositories: Loading...\n• Recent notifications: Loading...',
-        },
-      },
-      {
         type: 'actions',
         elements: [
           {
@@ -446,7 +476,7 @@ export class SlackService {
             type: 'button',
             text: {
               type: 'plain_text',
-              text: '🔗 Connect Repositories',
+              text: '🔗 Manage Repositories',
             },
             url: `${this.configService.get('app.frontendUrl')}/settings/repositories`,
             action_id: 'connect_repos',
