@@ -16,7 +16,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { WebhooksService } from '../services/webhooks.service';
-import { EventProcessingService } from '../services/event-processing.service';
+import { TriggerQueueService } from '../services/trigger-queue.service';
 import { AuthGuard } from '@/auth/guards/auth.guard';
 import { GetUser } from '@/auth/decorators/user.decorator';
 import { Public } from '@/auth/decorators/public.decorator';
@@ -29,7 +29,7 @@ export class WebhooksController {
 
   constructor(
     private readonly webhooksService: WebhooksService,
-    private readonly eventProcessingService: EventProcessingService,
+    private readonly triggerQueueService: TriggerQueueService,
   ) {}
 
   /**
@@ -76,20 +76,30 @@ export class WebhooksController {
       `Received GitHub webhook: ${eventType} for ${payload.repository?.full_name} (${deliveryId})`,
     );
 
-    // Process webhook
-    const success = await this.webhooksService.processGitHubWebhook(
+    // Process and store webhook
+    const storedEvent = await this.webhooksService.processGitHubWebhook(
       eventType,
       payload,
     );
 
-    if (!success) {
+    if (!storedEvent) {
       throw new BadRequestException('Failed to process webhook');
     }
 
-    // Trigger event processing asynchronously
-    this.eventProcessingService.processEvents().catch((error) => {
-      this.logger.error('Error processing events:', error);
-    });
+    // Queue event for real-time processing via Trigger.dev
+    const queued = await this.triggerQueueService.queueGitHubEvent(storedEvent);
+
+    if (!queued) {
+      this.logger.error(
+        `Failed to queue event ${storedEvent.id} for processing - no fallback available`,
+      );
+      // Note: With Trigger.dev handling everything, we rely on its retry mechanism
+      // If this fails, the event remains in the database but won't be processed
+    } else {
+      this.logger.log(
+        `Successfully queued event ${storedEvent.id} for real-time processing`,
+      );
+    }
 
     return {
       message: 'Webhook processed successfully',
@@ -99,21 +109,38 @@ export class WebhooksController {
   }
 
   /**
-   * Process pending events manually
+   * Process pending events manually (requeue failed events to Trigger.dev)
    */
   @Post('process-events')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Manually trigger event processing' })
-  @ApiResponse({ status: 200, description: 'Events processing initiated' })
+  @ApiOperation({
+    summary: 'Manually requeue unprocessed events to Trigger.dev',
+  })
+  @ApiResponse({ status: 200, description: 'Events requeued successfully' })
   async processEvents(@GetUser() user: User) {
-    this.logger.log(`Manual event processing triggered by user ${user.id}`);
+    this.logger.log(`Manual event requeuing triggered by user ${user.id}`);
 
-    const processedCount = await this.eventProcessingService.processEvents();
+    // Get unprocessed events and requeue them to Trigger.dev
+    const unprocessedEvents =
+      await this.webhooksService.getUnprocessedEvents(100);
+    let requeuedCount = 0;
+
+    for (const event of unprocessedEvents) {
+      const queued = await this.triggerQueueService.queueGitHubEvent(event);
+      if (queued) {
+        requeuedCount++;
+      }
+    }
+
+    this.logger.log(
+      `Requeued ${requeuedCount}/${unprocessedEvents.length} events`,
+    );
 
     return {
-      message: 'Event processing completed',
-      processedCount,
+      message: 'Event requeuing completed',
+      totalUnprocessed: unprocessedEvents.length,
+      requeuedCount,
     };
   }
 

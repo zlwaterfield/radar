@@ -44,12 +44,12 @@ export class WebhooksService {
   async processGitHubWebhook(
     eventType: string,
     payload: GitHubWebhookPayload,
-  ): Promise<boolean> {
+  ): Promise<any> {
     try {
       // Skip events we don't care about
       if (!this.isRelevantEvent(eventType, payload)) {
         this.logger.debug(`Skipping irrelevant event: ${eventType}`);
-        return true;
+        return null;
       }
 
       // Store event in database
@@ -57,19 +57,19 @@ export class WebhooksService {
 
       if (!event) {
         this.logger.error('Failed to store event in database');
-        return false;
+        return null;
       }
 
       this.logger.log(
         `Processed ${eventType} event for repository ${payload.repository?.name}`,
       );
-      return true;
+      return event;
     } catch (error) {
       this.logger.error(
         `Error processing GitHub webhook (${eventType}):`,
         error,
       );
-      return false;
+      return null;
     }
   }
 

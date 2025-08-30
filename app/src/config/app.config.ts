@@ -24,4 +24,8 @@ export default registerAs('app', () => ({
     process.env.ACCESS_TOKEN_EXPIRE_MINUTES || '30',
     10,
   ),
+
+  // Trigger.dev
+  triggerProjectRef: process.env.TRIGGER_PROJECT_REF,
+  triggerSecretKey: process.env.TRIGGER_SECRET_KEY,
 }));

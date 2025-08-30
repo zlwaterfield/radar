@@ -95,39 +95,39 @@ export class SlackController {
   async handleEvents(@Req() req: Request, @Res() res: Response) {
     try {
       const body = req.body;
-      
+
       this.logger.log('Received Slack event', JSON.stringify(body, null, 2));
-      
+
       // Handle URL verification challenge
       if (body.type === 'url_verification') {
         return res.status(200).json({ challenge: body.challenge });
       }
-      
+
       // Handle event callbacks
       if (body.type === 'event_callback') {
         const event = body.event;
         const eventType = event?.type;
-        
+
         this.logger.log(`Processing Slack event: ${eventType}`);
-        
+
         // Special handling for app_home_opened events
         if (eventType === 'app_home_opened') {
           this.logger.log('Processing app_home_opened event...');
-          
+
           // Get user ID from the event
           const userId = event.user;
-          
+
           if (userId) {
             await this.slackService.handleAppHomeOpened(userId);
           }
-          
+
           return res.status(200).json({ ok: true });
         }
-        
+
         // Handle other event types here as needed
         return res.status(200).json({ ok: true });
       }
-      
+
       // Default response for other event types
       res.status(200).json({ challenge: body?.challenge || 'ok' });
     } catch (error) {
@@ -314,7 +314,9 @@ export class SlackController {
     triggerId: string,
   ) {
     // Get user from database
-    const user = await this.usersService.getUserBySlackId(userId) as UserWithRelations | null;
+    const user = (await this.usersService.getUserBySlackId(
+      userId,
+    )) as UserWithRelations | null;
 
     if (!user) {
       return {
@@ -340,7 +342,7 @@ export class SlackController {
             '• `/radar status` - Check your connection status\n' +
             '• `/radar settings` - Open settings page\n' +
             '• `/radar repos` - List your connected repositories\n' +
-            '• `/radar connect` - Connect to GitHub\n'
+            '• `/radar connect` - Connect to GitHub\n',
         };
 
       case 'status':

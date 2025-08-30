@@ -1,23 +1,14 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { WebhooksService } from './services/webhooks.service';
-import { EventProcessingService } from './services/event-processing.service';
+import { TriggerQueueService } from './services/trigger-queue.service';
 import { WebhooksController } from './controllers/webhooks.controller';
 import { RadarAuthModule } from '../auth/auth.module';
-import { GitHubModule } from '../github/github.module';
-import { SlackModule } from '../slack/slack.module';
-import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    RadarAuthModule,
-    GitHubModule,
-    SlackModule,
-    forwardRef(() => NotificationsModule),
-  ],
+  imports: [ConfigModule, RadarAuthModule],
   controllers: [WebhooksController],
-  providers: [WebhooksService, EventProcessingService],
-  exports: [WebhooksService, EventProcessingService],
+  providers: [WebhooksService, TriggerQueueService],
+  exports: [WebhooksService, TriggerQueueService],
 })
 export class WebhooksModule {}
