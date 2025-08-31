@@ -14,9 +14,9 @@ A Slack application that connects GitHub activity to your team's Slack workspace
 ## 🛠 Tech Stack
 
 ### Backend
-- **FastAPI**: High-performance Python web framework
-- **Supabase**: PostgreSQL database with real-time capabilities
-- **APScheduler**: Background task scheduling and cron jobs
+- **NestJS**: Progressive Node.js framework for building efficient server-side applications
+- **Better Auth**: Modern authentication library for TypeScript
+- **Trigger.dev**: Background job processing and workflow automation
 - **PostHog**: Product analytics and error tracking
 - **OpenAI**: Intelligent keyword matching and analysis
 
@@ -29,10 +29,10 @@ A Slack application that connects GitHub activity to your team's Slack workspace
 
 ### Prerequisites
 
-- Python 3.8+
+- Node.js 18+
+- npm or yarn package manager
 - Slack workspace with admin privileges
 - GitHub account with access to repositories you want to track
-- Supabase account for database
 - Docker and Docker Compose (optional, for containerized deployment)
 
 ### Local Installation
@@ -43,15 +43,9 @@ A Slack application that connects GitHub activity to your team's Slack workspace
    cd radar
    ```
 
-2. Set up a virtual environment:
+2. Install dependencies:
    ```
-   python -m venv venv
-   source venv/bin/activate
-   ```
-
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
+   npm install
    ```
 
 4. Copy the example environment file and update with your settings:
@@ -62,7 +56,7 @@ A Slack application that connects GitHub activity to your team's Slack workspace
 
 5. Run the application:
    ```
-   uvicorn app.main:app --reload
+   npm run start:dev
    ```
 
 ## Configuration
@@ -70,7 +64,6 @@ A Slack application that connects GitHub activity to your team's Slack workspace
 See the [documentation](./docs/README.md) for detailed setup instructions including:
 - [Creating a Slack app](./docs/slack_setup.md)
 - [Setting up GitHub authentication](./docs/github_setup.md)
-- [Configuring Supabase](./docs/supabase_setup.md)
 - User and team settings
 
 ### Environment Variables
@@ -80,7 +73,6 @@ The application requires several environment variables to be set. See `.env.exam
 Key environment variables include:
 - Slack API credentials
 - GitHub API credentials
-- Supabase connection details
 - Application settings
 
 ## 🤝 Contributing
