@@ -7,7 +7,7 @@ export default registerAs('app', () => ({
   logLevel: process.env.LOG_LEVEL || 'info',
 
   // API settings
-  host: process.env.API_HOST || 'localhost',
+  host: process.env.API_HOST || '0.0.0.0',
   port: parseInt(process.env.API_PORT || '3003', 10),
   callbackHost: process.env.CALLBACK_API_HOST || 'http://localhost:3003',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3001',
