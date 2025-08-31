@@ -78,16 +78,10 @@ yarn-error.log*
 logs
 *.log
 
-# Local Netlify folder
-.netlify
-
 # Database
 *.sqlite
 *.sqlite3
 *.db
-
-# Supabase
-.supabase/
 
 # Misc
 .DS_Store
