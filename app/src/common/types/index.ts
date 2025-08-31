@@ -2,6 +2,7 @@
 export * from './auth.types';
 export * from './github.types';
 export * from './slack.types';
+export * from './notification-enums';
 
 // Export specific types from notification.types to avoid conflicts
 export type {

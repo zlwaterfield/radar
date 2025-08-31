@@ -18,6 +18,7 @@ import { SlackModule } from './slack/slack.module';
 import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -52,6 +53,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     UsersModule,
     WebhooksModule,
     IntegrationsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

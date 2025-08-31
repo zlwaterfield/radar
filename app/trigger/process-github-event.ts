@@ -1,9 +1,21 @@
 import { task } from "@trigger.dev/sdk";
 import { PrismaClient } from "@prisma/client";
 import { WebClient } from "@slack/web-api";
+import { NotificationService } from "../src/notifications/services/notification.service";
+import { LLMAnalyzerService } from "../src/notifications/services/llm-analyzer.service";
+import { DatabaseService } from "../src/database/database.service";
+import { GitHubService } from "../src/github/services/github.service";
+import { ConfigService } from "@nestjs/config";
 
 // Initialize Prisma client for the task
 const prisma = new PrismaClient();
+
+// Initialize services
+const configService = new ConfigService();
+const databaseService = new DatabaseService();
+const githubService = new GitHubService(configService, databaseService);
+const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
+const notificationService = new NotificationService(databaseService, githubService, llmAnalyzerService);
 
 // Event processing task payload
 interface GitHubEventPayload {
@@ -99,13 +111,46 @@ async function processEventNotifications(event: any): Promise<boolean> {
     // Create notifications for each relevant user
     let notificationCount = 0;
     for (const user of relevantUsers) {
-      const shouldNotify = await shouldNotifyUser(user, eventType, action, payload);
+      let shouldNotify = false;
+      let matchedKeywords: string[] = [];
+      let matchDetails = {};
+      
+      // Use the new notification service to determine if user should be notified
+      if (eventType === 'pull_request') {
+        const result = await notificationService.processPullRequestEvent(user.id, payload, event.id);
+        shouldNotify = result.shouldNotify;
+        matchedKeywords = result.matchedKeywords;
+        matchDetails = result.matchDetails;
+      } else if (eventType === 'issue_comment') {
+        const result = await notificationService.processIssueCommentEvent(user.id, payload, event.id);
+        shouldNotify = result.shouldNotify;
+        matchedKeywords = result.matchedKeywords;
+        matchDetails = result.matchDetails;
+      } else if (eventType === 'issues') {
+        const result = await notificationService.processIssueEvent(user.id, payload, event.id);
+        shouldNotify = result.shouldNotify;
+        matchedKeywords = result.matchedKeywords;
+        matchDetails = result.matchDetails;
+      } else if (eventType === 'pull_request_review') {
+        const result = await notificationService.processPullRequestReviewEvent(user.id, payload, event.id);
+        shouldNotify = result.shouldNotify;
+        matchedKeywords = result.matchedKeywords;
+        matchDetails = result.matchDetails;
+      } else {
+        // For other event types, use the legacy shouldNotifyUser for now
+        shouldNotify = await shouldNotifyUser(user, eventType, action, payload);
+      }
       
       if (shouldNotify) {
-        // This is where we'd create and send the actual notification
+        // Create and send the actual notification
         const notification = await createNotification(user, event, eventType, action, payload, repositoryName);
         if (notification) {
           notificationCount++;
+          
+          // Log keyword matches if any
+          if (matchedKeywords.length > 0) {
+            console.log(`Keywords matched for user ${user.id} in ${eventType}: ${matchedKeywords.join(', ')}`);
+          }
         }
       }
     }

@@ -23,27 +23,8 @@ export interface NotificationData {
   };
 }
 
-export interface NotificationPreferences {
-  pull_request_opened: boolean;
-  pull_request_closed: boolean;
-  pull_request_merged: boolean;
-  pull_request_reviewed: boolean;
-  pull_request_commented: boolean;
-  pull_request_assigned: boolean;
-  issue_opened: boolean;
-  issue_closed: boolean;
-  issue_commented: boolean;
-  issue_assigned: boolean;
-}
-
-export interface NotificationSchedule {
-  real_time: boolean;
-  digest_time: string;
-  digest_enabled: boolean;
-  digest_days: string[];
-  second_digest_time?: string;
-  second_digest_enabled?: boolean;
-}
+// NotificationPreferences and NotificationSchedule moved to user.types.ts to avoid duplication
+// Import them from there: import { NotificationPreferences, NotificationSchedule } from './user.types';
 
 export interface DigestNotification {
   id: string;
