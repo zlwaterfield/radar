@@ -8,7 +8,6 @@ import type {
   GitHubIssue,
   GitHubUser,
   GitHubInstallation,
-  GitHubAppToken,
 } from '@/common/types/github.types';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';

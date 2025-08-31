@@ -165,7 +165,7 @@ export class NotificationService {
       }
       
       // Check if this is a draft PR and user has muted draft PRs
-      if (preferences.mute_draft_prs && prData.draft) {
+      if (preferences.mute_draft_pull_requests && prData.draft) {
         return false;
       }
       
@@ -181,14 +181,15 @@ export class NotificationService {
         case NotificationTrigger.REVIEWED:
           return preferences.pull_request_reviewed ?? true;
         case NotificationTrigger.MERGED:
+          return preferences.pull_request_merged ?? true;
         case NotificationTrigger.CLOSED:
         case NotificationTrigger.REOPENED:
-          return preferences.pr_status_changes ?? true;
+          return preferences.pull_request_closed ?? true;
         case NotificationTrigger.ASSIGNED:
         case NotificationTrigger.UNASSIGNED:
         case NotificationTrigger.REVIEW_REQUESTED:
         case NotificationTrigger.REVIEW_REQUEST_REMOVED:
-          return preferences.pr_assignments ?? true;
+          return preferences.pull_request_assigned ?? true;
         case NotificationTrigger.OPENED:
           return preferences.pull_request_opened ?? true;
         case NotificationTrigger.CHECK_FAILED:
@@ -380,7 +381,7 @@ export class NotificationService {
    */
   private getDefaultNotificationPreferences(): NotificationPreferences {
     return {
-      // PR & Issue Activity
+      // PR Activity
       pull_request_opened: true,
       pull_request_closed: true,
       pull_request_merged: true,
@@ -388,30 +389,26 @@ export class NotificationService {
       pull_request_commented: true,
       pull_request_assigned: true,
       
-      // More granular PR notifications
-      pr_status_changes: true,
-      pr_assignments: true,
-      
+      // Issue Activity
       issue_opened: true,
       issue_closed: true,
       issue_commented: true,
       issue_assigned: true,
-      
-      // More granular issue notifications
-      issue_status_changes: true,
-      issue_assignments: true,
       
       // CI/CD
       check_failures: true,
       check_successes: false,
       
       // Mentions
+      mention_in_comment: true,
+      mention_in_pull_request: true,
+      mention_in_issue: true,
       mentioned_in_comments: true,
       
       // Noise Control
       mute_own_activity: true,
       mute_bot_comments: true,
-      mute_draft_prs: true,
+      mute_draft_pull_requests: true,
     };
   }
 
@@ -498,10 +495,12 @@ export class NotificationService {
       
       // Check notification preferences based on issue action
       let shouldNotifyPreferences: boolean;
-      if (['opened', 'reopened', 'closed'].includes(action)) {
-        shouldNotifyPreferences = preferences.issue_status_changes ?? true;
+      if (action === 'opened') {
+        shouldNotifyPreferences = preferences.issue_opened ?? true;
+      } else if (action === 'closed') {
+        shouldNotifyPreferences = preferences.issue_closed ?? true;
       } else if (action === 'assigned') {
-        shouldNotifyPreferences = preferences.issue_assignments ?? true;
+        shouldNotifyPreferences = preferences.issue_assigned ?? true;
       } else {
         // Default for other actions
         shouldNotifyPreferences = true;

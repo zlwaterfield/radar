@@ -8,28 +8,34 @@ import Button from '@/components/Button';
 import { toast } from 'sonner';
 
 interface NotificationSettings {
-  // PR & Issue Activity
-  pr_comments: boolean;
-  pr_reviews: boolean;
-  pr_status_changes: boolean;
-  pr_assignments: boolean;
-  pr_opened: boolean;
+  // PR Activity
+  pull_request_opened: boolean;
+  pull_request_closed: boolean;
+  pull_request_merged: boolean;
+  pull_request_reviewed: boolean;
+  pull_request_commented: boolean;
+  pull_request_assigned: boolean;
   
-  issue_comments: boolean;
-  issue_status_changes: boolean;
-  issue_assignments: boolean;
+  // Issue Activity
+  issue_opened: boolean;
+  issue_closed: boolean;
+  issue_commented: boolean;
+  issue_assigned: boolean;
   
   // CI/CD
   check_failures: boolean;
   check_successes: boolean;
   
   // Mentions
+  mention_in_comment: boolean;
+  mention_in_pull_request: boolean;
+  mention_in_issue: boolean;
   mentioned_in_comments: boolean;
   
   // Noise Control
   mute_own_activity: boolean;
   mute_bot_comments: boolean;
-  mute_draft_prs: boolean;
+  mute_draft_pull_requests: boolean;
 }
 
 export default function NotificationsSettings() {
@@ -37,28 +43,34 @@ export default function NotificationsSettings() {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
-    // PR & Issue Activity
-    pr_comments: true,
-    pr_reviews: true,
-    pr_status_changes: true,
-    pr_assignments: true,
-    pr_opened: true,
+    // PR Activity
+    pull_request_opened: true,
+    pull_request_closed: true,
+    pull_request_merged: true,
+    pull_request_reviewed: true,
+    pull_request_commented: true,
+    pull_request_assigned: true,
     
-    issue_comments: true,
-    issue_status_changes: true,
-    issue_assignments: true,
+    // Issue Activity
+    issue_opened: true,
+    issue_closed: true,
+    issue_commented: true,
+    issue_assigned: true,
     
     // CI/CD
     check_failures: true,
     check_successes: false,
     
     // Mentions
+    mention_in_comment: true,
+    mention_in_pull_request: true,
+    mention_in_issue: true,
     mentioned_in_comments: true,
     
     // Noise Control
     mute_own_activity: true,
     mute_bot_comments: true,
-    mute_draft_prs: true,
+    mute_draft_pull_requests: true,
   });
 
   useEffect(() => {
@@ -92,28 +104,34 @@ export default function NotificationsSettings() {
         setNotificationSettings(prev => ({
           ...prev,
           
-          // PR & Issue Activity
-          pr_comments: prefs.pr_comments ?? prev.pr_comments,
-          pr_reviews: prefs.pr_reviews ?? prev.pr_reviews,
-          pr_status_changes: prefs.pr_status_changes ?? prev.pr_status_changes,
-          pr_assignments: prefs.pr_assignments ?? prev.pr_assignments,
-          pr_opened: prefs.pr_opened ?? prev.pr_opened,
+          // PR Activity
+          pull_request_opened: prefs.pull_request_opened ?? prev.pull_request_opened,
+          pull_request_closed: prefs.pull_request_closed ?? prev.pull_request_closed,
+          pull_request_merged: prefs.pull_request_merged ?? prev.pull_request_merged,
+          pull_request_reviewed: prefs.pull_request_reviewed ?? prev.pull_request_reviewed,
+          pull_request_commented: prefs.pull_request_commented ?? prev.pull_request_commented,
+          pull_request_assigned: prefs.pull_request_assigned ?? prev.pull_request_assigned,
           
-          issue_comments: prefs.issue_comments ?? prev.issue_comments,
-          issue_status_changes: prefs.issue_status_changes ?? prev.issue_status_changes,
-          issue_assignments: prefs.issue_assignments ?? prev.issue_assignments,
+          // Issue Activity
+          issue_opened: prefs.issue_opened ?? prev.issue_opened,
+          issue_closed: prefs.issue_closed ?? prev.issue_closed,
+          issue_commented: prefs.issue_commented ?? prev.issue_commented,
+          issue_assigned: prefs.issue_assigned ?? prev.issue_assigned,
           
           // CI/CD
           check_failures: prefs.check_failures ?? prev.check_failures,
           check_successes: prefs.check_successes ?? prev.check_successes,
           
           // Mentions
+          mention_in_comment: prefs.mention_in_comment ?? prev.mention_in_comment,
+          mention_in_pull_request: prefs.mention_in_pull_request ?? prev.mention_in_pull_request,
+          mention_in_issue: prefs.mention_in_issue ?? prev.mention_in_issue,
           mentioned_in_comments: prefs.mentioned_in_comments ?? prev.mentioned_in_comments,
           
           // Noise Control
           mute_own_activity: prefs.mute_own_activity ?? prev.mute_own_activity,
           mute_bot_comments: prefs.mute_bot_comments ?? prev.mute_bot_comments,
-          mute_draft_prs: prefs.mute_draft_prs ?? prev.mute_draft_prs,
+          mute_draft_pull_requests: prefs.mute_draft_pull_requests ?? prev.mute_draft_pull_requests,
         }));
       }
     } catch (error) {
@@ -138,28 +156,34 @@ export default function NotificationsSettings() {
       // Format settings for API
       const settings = {
         notificationPreferences: {
-          // PR & Issue Activity
-          pr_comments: notificationSettings.pr_comments,
-          pr_reviews: notificationSettings.pr_reviews,
-          pr_status_changes: notificationSettings.pr_status_changes,
-          pr_assignments: notificationSettings.pr_assignments,
-          pr_opened: notificationSettings.pr_opened,
+          // PR Activity
+          pull_request_opened: notificationSettings.pull_request_opened,
+          pull_request_closed: notificationSettings.pull_request_closed,
+          pull_request_merged: notificationSettings.pull_request_merged,
+          pull_request_reviewed: notificationSettings.pull_request_reviewed,
+          pull_request_commented: notificationSettings.pull_request_commented,
+          pull_request_assigned: notificationSettings.pull_request_assigned,
           
-          issue_comments: notificationSettings.issue_comments,
-          issue_status_changes: notificationSettings.issue_status_changes,
-          issue_assignments: notificationSettings.issue_assignments,
+          // Issue Activity
+          issue_opened: notificationSettings.issue_opened,
+          issue_closed: notificationSettings.issue_closed,
+          issue_commented: notificationSettings.issue_commented,
+          issue_assigned: notificationSettings.issue_assigned,
           
           // CI/CD
           check_failures: notificationSettings.check_failures,
           check_successes: notificationSettings.check_successes,
           
           // Mentions
+          mention_in_comment: notificationSettings.mention_in_comment,
+          mention_in_pull_request: notificationSettings.mention_in_pull_request,
+          mention_in_issue: notificationSettings.mention_in_issue,
           mentioned_in_comments: notificationSettings.mentioned_in_comments,
           
           // Noise Control
           mute_own_activity: notificationSettings.mute_own_activity,
           mute_bot_comments: notificationSettings.mute_bot_comments,
-          mute_draft_prs: notificationSettings.mute_draft_prs,
+          mute_draft_pull_requests: notificationSettings.mute_draft_pull_requests,
         }
       };
       
@@ -207,10 +231,10 @@ export default function NotificationsSettings() {
               <div className="flex items-center">
                 <input
                   id="pr-comments"
-                  name="pr_comments"
+                  name="pull_request_commented"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.pr_comments}
+                  checked={notificationSettings.pull_request_commented}
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
@@ -220,10 +244,10 @@ export default function NotificationsSettings() {
               <div className="flex items-center">
                 <input
                   id="pr-reviews"
-                  name="pr_reviews"
+                  name="pull_request_reviewed"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.pr_reviews}
+                  checked={notificationSettings.pull_request_reviewed}
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-reviews" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
@@ -232,24 +256,37 @@ export default function NotificationsSettings() {
               </div>
               <div className="flex items-center">
                 <input
-                  id="pr-status-changes"
-                  name="pr_status_changes"
+                  id="pr-closed"
+                  name="pull_request_closed"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.pr_status_changes}
+                  checked={notificationSettings.pull_request_closed}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="pr-status-changes" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  PR status changes (merged, closed, reopened)
+                <label htmlFor="pr-closed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  PR closed
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="pr-merged"
+                  name="pull_request_merged"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.pull_request_merged}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="pr-merged" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  PR merged
                 </label>
               </div>
               <div className="flex items-center">
                 <input
                   id="pr-assignments"
-                  name="pr_assignments"
+                  name="pull_request_assigned"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.pr_assignments}
+                  checked={notificationSettings.pull_request_assigned}
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-assignments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
@@ -259,10 +296,10 @@ export default function NotificationsSettings() {
               <div className="flex items-center">
                 <input
                   id="pr-opened"
-                  name="pr_opened"
+                  name="pull_request_opened"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.pr_opened}
+                  checked={notificationSettings.pull_request_opened}
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-opened" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
@@ -278,11 +315,37 @@ export default function NotificationsSettings() {
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
-                  id="issue-comments"
-                  name="issue_comments"
+                  id="issue-opened"
+                  name="issue_opened"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.issue_comments}
+                  checked={notificationSettings.issue_opened}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="issue-opened" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  New issues opened
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="issue-closed"
+                  name="issue_closed"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.issue_closed}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="issue-closed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Issues closed
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="issue-comments"
+                  name="issue_commented"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.issue_commented}
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="issue-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
@@ -291,24 +354,11 @@ export default function NotificationsSettings() {
               </div>
               <div className="flex items-center">
                 <input
-                  id="issue-status-changes"
-                  name="issue_status_changes"
-                  type="checkbox"
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.issue_status_changes}
-                  onChange={handleNotificationChange}
-                />
-                <label htmlFor="issue-status-changes" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Issue status changes (opened, closed, reopened)
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
                   id="issue-assignments"
-                  name="issue_assignments"
+                  name="issue_assigned"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.issue_assignments}
+                  checked={notificationSettings.issue_assigned}
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="issue-assignments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
@@ -357,6 +407,45 @@ export default function NotificationsSettings() {
             <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
+                  id="mention-in-comment"
+                  name="mention_in_comment"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.mention_in_comment}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="mention-in-comment" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  When you&apos;re mentioned in comments
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="mention-in-pull-request"
+                  name="mention_in_pull_request"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.mention_in_pull_request}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="mention-in-pull-request" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  When you&apos;re mentioned in pull requests
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="mention-in-issue"
+                  name="mention_in_issue"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.mention_in_issue}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="mention-in-issue" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  When you&apos;re mentioned in issues
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
                   id="mentioned-in-comments"
                   name="mentioned_in_comments"
                   type="checkbox"
@@ -365,7 +454,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="mentioned-in-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  When you&apos;re mentioned in comments
+                  General mention notifications
                 </label>
               </div>
             </div>
@@ -404,10 +493,10 @@ export default function NotificationsSettings() {
               <div className="flex items-center">
                 <input
                   id="mute-draft-prs"
-                  name="mute_draft_prs"
+                  name="mute_draft_pull_requests"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.mute_draft_prs}
+                  checked={notificationSettings.mute_draft_pull_requests}
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="mute-draft-prs" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
