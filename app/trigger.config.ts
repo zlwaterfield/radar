@@ -1,5 +1,4 @@
 import { defineConfig } from "@trigger.dev/sdk";
-import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 
 export default defineConfig({
   project: process.env.TRIGGER_PROJECT_REF!,
@@ -13,14 +12,6 @@ export default defineConfig({
       factor: 2,
       randomize: true,
     },
-  },
-  build: {
-    extensions: [
-      prismaExtension({
-        schema: "prisma/schema.prisma",
-        migrate: true, // Run migrations on deploy
-      }),
-    ],
   },
   maxDuration: 3600,
   runtime: "node",
