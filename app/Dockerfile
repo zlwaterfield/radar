@@ -38,6 +38,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+
+# Copy for trigger.dev
+COPY --from=builder --chown=nestjs:nodejs /app/src ./src
 COPY --from=builder --chown=nestjs:nodejs /app/trigger.config.ts ./trigger.config.ts
 COPY --from=builder --chown=nestjs:nodejs /app/trigger ./trigger
 
