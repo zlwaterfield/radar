@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { toast } from 'sonner';
-import { authClient } from '../../lib/auth-client';
+import { authClient } from '../lib/auth-client';
 
 interface User {
   id: string;
