@@ -49,6 +49,10 @@ RUN printf '#!/bin/sh\necho "Running Prisma migrations..."\nnpx prisma migrate d
     chmod +x /app/start.sh && \
     chown nestjs:nodejs /app/start.sh
 
+# Create .trigger directory with proper permissions
+RUN mkdir -p /app/.trigger/tmp && \
+    chown -R nestjs:nodejs /app/.trigger
+
 # Switch to non-root user
 USER nestjs
 
