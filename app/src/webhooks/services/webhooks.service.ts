@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import { DatabaseService } from '@/database/database.service';
-import type { GitHubWebhookPayload } from '@/common/types';
+import { DatabaseService } from '../../database/database.service';
+import type { GitHubWebhookPayload } from '../../common/types';
 
 @Injectable()
 export class WebhooksService {

@@ -5,7 +5,7 @@ import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 export default defineConfig({
   project: process.env.TRIGGER_PROJECT_REF!,
   dirs: ["./trigger"],
-  tsconfig: "./tsconfig.json", // Point to your tsconfig with path aliases
+  tsconfig: "./tsconfig.json",
   retries: {
     enabledInDev: true,
     default: {

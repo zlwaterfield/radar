@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '@/database/database.service';
+import { DatabaseService } from '../../database/database.service';
 import {
   CreateUserSettingsDto,
   UpdateUserSettingsDto,

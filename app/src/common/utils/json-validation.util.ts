@@ -3,7 +3,7 @@ import type { JsonValue } from '@prisma/client/runtime/library';
 import {
   NotificationPreferencesDto,
   NotificationScheduleDto,
-} from '@/common/dtos/update-user-settings.dto';
+} from '../dtos/update-user-settings.dto';
 
 /**
  * Safely validates and parses JSON value to NotificationPreferencesDto

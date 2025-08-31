@@ -9,7 +9,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { NotificationPreferencesDto, NotificationScheduleDto } from '@/common/dtos/update-user-settings.dto';
+import { NotificationPreferencesDto, NotificationScheduleDto } from '../../common/dtos/update-user-settings.dto';
 
 export class CreateUserSettingsDto {
   @ApiProperty({

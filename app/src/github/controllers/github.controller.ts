@@ -16,10 +16,10 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { GitHubService } from '../services/github.service';
-import { AuthGuard } from '@/auth/guards/auth.guard';
-import { CurrentUser } from '@/auth/decorators/user.decorator';
-import { DatabaseService } from '@/database/database.service';
-import { parseRepositoryFullName } from '@/common/utils/validation.utils';
+import { AuthGuard } from '../../auth/guards/auth.guard';
+import { CurrentUser } from '../../auth/decorators/user.decorator';
+import { DatabaseService } from '../../database/database.service';
+import { parseRepositoryFullName } from '../../common/utils/validation.utils';
 
 @ApiTags('GitHub Integration')
 @Controller('github')

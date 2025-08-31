@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '@/database/database.service';
-import { GitHubService } from '@/github/services/github.service';
-import { getPaginationSkip } from '@/common/utils/pagination.util';
+import { DatabaseService } from '../../database/database.service';
+import { GitHubService } from '../../github/services/github.service';
+import { getPaginationSkip } from '../../common/utils/pagination.util';
 import type { UserRepository } from '@prisma/client';
 
 @Injectable()

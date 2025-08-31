@@ -12,9 +12,9 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { SlackService } from '../services/slack.service';
-import { UsersService } from '@/users/services/users.service';
-import { AuthGuard } from '@/auth/guards/auth.guard';
-import { GetUser } from '@/auth/decorators/user.decorator';
+import { UsersService } from '../../users/services/users.service';
+import { AuthGuard } from '../../auth/guards/auth.guard';
+import { GetUser } from '../../auth/decorators/user.decorator';
 import type { User, UserRepository, UserSettings } from '@prisma/client';
 
 type UserWithRelations = User & {

@@ -18,15 +18,15 @@ import {
   UpdateUserSettingsDto,
   UserSettingsResponseDto,
 } from '../dto/user-settings.dto';
-import { AuthGuard } from '@/auth/guards/auth.guard';
-import { GetUser } from '@/auth/decorators/user.decorator';
+import { AuthGuard } from '../../auth/guards/auth.guard';
+import { GetUser } from '../../auth/decorators/user.decorator';
 import type { User } from '@prisma/client';
 import {
   validateNotificationPreferences,
   validateNotificationSchedule,
   createDefaultNotificationPreferences,
   createDefaultNotificationSchedule,
-} from '@/common/utils/json-validation.util';
+} from '../../common/utils/json-validation.util';
 
 @ApiTags('user-settings')
 @ApiBearerAuth()

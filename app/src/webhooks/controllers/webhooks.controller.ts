@@ -15,7 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { WebhooksService } from '../services/webhooks.service';
 import { TriggerQueueService } from '../services/trigger-queue.service';
-import { Public } from '@/auth/decorators/public.decorator';
+import { Public } from '../../auth/decorators/public.decorator';
 
 @ApiTags('webhooks')
 @Controller('webhooks')

@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Octokit } from '@octokit/rest';
-import { DatabaseService } from '@/database/database.service';
+import { DatabaseService } from '../../database/database.service';
 import type {
   GitHubRepository,
   GitHubPullRequest,

@@ -21,10 +21,10 @@ import {
 } from '@nestjs/swagger';
 import { UserRepositoriesService } from '../services/user-repositories.service';
 import { UsersService } from '../services/users.service';
-import { AuthGuard } from '@/auth/guards/auth.guard';
-import { GetUser } from '@/auth/decorators/user.decorator';
-import { PaginationQueryDto } from '@/common/dto/pagination.dto';
-import { createPaginatedResponse } from '@/common/utils/pagination.util';
+import { AuthGuard } from '../../auth/guards/auth.guard';
+import { GetUser } from '../../auth/decorators/user.decorator';
+import { PaginationQueryDto } from '../../common/dto/pagination.dto';
+import { createPaginatedResponse } from '../../common/utils/pagination.util';
 import type { User } from '@prisma/client';
 
 @ApiTags('user-repositories')

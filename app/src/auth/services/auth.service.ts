@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DatabaseService } from '@/database/database.service';
+import { DatabaseService } from '../../database/database.service';
 import { auth } from '../auth.config';
 import * as crypto from 'crypto-js';
 

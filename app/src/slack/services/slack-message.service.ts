@@ -5,7 +5,7 @@ import type {
   GitHubPullRequest,
   GitHubIssue,
   NotificationData,
-} from '@/common/types';
+} from '../../common/types';
 
 @Injectable()
 export class SlackMessageService {

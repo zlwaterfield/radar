@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DatabaseService } from '@/database/database.service';
-import { GitHubService } from '@/github/services/github.service';
+import { DatabaseService } from '../../database/database.service';
+import { GitHubService } from '../../github/services/github.service';
 import { LLMAnalyzerService } from './llm-analyzer.service';
-import { WatchingReason, NotificationTrigger } from '@/common/types/notification-enums';
-import type { NotificationPreferences } from '@/common/types/user.types';
+import { WatchingReason, NotificationTrigger } from '../../common/types/notification-enums';
+import type { NotificationPreferences } from '../../common/types/user.types';
 
 @Injectable()
 export class NotificationService {

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WebClient } from '@slack/web-api';
 import { App as SlackApp } from '@slack/bolt';
-import { DatabaseService } from '@/database/database.service';
+import { DatabaseService } from '../../database/database.service';
 import type {
   SlackMessage,
   SlackUser,
