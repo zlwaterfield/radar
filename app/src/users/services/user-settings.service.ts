@@ -34,13 +34,19 @@ export class UserSettingsService {
     data: CreateUserSettingsDto,
   ): Promise<UserSettings> {
     try {
+      const keywordPrefs = (data as any).keywords ? {
+        enabled: (data as any).keywords.length > 0,
+        keywords: (data as any).keywords,
+        threshold: 0.7
+      } : (data.keywordPreferences || {});
+      
       const settings = await this.databaseService.userSettings.create({
         data: {
           userId,
-          notificationPreferences: data.notificationPreferences,
-          notificationSchedule: data.notificationSchedule,
+          notificationPreferences: data.notificationPreferences ? { ...data.notificationPreferences } : {},
+          notificationSchedule: data.notificationSchedule ? { ...data.notificationSchedule } : {},
           statsTimeWindow: data.statsTimeWindow,
-          keywordPreferences: data.keywordPreferences,
+          keywordPreferences: keywordPrefs,
         },
       });
 
@@ -60,12 +66,31 @@ export class UserSettingsService {
     data: UpdateUserSettingsDto,
   ): Promise<UserSettings> {
     try {
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
+      
+      if (data.notificationPreferences) {
+        updateData.notificationPreferences = { ...data.notificationPreferences };
+      }
+      if (data.notificationSchedule) {
+        updateData.notificationSchedule = { ...data.notificationSchedule };
+      }
+      if (data.statsTimeWindow !== undefined) {
+        updateData.statsTimeWindow = data.statsTimeWindow;
+      }
+      if ((data as any).keywords !== undefined) {
+        // Map keywords array to keywordPreferences object structure
+        updateData.keywordPreferences = {
+          enabled: (data as any).keywords.length > 0,
+          keywords: (data as any).keywords,
+          threshold: 0.7
+        };
+      }
+
       const settings = await this.databaseService.userSettings.update({
         where: { userId },
-        data: {
-          ...data,
-          updatedAt: new Date(),
-        },
+        data: updateData,
       });
 
       this.logger.log(`Updated settings for user ${userId}`);
@@ -94,16 +119,40 @@ export class UserSettingsService {
     data: CreateUserSettingsDto,
   ): Promise<UserSettings> {
     try {
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
+      const createData: any = {
+        userId,
+      };
+      
+      if (data.notificationPreferences) {
+        updateData.notificationPreferences = { ...data.notificationPreferences };
+        createData.notificationPreferences = { ...data.notificationPreferences };
+      }
+      if (data.notificationSchedule) {
+        updateData.notificationSchedule = { ...data.notificationSchedule };
+        createData.notificationSchedule = { ...data.notificationSchedule };
+      }
+      if (data.statsTimeWindow !== undefined) {
+        updateData.statsTimeWindow = data.statsTimeWindow;
+        createData.statsTimeWindow = data.statsTimeWindow;
+      }
+      if ((data as any).keywords !== undefined) {
+        // Map keywords array to keywordPreferences object structure
+        const keywordPrefs = {
+          enabled: (data as any).keywords.length > 0,
+          keywords: (data as any).keywords,
+          threshold: 0.7
+        };
+        updateData.keywordPreferences = keywordPrefs;
+        createData.keywordPreferences = keywordPrefs;
+      }
+
       const settings = await this.databaseService.userSettings.upsert({
         where: { userId },
-        update: {
-          ...data,
-          updatedAt: new Date(),
-        },
-        create: {
-          userId,
-          ...data,
-        },
+        update: updateData,
+        create: createData,
       });
 
       this.logger.log(`Upserted settings for user ${userId}`);
