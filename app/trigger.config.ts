@@ -1,3 +1,4 @@
+import "tsconfig-paths/register";
 import { defineConfig } from "@trigger.dev/sdk";
 import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 
