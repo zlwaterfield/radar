@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { UserRepositoriesService } from '../services/user-repositories.service';
 import { UsersService } from '../services/users.service';
+import { DatabaseService } from '../../database/database.service';
 import { AuthGuard } from '../../auth/guards/auth.guard';
 import { GetUser } from '../../auth/decorators/user.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
@@ -37,6 +38,7 @@ export class UserRepositoriesController {
   constructor(
     private readonly userRepositoriesService: UserRepositoriesService,
     private readonly usersService: UsersService,
+    private readonly databaseService: DatabaseService,
   ) {}
 
   /**
@@ -290,19 +292,16 @@ export class UserRepositoriesController {
     @GetUser() user: User,
     @Body() body: { enabled: boolean },
   ) {
-    // Get all repositories and toggle them
+    // Get all repositories and toggle them with a single bulk update
     const repositories = await this.userRepositoriesService.getUserRepositories(
       user.id,
     );
-    const updatePromises = repositories.map((repo) =>
-      this.userRepositoriesService.toggleRepositoryNotifications(
-        user.id,
-        repo.id,
-        body.enabled,
-      ),
-    );
-
-    await Promise.all(updatePromises);
+    
+    // Bulk update all repositories
+    await this.databaseService.userRepository.updateMany({
+      where: { userId: user.id },
+      data: { enabled: body.enabled, updatedAt: new Date() }
+    });
 
     return {
       message: `Notifications ${body.enabled ? 'enabled' : 'disabled'} for all repositories`,

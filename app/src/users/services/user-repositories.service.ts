@@ -202,15 +202,18 @@ export class UserRepositoriesService {
       let added = 0;
       let updated = 0;
 
-      for (const repo of githubRepos) {
-        const existingRepo =
-          await this.databaseService.userRepository.findFirst({
-            where: {
-              userId,
-              githubId: repo.id.toString(),
-            },
-          });
+      const existingRepos = await this.databaseService.userRepository.findMany({
+        where: {
+          userId,
+          githubId: { in: githubRepos.map(repo => repo.id.toString()) }
+        }
+      });
 
+      const existingRepoMap = new Map(existingRepos.map(repo => [repo.githubId, repo]));
+      const reposToCreate: any[] = [];
+      const reposToUpdate: any[] = [];
+
+      for (const repo of githubRepos) {
         const repoData = {
           githubId: repo.id.toString(),
           name: repo.name,
@@ -226,21 +229,33 @@ export class UserRepositoriesService {
             repo.owner.type === 'Organization' ? repo.owner.login : undefined,
         };
 
+        const existingRepo = existingRepoMap.get(repo.id.toString());
         if (existingRepo) {
-          // Update existing repository
-          await this.databaseService.userRepository.update({
+          reposToUpdate.push({
             where: { id: existingRepo.id },
-            data: {
-              ...repoData,
-              updatedAt: new Date(),
-            },
+            data: { ...repoData, updatedAt: new Date() }
           });
-          updated++;
         } else {
-          // Add new repository
-          await this.addUserRepository(userId, repoData);
-          added++;
+          reposToCreate.push({ userId, ...repoData });
         }
+      }
+
+      // Batch create new repositories
+      if (reposToCreate.length > 0) {
+        await this.databaseService.userRepository.createMany({
+          data: reposToCreate
+        });
+        added = reposToCreate.length;
+      }
+
+      // Batch update existing repositories
+      if (reposToUpdate.length > 0) {
+        await Promise.all(
+          reposToUpdate.map(update =>
+            this.databaseService.userRepository.update(update)
+          )
+        );
+        updated = reposToUpdate.length;
       }
 
       this.logger.log(

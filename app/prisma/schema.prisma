@@ -102,6 +102,8 @@ model UserRepository {
   enabled        Boolean @default(false)
 
   @@unique([userId, githubId])
+  @@index([userId])
+  @@index([userId, enabled])
   @@map("user_repository")
 }
 
@@ -131,6 +133,8 @@ model Event {
   user          User?          @relation(fields: [userId], references: [id])
   notifications Notification[]
 
+  @@index([processed])
+  @@index([repositoryId])
   @@map("event")
 }
 
