@@ -1,7 +1,6 @@
 import {
   Controller,
   Post,
-  Get,
   Body,
   Headers,
   Logger,
@@ -12,6 +11,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { WebhooksService } from '../services/webhooks.service';
 import { TriggerQueueService } from '../services/trigger-queue.service';
 import { Public } from '../../auth/decorators/public.decorator';
+import type { WebhookResponse, WebhookProcessResult } from '../../common/types';
 
 @ApiTags('webhooks')
 @Controller('webhooks')
@@ -40,16 +40,60 @@ export class WebhooksController {
     @Headers('x-github-event') eventType: string,
     @Headers('x-github-delivery') deliveryId: string,
     @Headers('x-hub-signature-256') signature: string,
-  ) {
+  ): Promise<WebhookResponse> {
+    this.validateWebhookHeaders(eventType, signature, deliveryId);
+    
+    const payloadString = JSON.stringify(payload);
+    this.verifyWebhookSignature(payloadString, signature, deliveryId);
+    
+    this.logger.log(
+      `Received GitHub webhook: ${eventType} for ${payload.repository?.full_name} (${deliveryId})`,
+    );
+
+    const processResult = await this.webhooksService.processGitHubWebhook(
+      eventType,
+      payload,
+    );
+
+    if (!processResult) {
+      throw new BadRequestException('Failed to process webhook');
+    }
+
+    if (!processResult.processed) {
+      return {
+        message: 'Webhook processed successfully, but event was skipped',
+        deliveryId,
+        eventType,
+      };
+    }
+
+    await this.queueEventForProcessing(processResult);
+
+    return {
+      message: 'Webhook processed successfully',
+      deliveryId,
+      eventType,
+    };
+  }
+
+  private validateWebhookHeaders(
+    eventType: string,
+    signature: string,
+    deliveryId: string,
+  ): void {
     if (!eventType) {
       throw new BadRequestException('Missing X-GitHub-Event header');
     }
-
     if (!signature) {
       throw new BadRequestException('Missing X-Hub-Signature-256 header');
     }
+  }
 
-    const payloadString = JSON.stringify(payload);
+  private verifyWebhookSignature(
+    payloadString: string,
+    signature: string,
+    deliveryId: string,
+  ): void {
     const isValidSignature = this.webhooksService.verifyGitHubSignature(
       payloadString,
       signature,
@@ -61,28 +105,18 @@ export class WebhooksController {
       );
       throw new BadRequestException('Invalid webhook signature');
     }
+  }
 
-    this.logger.log(
-      `Received GitHub webhook: ${eventType} for ${payload.repository?.full_name} (${deliveryId})`,
-    );
-
-    const storedEvent = await this.webhooksService.processGitHubWebhook(
-      eventType,
-      payload,
-    );
-
-    if (!storedEvent) {
-      throw new BadRequestException('Failed to process webhook');
-    }
-    if (!storedEvent.processed) {
-      return {
-        message: 'Webhook processed successfully, but event was skipped',
-        deliveryId,
-        eventType,
-      };
+  private async queueEventForProcessing(
+    processResult: WebhookProcessResult,
+  ): Promise<void> {
+    if (!processResult.event) {
+      return;
     }
 
-    const queued = await this.triggerQueueService.queueGitHubEvent(storedEvent);
+    const queued = await this.triggerQueueService.queueGitHubEvent(
+      processResult.event,
+    );
 
     if (!queued) {
       this.logger.error(
@@ -91,11 +125,5 @@ export class WebhooksController {
     } else {
       this.logger.log('Successfully queued event for real-time processing');
     }
-
-    return {
-      message: 'Webhook processed successfully',
-      deliveryId,
-      eventType,
-    };
   }
 }

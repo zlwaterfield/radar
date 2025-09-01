@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service';
 import { UserTeamsSyncService } from '../../users/services/user-teams-sync.service';
-import type { GitHubWebhookPayload } from '../../common/types';
+import type { GitHubWebhookPayload, WebhookProcessResult } from '../../common/types';
 
 @Injectable()
 export class WebhooksService {
@@ -46,26 +46,25 @@ export class WebhooksService {
   async processGitHubWebhook(
     eventType: string,
     payload: GitHubWebhookPayload,
-  ): Promise<any> {
+  ): Promise<WebhookProcessResult | null> {
     try {
       if (!this.isRelevantEvent(eventType, payload)) {
         this.logger.debug(`Skipping irrelevant event: ${eventType}`);
-        return { processed: false, type: eventType };
+        return { processed: false };
       }
 
       // Handle special events that don't need to be stored as regular events
       if (eventType === 'membership') {
         await this.processTeamMembershipEvent(payload);
-        return { processed: true, type: 'membership' };
+        return { processed: true };
       }
 
       if (eventType === 'installation') {
         await this.processInstallationEvent(payload);
-        return { processed: true, type: 'installation' };
+        return { processed: true };
       }
 
       const event = await this.storeEvent(eventType, payload);
-
       if (!event) {
         this.logger.error('Failed to store event in database');
         return null;
@@ -74,7 +73,7 @@ export class WebhooksService {
       this.logger.log(
         `Processed ${eventType} event for repository ${payload.repository?.name}`,
       );
-      return event;
+      return { processed: true, event };
     } catch (error) {
       this.logger.error(
         `Error processing GitHub webhook (${eventType}):`,
@@ -100,9 +99,8 @@ export class WebhooksService {
       'release',
       'star',
       'fork',
-      'membership', // Team membership changes
-      'team', // Team changes
-      'installation', // App installation events
+      'membership',
+      'installation',
     ];
 
     if (!relevantEvents.includes(eventType)) {
@@ -194,92 +192,6 @@ export class WebhooksService {
     } catch (error) {
       this.logger.error('Error storing event:', error);
       return null;
-    }
-  }
-
-  /**
-   * Get unprocessed events
-   */
-  async getUnprocessedEvents(limit = 50): Promise<any[]> {
-    try {
-      return await this.databaseService.event.findMany({
-        where: {
-          processed: false,
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-        take: limit,
-      });
-    } catch (error) {
-      this.logger.error('Error getting unprocessed events:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Mark event as processed
-   */
-  async markEventProcessed(eventId: string): Promise<boolean> {
-    try {
-      await this.databaseService.event.update({
-        where: { id: eventId },
-        data: {
-          processed: true,
-          updatedAt: new Date(),
-        },
-      });
-
-      return true;
-    } catch (error) {
-      this.logger.error(`Error marking event ${eventId} as processed:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Get events by repository
-   */
-  async getEventsByRepository(
-    repositoryId: string,
-    limit = 20,
-  ): Promise<any[]> {
-    try {
-      return await this.databaseService.event.findMany({
-        where: {
-          repositoryId,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: limit,
-      });
-    } catch (error) {
-      this.logger.error(
-        `Error getting events for repository ${repositoryId}:`,
-        error,
-      );
-      return [];
-    }
-  }
-
-  /**
-   * Get events by user
-   */
-  async getEventsByUser(userId: string, limit = 20): Promise<any[]> {
-    try {
-      return await this.databaseService.event.findMany({
-        where: {
-          userId,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: limit,
-      });
-    } catch (error) {
-      this.logger.error(`Error getting events for user ${userId}:`, error);
-      return [];
     }
   }
 

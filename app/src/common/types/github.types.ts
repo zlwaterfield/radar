@@ -175,3 +175,15 @@ export interface UserTeam {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Webhook response types
+export interface WebhookProcessResult {
+  processed: boolean;
+  event?: GitHubEvent;
+}
+
+export interface WebhookResponse {
+  message: string;
+  deliveryId: string;
+  eventType: string;
+}
