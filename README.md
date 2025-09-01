@@ -88,7 +88,6 @@ MIT License - see LICENSE file for details.
 - Soon
    - Testing all events in production (including teams)
    - Improve event messages (general copying and PR descriptions, +/- changes, etc)
-   - Document all supported events
 - Next
    - Github Discussions support
    - Daily Digests support
