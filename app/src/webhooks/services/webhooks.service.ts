@@ -50,7 +50,7 @@ export class WebhooksService {
     try {
       if (!this.isRelevantEvent(eventType, payload)) {
         this.logger.debug(`Skipping irrelevant event: ${eventType}`);
-        return null;
+        return { processed: false, type: eventType };
       }
 
       // Handle special events that don't need to be stored as regular events

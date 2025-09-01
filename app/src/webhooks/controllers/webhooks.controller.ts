@@ -74,6 +74,13 @@ export class WebhooksController {
     if (!storedEvent) {
       throw new BadRequestException('Failed to process webhook');
     }
+    if (!storedEvent.processed) {
+      return {
+        message: 'Webhook processed successfully, but event was skipped',
+        deliveryId,
+        eventType,
+      };
+    }
 
     const queued = await this.triggerQueueService.queueGitHubEvent(storedEvent);
 
