@@ -82,7 +82,9 @@ export class NotificationPreferencesDto {
   @IsBoolean()
   mention_in_comment?: boolean;
 
-  @ApiPropertyOptional({ description: 'Notify when mentioned in pull requests' })
+  @ApiPropertyOptional({
+    description: 'Notify when mentioned in pull requests',
+  })
   @IsOptional()
   @IsBoolean()
   mention_in_pull_request?: boolean;
@@ -107,7 +109,9 @@ export class NotificationPreferencesDto {
   @IsBoolean()
   mute_bot_comments?: boolean;
 
-  @ApiPropertyOptional({ description: 'Mute notifications for draft pull requests' })
+  @ApiPropertyOptional({
+    description: 'Mute notifications for draft pull requests',
+  })
   @IsOptional()
   @IsBoolean()
   mute_draft_pull_requests?: boolean;
@@ -143,7 +147,9 @@ export class NotificationScheduleDto {
   @IsBoolean()
   second_digest_enabled?: boolean;
 
-  @ApiPropertyOptional({ description: 'Time for second daily digest (HH:mm format)' })
+  @ApiPropertyOptional({
+    description: 'Time for second daily digest (HH:mm format)',
+  })
   @IsOptional()
   @IsString()
   second_digest_time?: string;

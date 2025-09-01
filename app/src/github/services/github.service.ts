@@ -8,6 +8,7 @@ import type {
   GitHubIssue,
   GitHubUser,
   GitHubInstallation,
+  GitHubTeam,
 } from '@/common/types/github.types';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
@@ -367,6 +368,121 @@ export class GitHubService {
     };
 
     return jwt.sign(payload, privateKey, { algorithm: 'RS256' });
+  }
+
+  /**
+   * Get user's team memberships from GitHub API
+   */
+  async getUserTeams(accessToken: string): Promise<GitHubTeam[]> {
+    try {
+      const octokit = this.createUserClient(accessToken);
+
+      const { data: teams } = await octokit.rest.teams.listForAuthenticatedUser(
+        {
+          per_page: 100,
+        },
+      );
+
+      this.logger.log(`Retrieved ${teams.length} teams for user`);
+      return teams.map((team) => ({
+        id: team.id,
+        slug: team.slug,
+        name: team.name,
+        description: team.description,
+        permission: team.permission as
+          | 'pull'
+          | 'triage'
+          | 'push'
+          | 'maintain'
+          | 'admin',
+        privacy: (team.privacy as 'secret' | 'closed') || 'closed',
+        organization: (team as any).organization || {
+          login: '',
+          id: 0,
+          avatar_url: '',
+        },
+        members_count: (team as any).members_count,
+        repos_count: (team as any).repos_count,
+        created_at: (team as any).created_at || new Date().toISOString(),
+        updated_at: (team as any).updated_at || new Date().toISOString(),
+      })) as GitHubTeam[];
+    } catch (error) {
+      this.logger.error('Error fetching user teams:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get teams for a specific organization using installation token
+   */
+  async getOrgTeams(
+    installationId: number,
+    org: string,
+  ): Promise<GitHubTeam[]> {
+    try {
+      const octokit = await this.createInstallationClient(installationId);
+
+      const { data: teams } = await octokit.rest.teams.list({
+        org,
+        per_page: 100,
+      });
+
+      this.logger.log(`Retrieved ${teams.length} teams for org ${org}`);
+      return teams.map((team) => ({
+        id: team.id,
+        slug: team.slug,
+        name: team.name,
+        description: team.description,
+        permission: team.permission as
+          | 'pull'
+          | 'triage'
+          | 'push'
+          | 'maintain'
+          | 'admin',
+        privacy: (team.privacy as 'secret' | 'closed') || 'closed',
+        organization: (team as any).organization || {
+          login: org,
+          id: 0,
+          avatar_url: '',
+        },
+        members_count: (team as any).members_count,
+        repos_count: (team as any).repos_count,
+        created_at: (team as any).created_at || new Date().toISOString(),
+        updated_at: (team as any).updated_at || new Date().toISOString(),
+      })) as GitHubTeam[];
+    } catch (error) {
+      this.logger.error(`Error fetching teams for org ${org}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a user is a member of a specific team
+   */
+  async checkTeamMembership(
+    installationId: number,
+    org: string,
+    teamSlug: string,
+    username: string,
+  ): Promise<boolean> {
+    try {
+      const octokit = await this.createInstallationClient(installationId);
+
+      await octokit.rest.teams.getMembershipForUserInOrg({
+        org,
+        team_slug: teamSlug,
+        username,
+      });
+
+      return true;
+    } catch (error) {
+      // 404 means user is not a team member
+      if (error.status === 404) {
+        return false;
+      }
+      this.logger.error(`Error checking team membership: ${error}`);
+      throw error;
+    }
   }
 
   /**

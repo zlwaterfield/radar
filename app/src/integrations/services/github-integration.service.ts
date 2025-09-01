@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
+import { UserTeamsSyncService } from '../../users/services/user-teams-sync.service';
 
 @Injectable()
 export class GitHubIntegrationService {
@@ -9,6 +10,7 @@ export class GitHubIntegrationService {
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
+    private readonly userTeamsSyncService: UserTeamsSyncService,
   ) {}
 
   async exchangeCodeForTokens(code: string): Promise<any> {
@@ -79,6 +81,20 @@ export class GitHubIntegrationService {
         },
       });
 
+      // Auto-sync repos and teams after connecting GitHub
+      try {
+        await this.userTeamsSyncService.syncUserGitHubData(userId);
+        this.logger.log(
+          `Auto-synced GitHub data for user ${userId} after connection`,
+        );
+      } catch (syncError) {
+        this.logger.error(
+          `Error auto-syncing data for user ${userId}:`,
+          syncError,
+        );
+        // Don't fail the connection if sync fails
+      }
+
       this.logger.log(`GitHub connected for user ${userId}`);
     } catch (error) {
       this.logger.error('Error connecting GitHub for user:', error);
@@ -142,10 +158,19 @@ export class GitHubIntegrationService {
         },
       });
 
-      // TODO: Fetch and store user repositories from the installation
-      // This would require GitHub App authentication to get installation repositories
-      // const repositories = await this.getInstallationRepositories(installationId);
-      // await this.storeUserRepositories(userId, repositories);
+      // Auto-sync repos and teams after app installation
+      try {
+        await this.userTeamsSyncService.syncUserGitHubData(userId);
+        this.logger.log(
+          `Auto-synced GitHub data for user ${userId} after app installation`,
+        );
+      } catch (syncError) {
+        this.logger.error(
+          `Error auto-syncing data for user ${userId}:`,
+          syncError,
+        );
+        // Don't fail the installation if sync fails
+      }
 
       this.logger.log(
         `GitHub App installation ${installationId} processed for user ${userId}`,

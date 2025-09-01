@@ -318,7 +318,6 @@ export class SlackService {
     return this.slackApp;
   }
 
-
   /**
    * Setup Slack event handlers
    */

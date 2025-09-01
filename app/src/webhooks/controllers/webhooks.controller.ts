@@ -8,11 +8,7 @@ import {
   BadRequestException,
   HttpCode,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { WebhooksService } from '../services/webhooks.service';
 import { TriggerQueueService } from '../services/trigger-queue.service';
 import { Public } from '../../auth/decorators/public.decorator';
@@ -83,12 +79,10 @@ export class WebhooksController {
 
     if (!queued) {
       this.logger.error(
-        "Failed to queue event for processing - no fallback available",
+        'Failed to queue event for processing - no fallback available',
       );
     } else {
-      this.logger.log(
-        "Successfully queued event for real-time processing",
-      );
+      this.logger.log('Successfully queued event for real-time processing');
     }
 
     return {

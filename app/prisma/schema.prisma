@@ -36,6 +36,7 @@ model User {
   githubAccessToken   String? @map("github_access_token") // encrypted
   githubRefreshToken  String? @map("github_refresh_token") // encrypted
   githubInstallationId String? @map("github_installation_id")
+  teamsLastSyncedAt   DateTime? @map("teams_last_synced_at")
 
   // Relations
   settings      UserSettings?
@@ -45,6 +46,7 @@ model User {
   events        Event[]
   sessions      Session[]
   accounts      Account[]
+  teams         UserTeam[]
 
   @@map("user")
 }
@@ -218,4 +220,25 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+// User team memberships
+
+model UserTeam {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // GitHub team data
+  teamId       String @map("team_id")
+  teamSlug     String @map("team_slug")
+  teamName     String @map("team_name")
+  organization String
+  permission   String @default("member")
+
+  @@unique([userId, teamId])
+  @@map("user_team")
 }

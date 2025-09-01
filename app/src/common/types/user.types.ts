@@ -36,39 +36,44 @@ export interface NotificationPreferences {
   pull_request_reviewed?: boolean;
   pull_request_commented?: boolean;
   pull_request_assigned?: boolean;
-  
+
   // More granular PR notifications
   // pull_request_status_changes?: boolean;  // PR merged, closed, reopened
   // pull_request_assignments?: boolean;     // Assigned to PR, review requested
-  
+
   issue_opened?: boolean;
   issue_closed?: boolean;
   issue_commented?: boolean;
   issue_assigned?: boolean;
-  
-  // More granular issue notifications  
+
+  // More granular issue notifications
   // issue_status_changes?: boolean;  // Issue opened, closed, reopened
   // issue_assignments?: boolean;     // Assigned to issue
-  
+
   // Discussions
   // discussion_created?: boolean;
   // discussion_answered?: boolean;
   // discussion_commented?: boolean;
-  
+
   // Mentions
   mention_in_comment?: boolean;
   mention_in_pull_request?: boolean;
   mention_in_issue?: boolean;
-  mentioned_in_comments?: boolean;  // Someone mentions you in a comment
-  
+  mentioned_in_comments?: boolean; // Someone mentions you in a comment
+
+  // Team notifications
+  team_assignments?: boolean; // When your team is assigned
+  team_mentions?: boolean; // When your team is mentioned
+  team_review_requests?: boolean; // When your team is requested for review
+
   // CI/CD
-  check_failures?: boolean;   // CI checks fail
-  check_successes?: boolean;  // CI checks pass (usually too noisy)
-  
+  check_failures?: boolean; // CI checks fail
+  check_successes?: boolean; // CI checks pass (usually too noisy)
+
   // Noise Control
   mute_own_activity?: boolean;
   mute_bot_comments?: boolean;
-  mute_draft_pull_requests?: boolean;  // Ignore draft PR activity
+  mute_draft_pull_requests?: boolean; // Ignore draft PR activity
 }
 
 export interface NotificationSchedule {

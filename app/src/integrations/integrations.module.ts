@@ -4,9 +4,10 @@ import { GitHubIntegrationController } from './controllers/github-integration.co
 import { SlackIntegrationService } from './services/slack-integration.service';
 import { GitHubIntegrationService } from './services/github-integration.service';
 import { DatabaseModule } from '../database/database.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, UsersModule],
   controllers: [SlackIntegrationController, GitHubIntegrationController],
   providers: [SlackIntegrationService, GitHubIntegrationService],
   exports: [SlackIntegrationService, GitHubIntegrationService],

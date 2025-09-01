@@ -1,6 +1,6 @@
 /**
  * Notification enums for Radar.
- * 
+ *
  * Defines the enums used for notification logic, matching the Python version.
  */
 
@@ -9,12 +9,14 @@
  */
 export enum WatchingReason {
   AUTHOR = 'author',
-  REVIEWER = 'reviewer', 
+  REVIEWER = 'reviewer',
   ASSIGNED = 'assigned',
   MENTIONED = 'mentioned',
+  TEAM_ASSIGNED = 'team_assigned',
   TEAM_MENTIONED = 'team_mentioned',
+  TEAM_REVIEWER = 'team_reviewer',
   SUBSCRIBED = 'subscribed',
-  MANUAL = 'manual'
+  MANUAL = 'manual',
 }
 
 /**
@@ -38,5 +40,5 @@ export enum NotificationTrigger {
   COMMITTED = 'committed',
   STATUS_CHANGED = 'status_changed',
   CHECK_FAILED = 'check_failed',
-  CHECK_SUCCEEDED = 'check_succeeded'
+  CHECK_SUCCEEDED = 'check_succeeded',
 }

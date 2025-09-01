@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { GitHubService } from '../../github/services/github.service';
 import { LLMAnalyzerService } from './llm-analyzer.service';
-import { WatchingReason, NotificationTrigger } from '../../common/types/notification-enums';
+import {
+  WatchingReason,
+  NotificationTrigger,
+} from '../../common/types/notification-enums';
 import type { NotificationPreferences } from '../../common/types/user.types';
 
 @Injectable()
@@ -18,27 +21,33 @@ export class NotificationService {
   /**
    * Determine the reasons why a user is watching a PR or issue
    */
-  async determineWatchingReasons(userId: string, data: any): Promise<Set<WatchingReason>> {
+  async determineWatchingReasons(
+    userId: string,
+    data: any,
+  ): Promise<Set<WatchingReason>> {
     const watchingReasons = new Set<WatchingReason>();
-    
+
     try {
-      // Get user data
+      // Get user data including teams
       const user = await this.databaseService.user.findUnique({
         where: { id: userId },
+        include: {
+          teams: true,
+        },
       });
-      
+
       if (!user || !user.githubId) {
         return watchingReasons;
       }
-      
+
       const githubUsername = user.githubLogin;
       if (!githubUsername) {
         return watchingReasons;
       }
-      
+
       // Determine if this is a PR or an issue
       let isPR = false;
-      
+
       // Check for direct PR indicators
       if (data.head || data.requested_reviewers) {
         isPR = true;
@@ -55,32 +64,34 @@ export class NotificationService {
       else if (data.html_url && data.html_url.includes('/pull/')) {
         isPR = true;
       }
-      
+
       // Check if user is the author
       if (data.user?.login === githubUsername) {
         watchingReasons.add(WatchingReason.AUTHOR);
       }
-      
+
       if (isPR) {
         // For issue comments on PRs, we need to fetch the full PR data
         let prData = data;
-        
+
         // If this is an issue comment on a PR, fetch the PR details
         if (data.issue && data.issue.pull_request) {
           try {
             // Extract repository and PR number
             const repository = data.repository?.full_name;
             const prNumber = data.issue?.number;
-            
+
             if (repository && prNumber && user.githubAccessToken) {
               // Fetch PR details from GitHub
-              const githubClient = this.githubService.createUserClient(user.githubAccessToken);
+              const githubClient = this.githubService.createUserClient(
+                user.githubAccessToken,
+              );
               const prDetails = await githubClient.rest.pulls.get({
                 owner: repository.split('/')[0],
                 repo: repository.split('/')[1],
                 pull_number: prNumber,
               });
-              
+
               if (prDetails.data) {
                 prData = prDetails.data;
               }
@@ -89,7 +100,7 @@ export class NotificationService {
             this.logger.error(`Error fetching PR details: ${error}`);
           }
         }
-        
+
         // Check if user is a reviewer
         const requestedReviewers = prData.requested_reviewers || [];
         for (const reviewer of requestedReviewers) {
@@ -98,8 +109,22 @@ export class NotificationService {
             break;
           }
         }
+
+        // Check if user's teams are requested for review
+        const requestedTeams = prData.requested_teams || [];
+        const userTeamSlugs = user.teams.map(
+          (t) => `${t.organization}/${t.teamSlug}`,
+        );
+
+        for (const team of requestedTeams) {
+          const teamPath = `${team.parent?.login || data.repository?.owner?.login}/${team.slug}`;
+          if (userTeamSlugs.includes(teamPath)) {
+            watchingReasons.add(WatchingReason.TEAM_REVIEWER);
+            break;
+          }
+        }
       }
-      
+
       // Check if user is assigned (works for both PRs and issues)
       const assignees = data.assignees || [];
       for (const assignee of assignees) {
@@ -107,16 +132,36 @@ export class NotificationService {
           watchingReasons.add(WatchingReason.ASSIGNED);
           break;
         }
+
+        // Check if any of user's teams are assigned
+        if (assignee.type === 'Team') {
+          const userTeamSlugs = user.teams.map(
+            (t) => `${t.organization}/${t.teamSlug}`,
+          );
+          if (userTeamSlugs.includes(assignee.name)) {
+            watchingReasons.add(WatchingReason.TEAM_ASSIGNED);
+            break;
+          }
+        }
       }
-      
+
       // Check if user is mentioned in the PR/issue description
       const body = data.body || '';
       if (body && body.includes(`@${githubUsername}`)) {
         watchingReasons.add(WatchingReason.MENTIONED);
       }
-      
+
+      // Check if user's teams are mentioned in the PR/issue description
+      if (body && user.teams.length > 0) {
+        for (const team of user.teams) {
+          if (body.includes(`@${team.organization}/${team.teamSlug}`)) {
+            watchingReasons.add(WatchingReason.TEAM_MENTIONED);
+            break;
+          }
+        }
+      }
+
       return watchingReasons;
-      
     } catch (error) {
       this.logger.error(`Error determining watching reasons: ${error}`);
       return watchingReasons;
@@ -137,23 +182,27 @@ export class NotificationService {
       const settings = await this.databaseService.userSettings.findUnique({
         where: { userId },
       });
-      
+
       let preferences: NotificationPreferences;
       if (!settings) {
         // Use default settings
         preferences = this.getDefaultNotificationPreferences();
       } else {
-        preferences = settings.notificationPreferences as NotificationPreferences;
+        preferences =
+          settings.notificationPreferences as NotificationPreferences;
       }
-      
+
       // Get watching reasons for this PR
-      const watchingReasons = await this.determineWatchingReasons(userId, prData);
-      
+      const watchingReasons = await this.determineWatchingReasons(
+        userId,
+        prData,
+      );
+
       // If the user isn't watching the PR, don't notify
       if (watchingReasons.size === 0) {
         return false;
       }
-      
+
       // Check if this is the user's own activity
       if (actorId && preferences.mute_own_activity) {
         const user = await this.databaseService.user.findUnique({
@@ -163,17 +212,22 @@ export class NotificationService {
           return false;
         }
       }
-      
+
       // Check if this is a draft PR and user has muted draft PRs
       if (preferences.mute_draft_pull_requests && prData.draft) {
         return false;
       }
-      
+
       // Always notify if mentioned (regardless of other preferences)
       if (watchingReasons.has(WatchingReason.MENTIONED)) {
         return preferences.mentioned_in_comments ?? true;
       }
-      
+
+      // Always notify if team is mentioned (regardless of other preferences)
+      if (watchingReasons.has(WatchingReason.TEAM_MENTIONED)) {
+        return preferences.team_mentions ?? true;
+      }
+
       // Check preferences based on activity type
       switch (trigger) {
         case NotificationTrigger.COMMENTED:
@@ -187,9 +241,30 @@ export class NotificationService {
           return preferences.pull_request_closed ?? true;
         case NotificationTrigger.ASSIGNED:
         case NotificationTrigger.UNASSIGNED:
+          // Check individual assignment
+          const individualAssigned =
+            watchingReasons.has(WatchingReason.ASSIGNED) &&
+            (preferences.pull_request_assigned ?? true);
+
+          // Check team assignment
+          const teamAssigned =
+            watchingReasons.has(WatchingReason.TEAM_ASSIGNED) &&
+            (preferences.team_assignments ?? true);
+
+          return individualAssigned || teamAssigned;
         case NotificationTrigger.REVIEW_REQUESTED:
         case NotificationTrigger.REVIEW_REQUEST_REMOVED:
-          return preferences.pull_request_assigned ?? true;
+          // Check individual review request
+          const individualReviewer =
+            watchingReasons.has(WatchingReason.REVIEWER) &&
+            (preferences.pull_request_assigned ?? true);
+
+          // Check team review request
+          const teamReviewer =
+            watchingReasons.has(WatchingReason.TEAM_REVIEWER) &&
+            (preferences.team_review_requests ?? true);
+
+          return individualReviewer || teamReviewer;
         case NotificationTrigger.OPENED:
           return preferences.pull_request_opened ?? true;
         case NotificationTrigger.CHECK_FAILED:
@@ -199,7 +274,6 @@ export class NotificationService {
         default:
           return false;
       }
-      
     } catch (error) {
       this.logger.error(`Error checking if user should be notified: ${error}`);
       return false;
@@ -213,18 +287,33 @@ export class NotificationService {
     userId: string,
     payload: any,
     eventId: string,
-  ): Promise<{ shouldNotify: boolean; matchedKeywords: string[]; matchDetails: any }> {
+  ): Promise<{
+    shouldNotify: boolean;
+    matchedKeywords: string[];
+    matchDetails: any;
+  }> {
     try {
       // Extract data from payload
       const action = payload.action;
       const pr = payload.pull_request || {};
       const sender = payload.sender || {};
-      
+
       // Skip if action is not interesting
-      if (!['opened', 'closed', 'reopened', 'review_requested', 'review_request_removed', 'assigned', 'unassigned', 'edited'].includes(action)) {
+      if (
+        ![
+          'opened',
+          'closed',
+          'reopened',
+          'review_requested',
+          'review_request_removed',
+          'assigned',
+          'unassigned',
+          'edited',
+        ].includes(action)
+      ) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Determine notification trigger based on action
       let trigger: NotificationTrigger | null = null;
       if (action === 'opened') {
@@ -244,11 +333,11 @@ export class NotificationService {
       } else if (action === 'unassigned') {
         trigger = NotificationTrigger.UNASSIGNED;
       }
-      
+
       if (!trigger) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Check if user should be notified based on notification preferences
       const shouldNotifyPreferences = await this.shouldNotify(
         userId,
@@ -256,21 +345,23 @@ export class NotificationService {
         trigger,
         sender.id?.toString(),
       );
-      
+
       // Extract content for AI analysis
       const prContent = `Title: ${pr.title || ''}\nDescription: ${pr.body || ''}`;
-      
+
       // Check if user should be notified based on keyword analysis
-      const keywordResult = await this.llmAnalyzerService.analyzeContent(prContent, userId);
+      const keywordResult = await this.llmAnalyzerService.analyzeContent(
+        prContent,
+        userId,
+      );
       const shouldNotifyKeywords = keywordResult.shouldNotify;
       const matchedKeywords = keywordResult.matchedKeywords;
       const matchDetails = keywordResult.matchDetails;
-      
+
       // Determine if notification should be sent
       const shouldNotify = shouldNotifyPreferences || shouldNotifyKeywords;
-      
+
       return { shouldNotify, matchedKeywords, matchDetails };
-      
     } catch (error) {
       this.logger.error(`Error processing pull request event: ${error}`);
       return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
@@ -284,55 +375,63 @@ export class NotificationService {
     userId: string,
     payload: any,
     eventId: string,
-  ): Promise<{ shouldNotify: boolean; matchedKeywords: string[]; matchDetails: any }> {
+  ): Promise<{
+    shouldNotify: boolean;
+    matchedKeywords: string[];
+    matchDetails: any;
+  }> {
     try {
       // Extract data from payload
       const comment = payload.comment || {};
       const issue = payload.issue || {};
       const sender = payload.sender || {};
-      
+
       // Get user settings
       const settings = await this.databaseService.userSettings.findUnique({
         where: { userId },
       });
-      
+
       let preferences: NotificationPreferences;
       if (!settings) {
         preferences = this.getDefaultNotificationPreferences();
       } else {
-        preferences = settings.notificationPreferences as NotificationPreferences;
+        preferences =
+          settings.notificationPreferences as NotificationPreferences;
       }
-      
+
       // Check if this is the user's own activity
       const user = await this.databaseService.user.findUnique({
         where: { id: userId },
       });
-      
+
       if (!user) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       const githubUsername = user.githubLogin;
       const isOwnActivity = sender.login === githubUsername;
-      
+
       // Don't notify for own activity if muted
       if (isOwnActivity && preferences.mute_own_activity) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Check for keyword matches in comment body
       const contentToCheck = [comment.body || ''];
       const commentContent = contentToCheck.join('\n\n');
-      const keywordResult = await this.llmAnalyzerService.analyzeContent(commentContent, userId);
+      const keywordResult = await this.llmAnalyzerService.analyzeContent(
+        commentContent,
+        userId,
+      );
       const shouldNotifyKeywords = keywordResult.shouldNotify;
       const matchedKeywords = keywordResult.matchedKeywords;
       const matchDetails = keywordResult.matchDetails;
-      
+
       // If we have keyword matches, always notify
       if (shouldNotifyKeywords) {
         return { shouldNotify: true, matchedKeywords, matchDetails };
       }
-      
+
       // Check if user is mentioned in the comment first
       const commentBody = comment.body || '';
       if (commentBody && commentBody.includes(`@${githubUsername}`)) {
@@ -343,33 +442,39 @@ export class NotificationService {
           return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
         }
       }
-      
+
       // Get watching reasons for this issue (only check if no keyword matches)
-      const watchingReasons = await this.determineWatchingReasons(userId, issue);
-      
+      const watchingReasons = await this.determineWatchingReasons(
+        userId,
+        issue,
+      );
+
       // If the user isn't watching the issue, don't notify
       if (watchingReasons.size === 0) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Use general comment preference for all users involved with the PR/issue
       // Check if this is a PR or issue based on whether it has pull_request field
       const isPR = !!issue.pull_request;
-      
+
       let shouldNotifyPreferences: boolean;
       if (isPR) {
         shouldNotifyPreferences = preferences.pull_request_commented ?? true;
       } else {
         shouldNotifyPreferences = preferences.issue_commented ?? true;
       }
-      
+
       // Always notify if mentioned
       if (watchingReasons.has(WatchingReason.MENTIONED)) {
         shouldNotifyPreferences = true;
       }
-      
-      return { shouldNotify: shouldNotifyPreferences, matchedKeywords: [], matchDetails: {} };
-      
+
+      return {
+        shouldNotify: shouldNotifyPreferences,
+        matchedKeywords: [],
+        matchDetails: {},
+      };
     } catch (error) {
       this.logger.error(`Error processing issue comment event: ${error}`);
       return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
@@ -388,23 +493,28 @@ export class NotificationService {
       pull_request_reviewed: true,
       pull_request_commented: true,
       pull_request_assigned: true,
-      
+
       // Issue Activity
       issue_opened: true,
       issue_closed: true,
       issue_commented: true,
       issue_assigned: true,
-      
+
       // CI/CD
       check_failures: true,
       check_successes: false,
-      
+
       // Mentions
       mention_in_comment: true,
       mention_in_pull_request: true,
       mention_in_issue: true,
       mentioned_in_comments: true,
-      
+
+      // Team notifications
+      team_assignments: true,
+      team_mentions: true,
+      team_review_requests: true,
+
       // Noise Control
       mute_own_activity: true,
       mute_bot_comments: true,
@@ -419,80 +529,96 @@ export class NotificationService {
     userId: string,
     payload: any,
     eventId: string,
-  ): Promise<{ shouldNotify: boolean; matchedKeywords: string[]; matchDetails: any }> {
+  ): Promise<{
+    shouldNotify: boolean;
+    matchedKeywords: string[];
+    matchDetails: any;
+  }> {
     try {
       // Extract data from payload
       const action = payload.action;
       const issue = payload.issue || {};
       const sender = payload.sender || {};
-      
+
       // Skip if action is not interesting
-      if (!['opened', 'closed', 'reopened', 'assigned', 'edited'].includes(action)) {
+      if (
+        !['opened', 'closed', 'reopened', 'assigned', 'edited'].includes(action)
+      ) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Get user settings
       const settings = await this.databaseService.userSettings.findUnique({
         where: { userId },
       });
-      
+
       let preferences: NotificationPreferences;
       if (!settings) {
         preferences = this.getDefaultNotificationPreferences();
       } else {
-        preferences = settings.notificationPreferences as NotificationPreferences;
+        preferences =
+          settings.notificationPreferences as NotificationPreferences;
       }
-      
+
       // Check if this is the user's own activity
       const user = await this.databaseService.user.findUnique({
         where: { id: userId },
       });
-      
+
       if (!user) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       const githubUsername = user.githubLogin;
       const isOwnActivity = sender.login === githubUsername;
-      
+
       // Don't notify for own activity if muted
       if (isOwnActivity && preferences.mute_own_activity) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Check for keyword matches in issue title and body
-      const contentToCheck = [
-        issue.title || '',
-        issue.body || ''
-      ];
+      const contentToCheck = [issue.title || '', issue.body || ''];
       const issueContent = contentToCheck.join('\n\n');
-      const keywordResult = await this.llmAnalyzerService.analyzeContent(issueContent, userId);
+      const keywordResult = await this.llmAnalyzerService.analyzeContent(
+        issueContent,
+        userId,
+      );
       const shouldNotifyKeywords = keywordResult.shouldNotify;
       const matchedKeywords = keywordResult.matchedKeywords;
       const matchDetails = keywordResult.matchDetails;
-      
+
       if (matchedKeywords.length > 0) {
-        this.logger.log(`Keywords matched for user ${userId} in issue ${action}: ${matchedKeywords.join(', ')}`);
+        this.logger.log(
+          `Keywords matched for user ${userId} in issue ${action}: ${matchedKeywords.join(', ')}`,
+        );
       }
-      
+
       // If we have keyword matches, always notify
       if (shouldNotifyKeywords) {
         return { shouldNotify: true, matchedKeywords, matchDetails };
       }
-      
+
       // Get watching reasons for this issue (only check if no keyword matches)
-      const watchingReasons = await this.determineWatchingReasons(userId, issue);
-      
+      const watchingReasons = await this.determineWatchingReasons(
+        userId,
+        issue,
+      );
+
       // If the user isn't watching the issue, don't notify
       if (watchingReasons.size === 0) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Always notify if mentioned (regardless of other preferences)
       if (watchingReasons.has(WatchingReason.MENTIONED)) {
-        return { shouldNotify: preferences.mentioned_in_comments ?? true, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: preferences.mentioned_in_comments ?? true,
+          matchedKeywords: [],
+          matchDetails: {},
+        };
       }
-      
+
       // Check notification preferences based on issue action
       let shouldNotifyPreferences: boolean;
       if (action === 'opened') {
@@ -505,9 +631,12 @@ export class NotificationService {
         // Default for other actions
         shouldNotifyPreferences = true;
       }
-      
-      return { shouldNotify: shouldNotifyPreferences, matchedKeywords: [], matchDetails: {} };
-      
+
+      return {
+        shouldNotify: shouldNotifyPreferences,
+        matchedKeywords: [],
+        matchDetails: {},
+      };
     } catch (error) {
       this.logger.error(`Error processing issue event: ${error}`);
       return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
@@ -521,35 +650,39 @@ export class NotificationService {
     userId: string,
     payload: any,
     eventId: string,
-  ): Promise<{ shouldNotify: boolean; matchedKeywords: string[]; matchDetails: any }> {
+  ): Promise<{
+    shouldNotify: boolean;
+    matchedKeywords: string[];
+    matchDetails: any;
+  }> {
     try {
       const action = payload.action;
       const pr = payload.pull_request || {};
       const sender = payload.sender || {};
-      
+
       // Only handle submitted reviews for now
       if (action !== 'submitted') {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Get user settings
       const settings = await this.databaseService.userSettings.findUnique({
         where: { userId },
       });
-      
+
       if (!settings) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Get user
       const user = await this.databaseService.user.findUnique({
         where: { id: userId },
       });
-      
+
       if (!user) {
         return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
       }
-      
+
       // Check if user should be notified
       const shouldNotify = await this.shouldNotify(
         userId,
@@ -557,9 +690,8 @@ export class NotificationService {
         NotificationTrigger.REVIEWED,
         sender.id?.toString(),
       );
-      
+
       return { shouldNotify, matchedKeywords: [], matchDetails: {} };
-      
     } catch (error) {
       this.logger.error(`Error processing pull request review event: ${error}`);
       return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };

@@ -34,17 +34,23 @@ export class UserSettingsService {
     data: CreateUserSettingsDto,
   ): Promise<UserSettings> {
     try {
-      const keywordPrefs = (data as any).keywords ? {
-        enabled: (data as any).keywords.length > 0,
-        keywords: (data as any).keywords,
-        threshold: 0.7
-      } : (data.keywordPreferences || {});
-      
+      const keywordPrefs = (data as any).keywords
+        ? {
+            enabled: (data as any).keywords.length > 0,
+            keywords: (data as any).keywords,
+            threshold: 0.7,
+          }
+        : data.keywordPreferences || {};
+
       const settings = await this.databaseService.userSettings.create({
         data: {
           userId,
-          notificationPreferences: data.notificationPreferences ? { ...data.notificationPreferences } : {},
-          notificationSchedule: data.notificationSchedule ? { ...data.notificationSchedule } : {},
+          notificationPreferences: data.notificationPreferences
+            ? { ...data.notificationPreferences }
+            : {},
+          notificationSchedule: data.notificationSchedule
+            ? { ...data.notificationSchedule }
+            : {},
           statsTimeWindow: data.statsTimeWindow,
           keywordPreferences: keywordPrefs,
         },
@@ -69,9 +75,11 @@ export class UserSettingsService {
       const updateData: any = {
         updatedAt: new Date(),
       };
-      
+
       if (data.notificationPreferences) {
-        updateData.notificationPreferences = { ...data.notificationPreferences };
+        updateData.notificationPreferences = {
+          ...data.notificationPreferences,
+        };
       }
       if (data.notificationSchedule) {
         updateData.notificationSchedule = { ...data.notificationSchedule };
@@ -84,7 +92,7 @@ export class UserSettingsService {
         updateData.keywordPreferences = {
           enabled: (data as any).keywords.length > 0,
           keywords: (data as any).keywords,
-          threshold: 0.7
+          threshold: 0.7,
         };
       }
 
@@ -125,10 +133,14 @@ export class UserSettingsService {
       const createData: any = {
         userId,
       };
-      
+
       if (data.notificationPreferences) {
-        updateData.notificationPreferences = { ...data.notificationPreferences };
-        createData.notificationPreferences = { ...data.notificationPreferences };
+        updateData.notificationPreferences = {
+          ...data.notificationPreferences,
+        };
+        createData.notificationPreferences = {
+          ...data.notificationPreferences,
+        };
       }
       if (data.notificationSchedule) {
         updateData.notificationSchedule = { ...data.notificationSchedule };
@@ -143,7 +155,7 @@ export class UserSettingsService {
         const keywordPrefs = {
           enabled: (data as any).keywords.length > 0,
           keywords: (data as any).keywords,
-          threshold: 0.7
+          threshold: 0.7,
         };
         updateData.keywordPreferences = keywordPrefs;
         createData.keywordPreferences = keywordPrefs;
@@ -195,6 +207,10 @@ export class UserSettingsService {
       issue_closed: true,
       issue_commented: true,
       issue_assigned: true,
+      // Team notification defaults
+      team_assignments: true,
+      team_mentions: true,
+      team_review_requests: true,
     };
   }
 

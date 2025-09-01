@@ -138,3 +138,40 @@ export interface GitHubAppToken {
   permissions: Record<string, string>;
   repositories?: GitHubRepository[];
 }
+
+export interface GitHubTeam {
+  id: number;
+  slug: string;
+  name: string;
+  description?: string;
+  permission: 'pull' | 'triage' | 'push' | 'maintain' | 'admin';
+  privacy: 'secret' | 'closed';
+  organization: {
+    login: string;
+    id: number;
+    avatar_url: string;
+  };
+  members_count?: number;
+  repos_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GitHubTeamMember {
+  id: number;
+  login: string;
+  role: 'member' | 'maintainer';
+  avatar_url: string;
+}
+
+export interface UserTeam {
+  id: string;
+  userId: string;
+  teamId: string;
+  teamSlug: string;
+  teamName: string;
+  organization: string;
+  permission: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

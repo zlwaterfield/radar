@@ -30,7 +30,11 @@ interface NotificationSettings {
   mention_in_comment: boolean;
   mention_in_pull_request: boolean;
   mention_in_issue: boolean;
-  mentioned_in_comments: boolean;
+  
+  // Team notifications
+  team_assignments: boolean;
+  team_mentions: boolean;
+  team_review_requests: boolean;
   
   // Noise Control
   mute_own_activity: boolean;
@@ -65,7 +69,11 @@ export default function NotificationsSettings() {
     mention_in_comment: true,
     mention_in_pull_request: true,
     mention_in_issue: true,
-    mentioned_in_comments: true,
+    
+    // Team notifications
+    team_assignments: true,
+    team_mentions: true,
+    team_review_requests: true,
     
     // Noise Control
     mute_own_activity: true,
@@ -126,7 +134,11 @@ export default function NotificationsSettings() {
           mention_in_comment: prefs.mention_in_comment ?? prev.mention_in_comment,
           mention_in_pull_request: prefs.mention_in_pull_request ?? prev.mention_in_pull_request,
           mention_in_issue: prefs.mention_in_issue ?? prev.mention_in_issue,
-          mentioned_in_comments: prefs.mentioned_in_comments ?? prev.mentioned_in_comments,
+          
+          // Team notifications
+          team_assignments: prefs.team_assignments ?? prev.team_assignments,
+          team_mentions: prefs.team_mentions ?? prev.team_mentions,
+          team_review_requests: prefs.team_review_requests ?? prev.team_review_requests,
           
           // Noise Control
           mute_own_activity: prefs.mute_own_activity ?? prev.mute_own_activity,
@@ -178,7 +190,11 @@ export default function NotificationsSettings() {
           mention_in_comment: notificationSettings.mention_in_comment,
           mention_in_pull_request: notificationSettings.mention_in_pull_request,
           mention_in_issue: notificationSettings.mention_in_issue,
-          mentioned_in_comments: notificationSettings.mentioned_in_comments,
+          
+          // Team notifications
+          team_assignments: notificationSettings.team_assignments,
+          team_mentions: notificationSettings.team_mentions,
+          team_review_requests: notificationSettings.team_review_requests,
           
           // Noise Control
           mute_own_activity: notificationSettings.mute_own_activity,
@@ -220,7 +236,10 @@ export default function NotificationsSettings() {
           Advanced notification preferences
         </h3>
         <div className="mt-2 max-w-xl text-sm text-gray-600 dark:text-gray-300">
-          <p>Configure when you want to be notified about GitHub activity. These settings apply regardless of your role on each PR or issue.</p>
+          <p>Configure when you want to be notified about GitHub activity.</p>
+          <p className="mt-1 text-xs">
+            <strong>You&apos;re involved with</strong> a PR/issue when you&apos;re the author, assigned to it, requested for review, or mentioned in it.
+          </p>
         </div>
         
         <div className="mt-5 space-y-6">
@@ -264,7 +283,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-closed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  PR closed
+                  PRs closed that you&apos;re involved with
                 </label>
               </div>
               <div className="flex items-center">
@@ -277,7 +296,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-merged" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  PR merged
+                  PRs merged that you&apos;re involved with
                 </label>
               </div>
               <div className="flex items-center">
@@ -290,7 +309,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="pr-assignments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  PR assignments and review requests
+                  When you&apos;re assigned to PRs or requested for review
                 </label>
               </div>
               <div className="flex items-center">
@@ -323,7 +342,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="issue-opened" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  New issues opened
+                  New issues opened in watched repositories
                 </label>
               </div>
               <div className="flex items-center">
@@ -336,7 +355,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="issue-closed" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Issues closed
+                  Issues closed in watched repositories
                 </label>
               </div>
               <div className="flex items-center">
@@ -362,7 +381,7 @@ export default function NotificationsSettings() {
                   onChange={handleNotificationChange}
                 />
                 <label htmlFor="issue-assignments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Issue assignments
+                  When you&apos;re assigned to issues
                 </label>
               </div>
             </div>
@@ -444,17 +463,53 @@ export default function NotificationsSettings() {
                   When you&apos;re mentioned in issues
                 </label>
               </div>
+            </div>
+          </div>
+          
+          {/* Team Notifications */}
+          <div>
+            <h4 className="font-medium text-gray-900 dark:text-white">Team notifications</h4>
+            <div className="mt-1 mb-2 text-xs text-gray-500 dark:text-gray-400">
+              These work in addition to your individual notification settings above
+            </div>
+            <div className="mt-2 space-y-2">
               <div className="flex items-center">
                 <input
-                  id="mentioned-in-comments"
-                  name="mentioned_in_comments"
+                  id="team-assignments"
+                  name="team_assignments"
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  checked={notificationSettings.mentioned_in_comments}
+                  checked={notificationSettings.team_assignments}
                   onChange={handleNotificationChange}
                 />
-                <label htmlFor="mentioned-in-comments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  General mention notifications
+                <label htmlFor="team-assignments" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  When your team is assigned to PRs or issues
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="team-mentions"
+                  name="team_mentions"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.team_mentions}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="team-mentions" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  When your team is mentioned in PRs or issues
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="team-review-requests"
+                  name="team_review_requests"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  checked={notificationSettings.team_review_requests}
+                  onChange={handleNotificationChange}
+                />
+                <label htmlFor="team-review-requests" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  When your team is requested to review PRs
                 </label>
               </div>
             </div>
