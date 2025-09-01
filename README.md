@@ -86,9 +86,7 @@ MIT License - see LICENSE file for details.
 ## 🎯 Roadmap
 
 - Soon
-   - Team mentions
-   - Improving onboarding experience
-   - Testing all events in production
+   - Testing all events in production (including teams)
    - Improve event messages (general copying and PR descriptions, +/- changes, etc)
    - Document all supported events
 - Next

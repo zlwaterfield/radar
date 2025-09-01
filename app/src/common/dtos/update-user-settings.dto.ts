@@ -99,6 +99,21 @@ export class NotificationPreferencesDto {
   @IsBoolean()
   mentioned_in_comments?: boolean;
 
+  @ApiPropertyOptional({ description: 'Notify when team is assigned' })
+  @IsOptional()
+  @IsBoolean()
+  team_assignments?: boolean;
+
+  @ApiPropertyOptional({ description: 'Notify when team is mentioned' })
+  @IsOptional()
+  @IsBoolean()
+  team_mentions?: boolean;
+
+  @ApiPropertyOptional({ description: 'Notify when team is requested for review' })
+  @IsOptional()
+  @IsBoolean()
+  team_review_requests?: boolean;
+
   @ApiPropertyOptional({ description: 'Mute notifications for own activity' })
   @IsOptional()
   @IsBoolean()
