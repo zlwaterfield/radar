@@ -86,10 +86,9 @@ MIT License - see LICENSE file for details.
 ## 🎯 Roadmap
 
 - Next
-   - Github Discussions support
-   - Daily Digests support
    - Customizable Digests to custom channels
-   - Events to custom channels - more configurations
+   - Keyword notifications to custom channels
+   - Github Discussions support
    - Better Slack homepage
    - Slack / Github user connecting to @ in notifications
 - Later
