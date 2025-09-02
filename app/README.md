@@ -50,6 +50,13 @@ $ npm run start:prod
 # unit tests
 $ npm run test
 
+# run specific test file
+$ npm test webhooks-filtering.spec.ts
+$ npm test slack-message-formatting.spec.ts
+
+# watch mode (runs tests on file changes)
+$ npm run test:watch
+
 # e2e tests
 $ npm run test:e2e
 
