@@ -11,8 +11,7 @@ const prisma = new PrismaClient();
 const configService = new ConfigService();
 const databaseService = new DatabaseService();
 const githubService = new GitHubService(configService, databaseService);
-const slackService = new SlackService(configService, databaseService);
-const digestService = new DigestService(databaseService, githubService, slackService);
+
 
 export const dailyDigest = schedules.task({
   id: "daily-digest",
@@ -25,6 +24,9 @@ export const dailyDigest = schedules.task({
     maxTimeoutInMs: 30000,
   },
   run: async (payload, { ctx }) => {
+    const slackService = new SlackService(configService, databaseService);
+    const digestService = new DigestService(databaseService, githubService, slackService);
+    
     try {
       console.log("Starting daily digest processing...");
 
@@ -117,6 +119,9 @@ export const dailyDigest = schedules.task({
 export const testUserDigest = task({
   id: "test-user-digest",
   run: async (payload: { userId: string }) => {
+    const slackService = new SlackService(configService, databaseService);
+    const digestService = new DigestService(databaseService, githubService, slackService);
+    
     try {
       const { userId } = payload;
       
