@@ -9,7 +9,6 @@ import type {
   SlackTeam,
   SlackOAuthResponse,
   SlackMessageResponse,
-  SlackApiResponse,
 } from '@/common/types/slack.types';
 
 @Injectable()

@@ -86,7 +86,6 @@ MIT License - see LICENSE file for details.
 ## 🎯 Roadmap
 
 - Soon
-   - Testing all events in production (including teams)
    - Improve event messages (general copying and PR descriptions, +/- changes, etc)
 - Next
    - Github Discussions support
