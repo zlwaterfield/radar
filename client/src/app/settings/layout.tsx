@@ -56,17 +56,17 @@ export default function SettingsLayout({
               Notifications
             </Link>
           </li>
-          {/* <li>
+          <li>
             <Link href="/settings/digest"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
                 isActive('/settings/digest')
-                  ? 'bg-primary-50 text-primary-700 dark:bg-gray-700 dark:text-primary-400 font-medium'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
               <FiCalendar size={20} className="mr-3 flex-shrink-0" />
               Daily digest
             </Link>
-          </li> */}
+          </li>
           <li>
             <Link href="/settings/repositories"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
@@ -138,7 +138,7 @@ export default function SettingsLayout({
           <div className="px-6 py-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               {pathname === '/settings/notifications' && 'Notifications'}
-              {/* {pathname === '/settings/digest' && 'Daily digest'} */}
+              {pathname === '/settings/digest' && 'Daily Digest'}
               {pathname === '/settings/repositories' && 'Repositories'}
               {pathname === '/settings/keywords' && 'Keywords'}
               {pathname === '/onboarding' && 'Setup Integrations'}

@@ -19,6 +19,7 @@ import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { DigestModule } from './digest/digest.module';
 
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -54,6 +55,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     WebhooksModule,
     IntegrationsModule,
     NotificationsModule,
+    DigestModule,
   ],
   controllers: [AppController],
   providers: [

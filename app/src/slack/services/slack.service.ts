@@ -242,6 +242,52 @@ export class SlackService {
   }
 
   /**
+   * Send direct message to user
+   */
+  async sendDirectMessage(
+    accessToken: string,
+    userId: string,
+    message: { blocks?: any[]; text?: string; attachments?: any[] },
+  ): Promise<SlackMessageResponse | null> {
+    try {
+      const client = this.createUserClient(accessToken);
+
+      // Open DM channel
+      const dmResponse = await client.conversations.open({
+        users: userId,
+      });
+
+      if (!dmResponse.ok || !dmResponse.channel?.id) {
+        this.logger.error(`Failed to open DM channel: ${dmResponse.error}`);
+        return null;
+      }
+
+      const channelId = dmResponse.channel.id;
+
+      // Send message
+      const messageParams: any = {
+        channel: channelId,
+        text: message.text || 'Daily Digest',
+        blocks: message.blocks,
+        attachments: message.attachments,
+      };
+
+      const messageResponse = await client.chat.postMessage(messageParams);
+
+      if (messageResponse.ok) {
+        this.logger.log(`Direct message sent to user ${userId}`);
+        return messageResponse as SlackMessageResponse;
+      } else {
+        this.logger.error(`Failed to send direct message: ${messageResponse.error}`);
+        return null;
+      }
+    } catch (error) {
+      this.logger.error('Error sending direct message:', error);
+      return null;
+    }
+  }
+
+  /**
    * Test Slack connection
    */
   async testConnection(accessToken?: string): Promise<boolean> {
