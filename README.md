@@ -95,6 +95,3 @@ MIT License - see LICENSE file for details.
 - Later
    - Statistics
    - Billing and subscription management
-
-## Bugs
-- Same github user multiple slack workspaces
