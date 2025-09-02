@@ -82,9 +82,17 @@ describe('Webhook Event Filtering', () => {
 
   describe('Pull Request Events', () => {
     it('should accept relevant PR actions', () => {
-      const relevantActions = ['opened', 'closed', 'reopened', 'ready_for_review', 'review_requested', 'assigned', 'unassigned'];
-      
-      relevantActions.forEach(action => {
+      const relevantActions = [
+        'opened',
+        'closed',
+        'reopened',
+        'ready_for_review',
+        'review_requested',
+        'assigned',
+        'unassigned',
+      ];
+
+      relevantActions.forEach((action) => {
         const payload = {
           action,
           sender: { type: 'User' },
@@ -94,9 +102,14 @@ describe('Webhook Event Filtering', () => {
     });
 
     it('should reject irrelevant PR actions', () => {
-      const irrelevantActions = ['edited', 'labeled', 'unlabeled', 'synchronize'];
-      
-      irrelevantActions.forEach(action => {
+      const irrelevantActions = [
+        'edited',
+        'labeled',
+        'unlabeled',
+        'synchronize',
+      ];
+
+      irrelevantActions.forEach((action) => {
         const payload = {
           action,
           sender: { type: 'User' },
@@ -112,7 +125,7 @@ describe('Webhook Event Filtering', () => {
         action: 'opened',
         sender: { type: 'Bot', login: 'dependabot[bot]' },
       };
-      
+
       expect(isRelevantEvent('pull_request', payload)).toBe(false);
       expect(isRelevantEvent('issues', payload)).toBe(false);
       expect(isRelevantEvent('issue_comment', payload)).toBe(false);
@@ -123,12 +136,12 @@ describe('Webhook Event Filtering', () => {
         action: 'added',
         sender: { type: 'Bot' },
       };
-      
+
       const installationPayload = {
         action: 'created',
         sender: { type: 'Bot' },
       };
-      
+
       expect(isRelevantEvent('membership', membershipPayload)).toBe(true);
       expect(isRelevantEvent('installation', installationPayload)).toBe(true);
     });
@@ -136,9 +149,15 @@ describe('Webhook Event Filtering', () => {
 
   describe('Issue Events', () => {
     it('should accept relevant issue actions', () => {
-      const relevantActions = ['opened', 'closed', 'reopened', 'assigned', 'unassigned'];
-      
-      relevantActions.forEach(action => {
+      const relevantActions = [
+        'opened',
+        'closed',
+        'reopened',
+        'assigned',
+        'unassigned',
+      ];
+
+      relevantActions.forEach((action) => {
         const payload = {
           action,
           sender: { type: 'User' },
@@ -149,8 +168,8 @@ describe('Webhook Event Filtering', () => {
 
     it('should reject irrelevant issue actions', () => {
       const irrelevantActions = ['edited', 'labeled', 'unlabeled'];
-      
-      irrelevantActions.forEach(action => {
+
+      irrelevantActions.forEach((action) => {
         const payload = {
           action,
           sender: { type: 'User' },
@@ -166,9 +185,11 @@ describe('Webhook Event Filtering', () => {
         action: 'created',
         sender: { type: 'User' },
       };
-      
+
       expect(isRelevantEvent('issue_comment', payload)).toBe(true);
-      expect(isRelevantEvent('pull_request_review_comment', payload)).toBe(true);
+      expect(isRelevantEvent('pull_request_review_comment', payload)).toBe(
+        true,
+      );
     });
 
     it('should reject edited comments', () => {
@@ -176,17 +197,25 @@ describe('Webhook Event Filtering', () => {
         action: 'edited',
         sender: { type: 'User' },
       };
-      
+
       expect(isRelevantEvent('issue_comment', payload)).toBe(false);
-      expect(isRelevantEvent('pull_request_review_comment', payload)).toBe(false);
+      expect(isRelevantEvent('pull_request_review_comment', payload)).toBe(
+        false,
+      );
     });
   });
 
   describe('Irrelevant Event Types', () => {
     it('should reject unsupported event types', () => {
-      const irrelevantEvents = ['push', 'release', 'star', 'fork', 'workflow_run'];
-      
-      irrelevantEvents.forEach(eventType => {
+      const irrelevantEvents = [
+        'push',
+        'release',
+        'star',
+        'fork',
+        'workflow_run',
+      ];
+
+      irrelevantEvents.forEach((eventType) => {
         const payload = { action: 'created', sender: { type: 'User' } };
         expect(isRelevantEvent(eventType, payload)).toBe(false);
       });

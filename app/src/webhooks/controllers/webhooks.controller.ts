@@ -42,10 +42,10 @@ export class WebhooksController {
     @Headers('x-hub-signature-256') signature: string,
   ): Promise<WebhookResponse> {
     this.validateWebhookHeaders(eventType, signature, deliveryId);
-    
+
     const payloadString = JSON.stringify(payload);
     this.verifyWebhookSignature(payloadString, signature, deliveryId);
-    
+
     this.logger.log(
       `Received GitHub webhook: ${eventType} for ${payload.repository?.full_name} (${deliveryId})`,
     );

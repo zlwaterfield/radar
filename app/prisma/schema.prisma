@@ -154,6 +154,10 @@ model Notification {
   // Notification payload (JSON)
   payload     Json
 
+  // Notification decision context for debugging
+  reason      String? // Main reason for notification (e.g., "KEYWORD_MATCH", "AUTHOR", "REVIEWER")
+  context     Json?   // Additional context like watching reasons, matched keywords, etc.
+
   @@map("notification")
 }
 

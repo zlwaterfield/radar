@@ -57,7 +57,10 @@ describe('WebhooksService', () => {
       });
 
       // Act
-      const result = await service.processGitHubWebhook('pull_request', payload);
+      const result = await service.processGitHubWebhook(
+        'pull_request',
+        payload,
+      );
 
       // Assert
       expect(result).not.toBeNull();
@@ -85,7 +88,10 @@ describe('WebhooksService', () => {
       };
 
       // Act
-      const result = await service.processGitHubWebhook('workflow_run', payload);
+      const result = await service.processGitHubWebhook(
+        'workflow_run',
+        payload,
+      );
 
       // Assert
       expect(result).toEqual({ processed: false });
@@ -102,7 +108,10 @@ describe('WebhooksService', () => {
       };
 
       // Act
-      const result = await service.processGitHubWebhook('pull_request', payload);
+      const result = await service.processGitHubWebhook(
+        'pull_request',
+        payload,
+      );
 
       // Assert
       expect(result).toEqual({ processed: false });
@@ -119,7 +128,10 @@ describe('WebhooksService', () => {
       };
 
       // Act
-      const result = await service.processGitHubWebhook('pull_request', payload);
+      const result = await service.processGitHubWebhook(
+        'pull_request',
+        payload,
+      );
 
       // Assert
       expect(result).toEqual({ processed: false });

@@ -109,7 +109,9 @@ export class NotificationPreferencesDto {
   @IsBoolean()
   team_mentions?: boolean;
 
-  @ApiPropertyOptional({ description: 'Notify when team is requested for review' })
+  @ApiPropertyOptional({
+    description: 'Notify when team is requested for review',
+  })
   @IsOptional()
   @IsBoolean()
   team_review_requests?: boolean;

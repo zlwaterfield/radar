@@ -110,10 +110,17 @@ async function processEventNotifications(event: any): Promise<boolean> {
 
     // Create notifications for each relevant user
     let notificationCount = 0;
+    console.log(`Processing notifications for ${relevantUsers.length} users for ${eventType} in ${repositoryName}`);
+    
     for (const user of relevantUsers) {
+      const startTime = Date.now();
       let shouldNotify = false;
       let matchedKeywords: string[] = [];
       let matchDetails = {};
+      let reason: string | undefined;
+      let context: any | undefined;
+      
+      console.log(`\n--- Processing user ${user.id} (${user.githubLogin}) for ${eventType} ---`);
       
       // Use the new notification service to determine if user should be notified
       if (eventType === 'pull_request') {
@@ -121,37 +128,56 @@ async function processEventNotifications(event: any): Promise<boolean> {
         shouldNotify = result.shouldNotify;
         matchedKeywords = result.matchedKeywords;
         matchDetails = result.matchDetails;
+        reason = result.reason;
+        context = result.context;
       } else if (eventType === 'issue_comment') {
         const result = await notificationService.processIssueCommentEvent(user.id, payload, event.id);
         shouldNotify = result.shouldNotify;
         matchedKeywords = result.matchedKeywords;
         matchDetails = result.matchDetails;
+        reason = result.reason;
+        context = result.context;
       } else if (eventType === 'issues') {
         const result = await notificationService.processIssueEvent(user.id, payload, event.id);
         shouldNotify = result.shouldNotify;
         matchedKeywords = result.matchedKeywords;
         matchDetails = result.matchDetails;
+        reason = result.reason;
+        context = result.context;
       } else if (eventType === 'pull_request_review') {
         const result = await notificationService.processPullRequestReviewEvent(user.id, payload, event.id);
         shouldNotify = result.shouldNotify;
         matchedKeywords = result.matchedKeywords;
         matchDetails = result.matchDetails;
+        reason = result.reason;
+        context = result.context;
       } else {
         // For other event types, use the legacy shouldNotifyUser for now
+        console.log(`Using legacy notification logic for ${eventType}`);
         shouldNotify = await shouldNotifyUser(user, eventType, action, payload);
+        reason = shouldNotify ? 'LEGACY_LOGIC' : 'LEGACY_SKIP';
+        context = { eventType, action, legacyLogic: true };
       }
+      
+      const processingTime = Date.now() - startTime;
+      console.log(`Decision: ${shouldNotify ? 'NOTIFY' : 'SKIP'} - Reason: ${reason} (${processingTime}ms)`);
       
       if (shouldNotify) {
         // Create and send the actual notification
-        const notification = await createNotification(user, event, eventType, action, payload, repositoryName);
+        const notification = await createNotification(user, event, eventType, action, payload, repositoryName, reason, context);
         if (notification) {
           notificationCount++;
+          console.log(`✅ Successfully created notification ${notification.id} for user ${user.githubLogin}`);
           
           // Log keyword matches if any
           if (matchedKeywords.length > 0) {
-            console.log(`Keywords matched for user ${user.id} in ${eventType}: ${matchedKeywords.join(', ')}`);
+            console.log(`🔍 Keywords matched: ${matchedKeywords.join(', ')}`);
           }
+        } else {
+          console.error(`❌ Failed to create notification for user ${user.githubLogin}`);
         }
+      } else {
+        console.log(`⏭️ Skipped notification for user ${user.githubLogin} - ${reason}`);
       }
     }
 
@@ -243,14 +269,16 @@ async function createNotification(
   eventType: string,
   action: string,
   payload: any,
-  repositoryName: string
+  repositoryName: string,
+  reason?: string,
+  context?: any
 ): Promise<any> {
   try {
     const title = generateNotificationTitle(eventType, action, payload);
     const message = generateNotificationMessage(eventType, action, payload);
     const url = payload.html_url || payload.pull_request?.html_url || payload.issue?.html_url;
     
-    // Create notification record
+    // Create notification record with reason and context
     const notification = await prisma.notification.create({
       data: {
         userId: user.id,
@@ -264,6 +292,8 @@ async function createNotification(
           message,
           url,
         },
+        reason: reason || 'UNKNOWN',
+        context: context || {},
       },
     });
 
@@ -430,24 +460,53 @@ function createPRSlackMessage(data: any) {
     contextText = `${githubUserLink} ${action} this pull request in \`${repositoryName}\``;
   }
 
-  // Create blocks with attachment styling (like Python example)
+  // Get user-friendly action text
+  const getFriendlyActionText = (action: string): string => {
+    switch (action) {
+      case 'opened': return 'opened';
+      case 'closed': return payload.pull_request?.merged ? 'merged' : 'closed';
+      case 'reopened': return 'reopened';
+      case 'review_requested': return 'requested review for';
+      case 'assigned': return 'assigned';
+      default: return action.replace('_', ' ');
+    }
+  };
+
+  const friendlyAction = getFriendlyActionText(action);
+  
+  // Create blocks with attachment styling, putting PR title in main message
   const blocks = [
     {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${icon} *Pull Request ${actionText}* by ${githubUserLink}`
+        text: `${icon} *<${url}|${title}>*`
       }
     },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `${githubUserLink} ${friendlyAction} this pull request in \`${repositoryName}\``
+        }
+      ]
+    } as any,
     {
       type: 'divider'
     },
     {
       type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `<${url}|*PR #${payload.pull_request?.number}* ${title}>`
-      },
+      fields: [
+        {
+          type: 'mrkdwn',
+          text: `*PR:* #${payload.pull_request?.number}`
+        },
+        {
+          type: 'mrkdwn',
+          text: `*Action:* ${actionText}`
+        }
+      ],
       accessory: {
         type: 'button',
         text: {
@@ -458,16 +517,7 @@ function createPRSlackMessage(data: any) {
         url: url,
         action_id: 'view_pr'
       }
-    },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: contextText
-        }
-      ]
-    } as any
+    }
   ];
 
   return {
@@ -522,24 +572,39 @@ function createIssueSlackMessage(data: any) {
     viewText = "View Issue";
   }
 
-  // Create blocks with attachment styling
+  // Create blocks with issue/PR title prominently displayed
   const blocks = [
     {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: titleText
+        text: `${icon} *<${url}|${title}>*`
       }
     },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `${githubUserLink} ${action} this ${isPullRequest ? 'pull request' : 'issue'} in \`${repositoryName}\``
+        }
+      ]
+    } as any,
     {
       type: 'divider'
     },
     {
       type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `<${url}|*${itemPrefix} #${payload.issue?.number}* ${title}>`
-      },
+      fields: [
+        {
+          type: 'mrkdwn',
+          text: `*${itemPrefix}:* #${payload.issue?.number}`
+        },
+        {
+          type: 'mrkdwn',
+          text: `*Action:* ${actionText}`
+        }
+      ],
       accessory: {
         type: 'button',
         text: {
@@ -550,16 +615,7 @@ function createIssueSlackMessage(data: any) {
         url: url,
         action_id: 'view_issue'
       }
-    },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: contextText
-        }
-      ]
-    } as any
+    }
   ];
 
   return {
@@ -597,24 +653,39 @@ function createPRReviewSlackMessage(data: any) {
   const user = payload.review?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
   
-  // Create blocks with attachment styling
+  // Create blocks with PR title prominently displayed
   const blocks = [
     {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${icon} *Pull Request Review: ${stateText}* by ${githubUserLink}`
+        text: `${icon} *<${url}|${title}>*`
       }
     },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `${githubUserLink} ${reviewState === 'approved' ? 'approved' : reviewState === 'changes_requested' ? 'requested changes on' : 'reviewed'} this pull request in \`${repositoryName}\``
+        }
+      ]
+    } as any,
     {
       type: 'divider'
     },
     {
       type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `<${url}|*PR #${payload.pull_request?.number}* ${title}>`
-      },
+      fields: [
+        {
+          type: 'mrkdwn',
+          text: `*PR:* #${payload.pull_request?.number}`
+        },
+        {
+          type: 'mrkdwn',
+          text: `*Review:* ${stateText}`
+        }
+      ],
       accessory: {
         type: 'button',
         text: {
@@ -634,7 +705,7 @@ function createPRReviewSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*Comment:*\n${truncateText(payload.review.body, 300)}`
+        text: `*Comment:*\n${processMarkdownForSlack(payload.review.body, 300)}`
       }
     });
   }
@@ -672,40 +743,13 @@ function createPRCommentSlackMessage(data: any) {
   const user = payload.comment?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
   
-  // Create blocks with attachment styling
+  // Create blocks with PR title prominently displayed  
   const blocks = [
     {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `💬 *Pull Request Comment* by ${githubUserLink}`
-      }
-    },
-    {
-      type: 'divider'
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `<${url}|*PR #${payload.pull_request?.number}* ${title}>`
-      },
-      accessory: {
-        type: 'button',
-        text: {
-          type: 'plain_text',
-          text: 'View PR',
-          emoji: true
-        },
-        url: url,
-        action_id: 'view_pr'
-      }
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: truncateText(payload.comment?.body || message, 300)
+        text: `💬 *<${url}|${title}>*`
       }
     },
     {
@@ -716,7 +760,36 @@ function createPRCommentSlackMessage(data: any) {
           text: `${githubUserLink} commented on this pull request in \`${repositoryName}\``
         }
       ]
-    } as any
+    } as any,
+    {
+      type: 'divider'
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: processMarkdownForSlack(payload.comment?.body || message, 300)
+      }
+    },
+    {
+      type: 'section',
+      fields: [
+        {
+          type: 'mrkdwn',
+          text: `*PR:* #${payload.pull_request?.number}`
+        }
+      ],
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: 'View PR',
+          emoji: true
+        },
+        url: url,
+        action_id: 'view_pr'
+      }
+    }
   ];
 
   return {
@@ -758,34 +831,26 @@ function createIssueCommentSlackMessage(data: any) {
     viewText = "View Issue";
   }
   
-  // Create blocks with attachment styling
+  // Create blocks with issue/PR title prominently displayed
   const blocks = [
     {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: titleText
+        text: `💬 *<${url}|${title}>*`
       }
     },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: contextText
+        }
+      ]
+    } as any,
     {
       type: 'divider'
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `<${url}|*${itemPrefix} #${payload.issue?.number}* ${title}>`
-      },
-      accessory: {
-        type: 'button',
-        text: {
-          type: 'plain_text',
-          text: viewText,
-          emoji: true
-        },
-        url: url,
-        action_id: 'view_issue'
-      }
     }
   ];
   
@@ -795,21 +860,31 @@ function createIssueCommentSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: truncateText(payload.comment.body, 300)
+        text: processMarkdownForSlack(payload.comment.body, 300)
       }
     });
   }
   
-  // Add context about who commented
+  // Add PR/Issue number and action button
   blocks.push({
-    type: 'context',
-    elements: [
+    type: 'section',
+    fields: [
       {
         type: 'mrkdwn',
-        text: contextText
+        text: `*${itemPrefix}:* #${payload.issue?.number}`
       }
-    ]
-  } as any);
+    ],
+    accessory: {
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: viewText,
+        emoji: true
+      },
+      url: url,
+      action_id: 'view_issue'
+    }
+  });
 
   return {
     blocks: [],
@@ -869,7 +944,7 @@ function createGenericSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: truncateText(message, 300)
+        text: processMarkdownForSlack(message, 300)
       }
     });
   }
@@ -895,6 +970,39 @@ function createGenericSlackMessage(data: any) {
   };
 }
 
+
+/**
+ * Convert GitHub markdown to Slack-compatible mrkdwn and truncate
+ */
+function processMarkdownForSlack(text: string, maxLength: number = 300): string {
+  if (!text) return '';
+  
+  // Basic markdown conversions for Slack
+  let processed = text
+    // Convert GitHub-style code blocks to Slack format
+    .replace(/```(\w+)?\n([\s\S]*?)```/g, '```$2```')
+    // Convert inline code
+    .replace(/`([^`]+)`/g, '`$1`')
+    // Convert bold
+    .replace(/\*\*([^*]+)\*\*/g, '*$1*')
+    // Convert italic (Slack doesn't support italic, so keep as is or convert to emphasis)
+    .replace(/\*([^*]+)\*/g, '_$1_')
+    // Convert strikethrough
+    .replace(/~~([^~]+)~~/g, '~$1~')
+    // Convert GitHub-style links [text](url) to Slack format <url|text>
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<$2|$1>')
+    // Escape special characters that might break Slack formatting
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // Truncate if too long
+  if (processed.length > maxLength) {
+    processed = processed.substring(0, maxLength - 3) + '...';
+  }
+  
+  return processed;
+}
 
 /**
  * Truncate text to specified length

@@ -163,7 +163,7 @@ export const TestScenarios = {
     'unassigned',
   ],
 
-  // Issue event variations  
+  // Issue event variations
   issueEvents: ['opened', 'closed', 'reopened', 'assigned', 'unassigned'],
 
   // Notification settings variations
@@ -196,7 +196,11 @@ export class TestAssertions {
     expect(message.attachments[0].blocks.length).toBeGreaterThan(0);
   }
 
-  static expectNotificationCreated(prismaMock: any, userId: string, eventId: string) {
+  static expectNotificationCreated(
+    prismaMock: any,
+    userId: string,
+    eventId: string,
+  ) {
     expect(prismaMock.notification.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId,

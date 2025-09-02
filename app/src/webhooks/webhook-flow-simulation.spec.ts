@@ -10,7 +10,7 @@ describe('Webhook to Slack Flow Simulation', () => {
     action: string,
     payload: any,
     users: any[],
-    signature: string = 'valid'
+    signature: string = 'valid',
   ) {
     const results = {
       webhookAccepted: false,
@@ -46,23 +46,38 @@ describe('Webhook to Slack Flow Simulation', () => {
 
     // Step 3: Action filtering
     const actionFilters = {
-      pull_request: ['opened', 'closed', 'reopened', 'ready_for_review', 'review_requested', 'assigned', 'unassigned'],
+      pull_request: [
+        'opened',
+        'closed',
+        'reopened',
+        'ready_for_review',
+        'review_requested',
+        'assigned',
+        'unassigned',
+      ],
       issues: ['opened', 'closed', 'reopened', 'assigned', 'unassigned'],
       pull_request_review: ['submitted'],
       issue_comment: ['created'],
       pull_request_review_comment: ['created'],
     };
 
-    if (actionFilters[eventType] && !actionFilters[eventType].includes(action)) {
+    if (
+      actionFilters[eventType] &&
+      !actionFilters[eventType].includes(action)
+    ) {
       results.errors.push(`Action ${action} not relevant for ${eventType}`);
       return results;
     }
 
     // Step 4: Bot filtering (simplified - assume bots have 'bot' in name)
-    if (payload.sender?.login?.includes('bot') && !['membership', 'installation'].includes(eventType)) {
+    if (
+      payload.sender?.login?.includes('bot') &&
+      !['membership', 'installation'].includes(eventType)
+    ) {
       // Check if any users have bot filtering disabled
-      const allowBotEvents = users.some(user => 
-        user.settings?.notificationPreferences?.mute_bot_comments === false
+      const allowBotEvents = users.some(
+        (user) =>
+          user.settings?.notificationPreferences?.mute_bot_comments === false,
       );
       if (!allowBotEvents) {
         results.errors.push('Bot event filtered out');
@@ -75,13 +90,23 @@ describe('Webhook to Slack Flow Simulation', () => {
 
     // Step 5: Process notifications for each user
     for (const user of users) {
-      const notificationDecision = simulateNotificationDecision(user, eventType, action, payload);
-      
+      const notificationDecision = simulateNotificationDecision(
+        user,
+        eventType,
+        action,
+        payload,
+      );
+
       if (notificationDecision.shouldNotify) {
         results.usersNotified++;
-        
+
         // Simulate Slack message creation and sending
-        const messageResult = simulateSlackMessage(eventType, action, payload, user);
+        const messageResult = simulateSlackMessage(
+          eventType,
+          action,
+          payload,
+          user,
+        );
         if (messageResult.success) {
           results.slackMessagesSent++;
         }
@@ -91,9 +116,14 @@ describe('Webhook to Slack Flow Simulation', () => {
     return results;
   }
 
-  function simulateNotificationDecision(user: any, eventType: string, action: string, payload: any) {
+  function simulateNotificationDecision(
+    user: any,
+    eventType: string,
+    action: string,
+    payload: any,
+  ) {
     const preferences = user.settings?.notificationPreferences || {};
-    
+
     // Map event to preference key
     const preferenceKey = mapEventToPreference(eventType, action);
     if (preferenceKey && preferences[preferenceKey] === false) {
@@ -101,12 +131,18 @@ describe('Webhook to Slack Flow Simulation', () => {
     }
 
     // Check own activity muting
-    if (payload.sender?.login === user.githubLogin && preferences.mute_own_activity !== false) {
+    if (
+      payload.sender?.login === user.githubLogin &&
+      preferences.mute_own_activity !== false
+    ) {
       return { shouldNotify: false, reason: 'Own activity muted' };
     }
 
     // Check bot muting
-    if (payload.sender?.login?.includes('bot') && preferences.mute_bot_comments === true) {
+    if (
+      payload.sender?.login?.includes('bot') &&
+      preferences.mute_bot_comments === true
+    ) {
       return { shouldNotify: false, reason: 'Bot activity muted' };
     }
 
@@ -123,36 +159,64 @@ describe('Webhook to Slack Flow Simulation', () => {
     const reasons = [];
 
     // Author check
-    if (payload.pull_request?.user?.login === user.githubLogin || payload.issue?.user?.login === user.githubLogin) {
+    if (
+      payload.pull_request?.user?.login === user.githubLogin ||
+      payload.issue?.user?.login === user.githubLogin
+    ) {
       reasons.push('AUTHOR');
     }
 
     // Reviewer check
-    if (payload.pull_request?.requested_reviewers?.some((r: any) => r.login === user.githubLogin)) {
+    if (
+      payload.pull_request?.requested_reviewers?.some(
+        (r: any) => r.login === user.githubLogin,
+      )
+    ) {
       reasons.push('REVIEWER');
     }
 
     // Assignment check
-    if (payload.pull_request?.assignees?.some((a: any) => a.login === user.githubLogin) ||
-        payload.issue?.assignees?.some((a: any) => a.login === user.githubLogin)) {
+    if (
+      payload.pull_request?.assignees?.some(
+        (a: any) => a.login === user.githubLogin,
+      ) ||
+      payload.issue?.assignees?.some((a: any) => a.login === user.githubLogin)
+    ) {
       reasons.push('ASSIGNED');
     }
 
     // Mention check
-    const textToCheck = [payload.pull_request?.title, payload.pull_request?.body, payload.issue?.title, payload.issue?.body].filter(Boolean).join(' ');
+    const textToCheck = [
+      payload.pull_request?.title,
+      payload.pull_request?.body,
+      payload.issue?.title,
+      payload.issue?.body,
+    ]
+      .filter(Boolean)
+      .join(' ');
     if (textToCheck.includes(`@${user.githubLogin}`)) {
       reasons.push('MENTIONED');
     }
 
     // If no specific reasons but repository is tracked, add general subscription
-    if (reasons.length === 0 && user.repositories?.some((r: any) => r.githubId === payload.repository?.id?.toString())) {
+    if (
+      reasons.length === 0 &&
+      user.repositories?.some(
+        (r: any) => r.githubId === payload.repository?.id?.toString(),
+      )
+    ) {
       reasons.push('SUBSCRIBED');
     }
 
     return reasons;
   }
 
-  function simulateSlackMessage(eventType: string, action: string, payload: any, user: any) {
+  function simulateSlackMessage(
+    eventType: string,
+    action: string,
+    payload: any,
+    user: any,
+  ) {
     // Simulate message creation logic
     if (!user.slackId || !user.slackAccessToken) {
       return { success: false, error: 'User missing Slack credentials' };
@@ -165,37 +229,61 @@ describe('Webhook to Slack Flow Simulation', () => {
       issue_comment: () => ({ icon: '💬', color: '#1D9BD1', type: 'Comment' }),
     };
 
-    const messageConfig = messageTypes[eventType]?.() || { icon: '📝', color: '#1D9BD1', type: 'Activity' };
+    const messageConfig = messageTypes[eventType]?.() || {
+      icon: '📝',
+      color: '#1D9BD1',
+      type: 'Activity',
+    };
 
     return {
       success: true,
       message: {
-        attachments: [{
-          color: messageConfig.color,
-          blocks: [
-            { type: 'section', text: { type: 'mrkdwn', text: `${messageConfig.icon} ${messageConfig.type} ${action}` } },
-            { type: 'divider' },
-            { type: 'section', text: { type: 'mrkdwn', text: payload.pull_request?.title || payload.issue?.title || 'GitHub Activity' } }
-          ]
-        }]
-      }
+        attachments: [
+          {
+            color: messageConfig.color,
+            blocks: [
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `${messageConfig.icon} ${messageConfig.type} ${action}`,
+                },
+              },
+              { type: 'divider' },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text:
+                    payload.pull_request?.title ||
+                    payload.issue?.title ||
+                    'GitHub Activity',
+                },
+              },
+            ],
+          },
+        ],
+      },
     };
   }
 
-  function mapEventToPreference(eventType: string, action: string): string | null {
+  function mapEventToPreference(
+    eventType: string,
+    action: string,
+  ): string | null {
     const mapping = {
-      'pull_request': {
-        'opened': 'pull_request_opened',
-        'closed': 'pull_request_closed',
-        'reopened': 'pull_request_reopened',
+      pull_request: {
+        opened: 'pull_request_opened',
+        closed: 'pull_request_closed',
+        reopened: 'pull_request_reopened',
       },
-      'issues': {
-        'opened': 'issue_opened',
-        'closed': 'issue_closed',
-        'reopened': 'issue_reopened',
+      issues: {
+        opened: 'issue_opened',
+        closed: 'issue_closed',
+        reopened: 'issue_reopened',
       },
-      'issue_comment': { 'created': 'issue_commented' },
-      'pull_request_review': { 'submitted': 'pull_request_reviewed' },
+      issue_comment: { created: 'issue_commented' },
+      pull_request_review: { submitted: 'pull_request_reviewed' },
     };
 
     return mapping[eventType]?.[action] || mapping[eventType] || null;
@@ -214,20 +302,27 @@ describe('Webhook to Slack Flow Simulation', () => {
         sender: { login: 'developer' },
       };
 
-      const users = [{
-        githubLogin: 'reviewer1',
-        slackId: 'U123456',
-        slackAccessToken: 'xoxp-token',
-        repositories: [{ githubId: '12345', enabled: true }],
-        settings: {
-          notificationPreferences: {
-            pull_request_opened: true,
-            mute_own_activity: true,
+      const users = [
+        {
+          githubLogin: 'reviewer1',
+          slackId: 'U123456',
+          slackAccessToken: 'xoxp-token',
+          repositories: [{ githubId: '12345', enabled: true }],
+          settings: {
+            notificationPreferences: {
+              pull_request_opened: true,
+              mute_own_activity: true,
+            },
           },
         },
-      }];
+      ];
 
-      const result = simulateWebhookToSlackFlow('pull_request', 'opened', payload, users);
+      const result = simulateWebhookToSlackFlow(
+        'pull_request',
+        'opened',
+        payload,
+        users,
+      );
 
       expect(result.webhookAccepted).toBe(true);
       expect(result.eventStored).toBe(true);
@@ -251,20 +346,27 @@ describe('Webhook to Slack Flow Simulation', () => {
         sender: { login: 'commenter' },
       };
 
-      const users = [{
-        githubLogin: 'expert',
-        slackId: 'U789012',
-        slackAccessToken: 'xoxp-token2',
-        repositories: [{ githubId: '67890', enabled: true }],
-        settings: {
-          notificationPreferences: {
-            issue_commented: true,
-            mute_own_activity: true,
+      const users = [
+        {
+          githubLogin: 'expert',
+          slackId: 'U789012',
+          slackAccessToken: 'xoxp-token2',
+          repositories: [{ githubId: '67890', enabled: true }],
+          settings: {
+            notificationPreferences: {
+              issue_commented: true,
+              mute_own_activity: true,
+            },
           },
         },
-      }];
+      ];
 
-      const result = simulateWebhookToSlackFlow('issue_comment', 'created', payload, users);
+      const result = simulateWebhookToSlackFlow(
+        'issue_comment',
+        'created',
+        payload,
+        users,
+      );
 
       expect(result.usersNotified).toBe(1);
       expect(result.slackMessagesSent).toBe(1);
@@ -293,10 +395,17 @@ describe('Webhook to Slack Flow Simulation', () => {
         sender: { login: 'developer' },
       };
 
-      const result = simulateWebhookToSlackFlow('pull_request', 'edited', payload, []);
+      const result = simulateWebhookToSlackFlow(
+        'pull_request',
+        'edited',
+        payload,
+        [],
+      );
 
       expect(result.eventStored).toBe(false);
-      expect(result.errors).toContain('Action edited not relevant for pull_request');
+      expect(result.errors).toContain(
+        'Action edited not relevant for pull_request',
+      );
     });
 
     it('should filter bot events when users have muting enabled', () => {
@@ -306,17 +415,24 @@ describe('Webhook to Slack Flow Simulation', () => {
         sender: { login: 'dependabot[bot]' },
       };
 
-      const users = [{
-        githubLogin: 'developer',
-        settings: {
-          notificationPreferences: {
-            pull_request_opened: true,
-            mute_bot_comments: true,
+      const users = [
+        {
+          githubLogin: 'developer',
+          settings: {
+            notificationPreferences: {
+              pull_request_opened: true,
+              mute_bot_comments: true,
+            },
           },
         },
-      }];
+      ];
 
-      const result = simulateWebhookToSlackFlow('pull_request', 'opened', payload, users);
+      const result = simulateWebhookToSlackFlow(
+        'pull_request',
+        'opened',
+        payload,
+        users,
+      );
 
       expect(result.errors).toContain('Bot event filtered out');
     });
@@ -332,20 +448,27 @@ describe('Webhook to Slack Flow Simulation', () => {
         sender: { login: 'dependabot[bot]' },
       };
 
-      const users = [{
-        githubLogin: 'developer',
-        slackId: 'U123456',
-        slackAccessToken: 'xoxp-token',
-        repositories: [{ githubId: '12345', enabled: true }],
-        settings: {
-          notificationPreferences: {
-            pull_request_opened: true,
-            mute_bot_comments: false, // Allow bot notifications
+      const users = [
+        {
+          githubLogin: 'developer',
+          slackId: 'U123456',
+          slackAccessToken: 'xoxp-token',
+          repositories: [{ githubId: '12345', enabled: true }],
+          settings: {
+            notificationPreferences: {
+              pull_request_opened: true,
+              mute_bot_comments: false, // Allow bot notifications
+            },
           },
         },
-      }];
+      ];
 
-      const result = simulateWebhookToSlackFlow('pull_request', 'opened', payload, users);
+      const result = simulateWebhookToSlackFlow(
+        'pull_request',
+        'opened',
+        payload,
+        users,
+      );
 
       expect(result.usersNotified).toBe(1);
       expect(result.slackMessagesSent).toBe(1);
@@ -364,19 +487,26 @@ describe('Webhook to Slack Flow Simulation', () => {
         sender: { login: 'developer' },
       };
 
-      const users = [{
-        githubLogin: 'reviewer',
-        slackId: 'U123456',
-        slackAccessToken: 'xoxp-token',
-        repositories: [{ githubId: '12345', enabled: true }],
-        settings: {
-          notificationPreferences: {
-            pull_request_opened: false, // Disabled
+      const users = [
+        {
+          githubLogin: 'reviewer',
+          slackId: 'U123456',
+          slackAccessToken: 'xoxp-token',
+          repositories: [{ githubId: '12345', enabled: true }],
+          settings: {
+            notificationPreferences: {
+              pull_request_opened: false, // Disabled
+            },
           },
         },
-      }];
+      ];
 
-      const result = simulateWebhookToSlackFlow('pull_request', 'opened', payload, users);
+      const result = simulateWebhookToSlackFlow(
+        'pull_request',
+        'opened',
+        payload,
+        users,
+      );
 
       expect(result.usersNotified).toBe(0);
       expect(result.slackMessagesSent).toBe(0);
@@ -389,18 +519,25 @@ describe('Webhook to Slack Flow Simulation', () => {
         sender: { login: 'developer' }, // Same as user
       };
 
-      const users = [{
-        githubLogin: 'developer',
-        repositories: [{ githubId: '12345', enabled: true }],
-        settings: {
-          notificationPreferences: {
-            pull_request_opened: true,
-            mute_own_activity: true,
+      const users = [
+        {
+          githubLogin: 'developer',
+          repositories: [{ githubId: '12345', enabled: true }],
+          settings: {
+            notificationPreferences: {
+              pull_request_opened: true,
+              mute_own_activity: true,
+            },
           },
         },
-      }];
+      ];
 
-      const result = simulateWebhookToSlackFlow('pull_request', 'opened', payload, users);
+      const result = simulateWebhookToSlackFlow(
+        'pull_request',
+        'opened',
+        payload,
+        users,
+      );
 
       expect(result.usersNotified).toBe(0);
     });
@@ -409,8 +546,14 @@ describe('Webhook to Slack Flow Simulation', () => {
   describe('Error Handling', () => {
     it('should handle invalid webhook signature', () => {
       const payload = { repository: { id: 12345 } };
-      
-      const result = simulateWebhookToSlackFlow('pull_request', 'opened', payload, [], 'invalid');
+
+      const result = simulateWebhookToSlackFlow(
+        'pull_request',
+        'opened',
+        payload,
+        [],
+        'invalid',
+      );
 
       expect(result.webhookAccepted).toBe(false);
       expect(result.errors).toContain('Invalid webhook signature');
@@ -427,18 +570,25 @@ describe('Webhook to Slack Flow Simulation', () => {
         sender: { login: 'developer' },
       };
 
-      const users = [{
-        githubLogin: 'reviewer',
-        // Missing slackId and slackAccessToken
-        repositories: [{ githubId: '12345', enabled: true }],
-        settings: {
-          notificationPreferences: {
-            pull_request_opened: true,
+      const users = [
+        {
+          githubLogin: 'reviewer',
+          // Missing slackId and slackAccessToken
+          repositories: [{ githubId: '12345', enabled: true }],
+          settings: {
+            notificationPreferences: {
+              pull_request_opened: true,
+            },
           },
         },
-      }];
+      ];
 
-      const result = simulateWebhookToSlackFlow('pull_request', 'opened', payload, users);
+      const result = simulateWebhookToSlackFlow(
+        'pull_request',
+        'opened',
+        payload,
+        users,
+      );
 
       expect(result.usersNotified).toBe(1); // Decision was made to notify
       expect(result.slackMessagesSent).toBe(0); // But Slack send failed

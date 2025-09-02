@@ -3,7 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service';
 import { UserTeamsSyncService } from '../../users/services/user-teams-sync.service';
-import type { GitHubWebhookPayload, WebhookProcessResult } from '../../common/types';
+import type {
+  GitHubWebhookPayload,
+  WebhookProcessResult,
+} from '../../common/types';
 
 @Injectable()
 export class WebhooksService {

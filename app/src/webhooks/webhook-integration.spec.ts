@@ -81,16 +81,18 @@ describe('Webhook Integration Flow', () => {
 
       // Mock database responses
       databaseService.event.create.mockResolvedValue(mockEvent);
-      
+
       // Mock signature verification by spying on the service method
-      const verifySpy = jest.spyOn(webhooksService, 'verifyGitHubSignature').mockReturnValue(true);
+      const verifySpy = jest
+        .spyOn(webhooksService, 'verifyGitHubSignature')
+        .mockReturnValue(true);
 
       // Act
       const result = await controller.handleGitHubWebhook(
         prPayload,
         'pull_request',
         'delivery-123',
-        'sha256=valid-signature'
+        'sha256=valid-signature',
       );
 
       // Assert
@@ -118,7 +120,9 @@ describe('Webhook Integration Flow', () => {
       });
 
       // Verify event was queued for processing
-      expect(triggerQueueService.queueGitHubEvent).toHaveBeenCalledWith(mockEvent);
+      expect(triggerQueueService.queueGitHubEvent).toHaveBeenCalledWith(
+        mockEvent,
+      );
     });
   });
 
@@ -130,13 +134,15 @@ describe('Webhook Integration Flow', () => {
         sender: { id: 67890, login: 'developer', type: 'User' },
       };
 
-      const verifySpy = jest.spyOn(webhooksService, 'verifyGitHubSignature').mockReturnValue(true);
+      const verifySpy = jest
+        .spyOn(webhooksService, 'verifyGitHubSignature')
+        .mockReturnValue(true);
 
       const result = await controller.handleGitHubWebhook(
         pushPayload,
         'push', // Not in relevant events list
         'delivery-124',
-        'sha256=valid-signature'
+        'sha256=valid-signature',
       );
 
       expect(result.message).toContain('event was skipped');
@@ -149,13 +155,15 @@ describe('Webhook Integration Flow', () => {
         sender: { id: 98765, login: 'dependabot[bot]', type: 'Bot' },
       });
 
-      const verifySpy = jest.spyOn(webhooksService, 'verifyGitHubSignature').mockReturnValue(true);
+      const verifySpy = jest
+        .spyOn(webhooksService, 'verifyGitHubSignature')
+        .mockReturnValue(true);
 
       const result = await controller.handleGitHubWebhook(
         botPRPayload,
         'pull_request',
         'delivery-125',
-        'sha256=valid-signature'
+        'sha256=valid-signature',
       );
 
       expect(result.message).toContain('event was skipped');
@@ -177,13 +185,15 @@ describe('Webhook Integration Flow', () => {
 
       databaseService.user.findFirst.mockResolvedValue(mockUser);
 
-      const verifySpy = jest.spyOn(webhooksService, 'verifyGitHubSignature').mockReturnValue(true);
+      const verifySpy = jest
+        .spyOn(webhooksService, 'verifyGitHubSignature')
+        .mockReturnValue(true);
 
       const result = await controller.handleGitHubWebhook(
         membershipPayload,
         'membership',
         'delivery-126',
-        'sha256=valid-signature'
+        'sha256=valid-signature',
       );
 
       expect(result.message).toBe('Webhook processed successfully');
@@ -197,16 +207,18 @@ describe('Webhook Integration Flow', () => {
   describe('Security Validation', () => {
     it('should reject invalid signatures', async () => {
       const prPayload = TestDataFactory.createPRWebhook('opened');
-      
-      const verifySpy = jest.spyOn(webhooksService, 'verifyGitHubSignature').mockReturnValue(false);
+
+      const verifySpy = jest
+        .spyOn(webhooksService, 'verifyGitHubSignature')
+        .mockReturnValue(false);
 
       await expect(
         controller.handleGitHubWebhook(
           prPayload,
           'pull_request',
           'delivery-127',
-          'sha256=invalid-signature'
-        )
+          'sha256=invalid-signature',
+        ),
       ).rejects.toThrow('Invalid webhook signature');
 
       expect(databaseService.event.create).not.toHaveBeenCalled();
@@ -221,8 +233,8 @@ describe('Webhook Integration Flow', () => {
           prPayload,
           '', // Missing event type
           'delivery-128',
-          'sha256=signature'
-        )
+          'sha256=signature',
+        ),
       ).rejects.toThrow('Missing X-GitHub-Event header');
     });
   });
@@ -230,17 +242,21 @@ describe('Webhook Integration Flow', () => {
   describe('Error Handling', () => {
     it('should handle database errors gracefully', async () => {
       const prPayload = TestDataFactory.createPRWebhook('opened');
-      
-      const verifySpy = jest.spyOn(webhooksService, 'verifyGitHubSignature').mockReturnValue(true);
-      databaseService.event.create.mockRejectedValue(new Error('Database connection failed'));
+
+      const verifySpy = jest
+        .spyOn(webhooksService, 'verifyGitHubSignature')
+        .mockReturnValue(true);
+      databaseService.event.create.mockRejectedValue(
+        new Error('Database connection failed'),
+      );
 
       await expect(
         controller.handleGitHubWebhook(
           prPayload,
           'pull_request',
           'delivery-129',
-          'sha256=valid-signature'
-        )
+          'sha256=valid-signature',
+        ),
       ).rejects.toThrow('Failed to process webhook');
     });
 
@@ -252,7 +268,9 @@ describe('Webhook Integration Flow', () => {
         processed: false,
       };
 
-      const verifySpy = jest.spyOn(webhooksService, 'verifyGitHubSignature').mockReturnValue(true);
+      const verifySpy = jest
+        .spyOn(webhooksService, 'verifyGitHubSignature')
+        .mockReturnValue(true);
       databaseService.event.create.mockResolvedValue(mockEvent);
       triggerQueueService.queueGitHubEvent.mockResolvedValue(false); // Queue failed
 
@@ -261,7 +279,7 @@ describe('Webhook Integration Flow', () => {
         prPayload,
         'pull_request',
         'delivery-130',
-        'sha256=valid-signature'
+        'sha256=valid-signature',
       );
 
       expect(result.message).toBe('Webhook processed successfully');
@@ -272,7 +290,7 @@ describe('Webhook Integration Flow', () => {
     it('should demonstrate full pipeline for relevant user', async () => {
       // This test simulates what happens after the webhook is processed
       // and the trigger task processes the event
-      
+
       const prPayload = TestDataFactory.createPRWebhook('opened', {
         pull_request: {
           number: 456,
@@ -302,7 +320,9 @@ describe('Webhook Integration Flow', () => {
       });
 
       // Mock the complete flow
-      const verifySpy = jest.spyOn(webhooksService, 'verifyGitHubSignature').mockReturnValue(true);
+      const verifySpy = jest
+        .spyOn(webhooksService, 'verifyGitHubSignature')
+        .mockReturnValue(true);
       databaseService.event.create.mockResolvedValue(mockEvent);
       triggerQueueService.queueGitHubEvent.mockResolvedValue(true);
 
@@ -311,14 +331,16 @@ describe('Webhook Integration Flow', () => {
         prPayload,
         'pull_request',
         'delivery-131',
-        'sha256=valid-signature'
+        'sha256=valid-signature',
       );
 
       expect(webhookResult.message).toBe('Webhook processed successfully');
 
       // Verify the chain of events
       expect(databaseService.event.create).toHaveBeenCalled();
-      expect(triggerQueueService.queueGitHubEvent).toHaveBeenCalledWith(mockEvent);
+      expect(triggerQueueService.queueGitHubEvent).toHaveBeenCalledWith(
+        mockEvent,
+      );
 
       // At this point, the trigger task would:
       // 1. Find relevant users (reviewer1 in this case)

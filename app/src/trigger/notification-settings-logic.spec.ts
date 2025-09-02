@@ -5,7 +5,10 @@
 
 describe('Notification Settings Logic', () => {
   // Extract the notification preference mapping logic
-  function getNotificationPreferenceKey(eventType: string, action: string): string | null {
+  function getNotificationPreferenceKey(
+    eventType: string,
+    action: string,
+  ): string | null {
     if (eventType === 'pull_request') {
       switch (action) {
         case 'opened':
@@ -35,19 +38,24 @@ describe('Notification Settings Logic', () => {
     } else if (eventType === 'pull_request_review_comment') {
       return 'pull_request_commented';
     }
-    
+
     return null;
   }
 
   // Extract the user notification decision logic
-  function shouldNotifyUser(user: any, eventType: string, action: string, payload: any): boolean {
+  function shouldNotifyUser(
+    user: any,
+    eventType: string,
+    action: string,
+    payload: any,
+  ): boolean {
     const settings = user.settings;
     if (!settings) {
       return true; // Default to sending notifications if no settings
     }
 
     const preferences = settings.notificationPreferences || {};
-    
+
     // Map event types to preference keys
     const eventKey = getNotificationPreferenceKey(eventType, action);
     if (eventKey && preferences[eventKey] === false) {
@@ -60,7 +68,10 @@ describe('Notification Settings Logic', () => {
     }
 
     // Check bot filtering
-    if (payload.sender?.type === 'Bot' && preferences.mute_bot_comments === true) {
+    if (
+      payload.sender?.type === 'Bot' &&
+      preferences.mute_bot_comments === true
+    ) {
       return false;
     }
 
@@ -90,23 +101,45 @@ describe('Notification Settings Logic', () => {
 
   describe('Notification Preference Mapping', () => {
     it('should map pull request events to correct preference keys', () => {
-      expect(getNotificationPreferenceKey('pull_request', 'opened')).toBe('pull_request_opened');
-      expect(getNotificationPreferenceKey('pull_request', 'closed')).toBe('pull_request_closed');
-      expect(getNotificationPreferenceKey('pull_request', 'reopened')).toBe('pull_request_reopened');
-      expect(getNotificationPreferenceKey('pull_request', 'assigned')).toBe('pull_request_opened'); // default
+      expect(getNotificationPreferenceKey('pull_request', 'opened')).toBe(
+        'pull_request_opened',
+      );
+      expect(getNotificationPreferenceKey('pull_request', 'closed')).toBe(
+        'pull_request_closed',
+      );
+      expect(getNotificationPreferenceKey('pull_request', 'reopened')).toBe(
+        'pull_request_reopened',
+      );
+      expect(getNotificationPreferenceKey('pull_request', 'assigned')).toBe(
+        'pull_request_opened',
+      ); // default
     });
 
     it('should map issue events to correct preference keys', () => {
-      expect(getNotificationPreferenceKey('issues', 'opened')).toBe('issue_opened');
-      expect(getNotificationPreferenceKey('issues', 'closed')).toBe('issue_closed');
-      expect(getNotificationPreferenceKey('issues', 'reopened')).toBe('issue_reopened');
-      expect(getNotificationPreferenceKey('issues', 'assigned')).toBe('issue_opened'); // default
+      expect(getNotificationPreferenceKey('issues', 'opened')).toBe(
+        'issue_opened',
+      );
+      expect(getNotificationPreferenceKey('issues', 'closed')).toBe(
+        'issue_closed',
+      );
+      expect(getNotificationPreferenceKey('issues', 'reopened')).toBe(
+        'issue_reopened',
+      );
+      expect(getNotificationPreferenceKey('issues', 'assigned')).toBe(
+        'issue_opened',
+      ); // default
     });
 
     it('should map comment and review events', () => {
-      expect(getNotificationPreferenceKey('issue_comment', 'created')).toBe('issue_commented');
-      expect(getNotificationPreferenceKey('pull_request_review', 'submitted')).toBe('pull_request_reviewed');
-      expect(getNotificationPreferenceKey('pull_request_review_comment', 'created')).toBe('pull_request_commented');
+      expect(getNotificationPreferenceKey('issue_comment', 'created')).toBe(
+        'issue_commented',
+      );
+      expect(
+        getNotificationPreferenceKey('pull_request_review', 'submitted'),
+      ).toBe('pull_request_reviewed');
+      expect(
+        getNotificationPreferenceKey('pull_request_review_comment', 'created'),
+      ).toBe('pull_request_commented');
     });
 
     it('should return null for unsupported event types', () => {
@@ -124,7 +157,7 @@ describe('Notification Settings Logic', () => {
           },
         },
       });
-      
+
       const payload = {
         sender: { id: 67890, login: 'otheruser', type: 'User' },
       };
@@ -141,7 +174,7 @@ describe('Notification Settings Logic', () => {
           },
         },
       });
-      
+
       const payload = {
         sender: { id: 67890, login: 'otheruser', type: 'User' },
       };
@@ -160,7 +193,7 @@ describe('Notification Settings Logic', () => {
           },
         },
       });
-      
+
       const payload = {
         sender: { id: 12345, login: 'testuser', type: 'User' }, // Same as user's GitHub ID
       };
@@ -179,7 +212,7 @@ describe('Notification Settings Logic', () => {
           },
         },
       });
-      
+
       const payload = {
         sender: { id: 12345, login: 'testuser', type: 'User' },
       };
@@ -197,7 +230,7 @@ describe('Notification Settings Logic', () => {
           },
         },
       });
-      
+
       const payload = {
         sender: { id: 98765, login: 'dependabot[bot]', type: 'Bot' },
       };
@@ -215,7 +248,7 @@ describe('Notification Settings Logic', () => {
           },
         },
       });
-      
+
       const payload = {
         sender: { id: 98765, login: 'dependabot[bot]', type: 'Bot' },
       };
@@ -230,7 +263,7 @@ describe('Notification Settings Logic', () => {
         githubId: '12345',
         settings: null,
       };
-      
+
       const payload = {
         sender: { id: 67890, login: 'otheruser', type: 'User' },
       };
@@ -245,7 +278,7 @@ describe('Notification Settings Logic', () => {
         githubId: '12345',
         settings: {},
       };
-      
+
       const payload = {
         sender: { id: 67890, login: 'otheruser', type: 'User' },
       };
@@ -272,19 +305,25 @@ describe('Notification Settings Logic', () => {
       const otherUserPayload = {
         sender: { id: 67890, login: 'otheruser', type: 'User' },
       };
-      expect(shouldNotifyUser(user, 'pull_request', 'opened', otherUserPayload)).toBe(true);
+      expect(
+        shouldNotifyUser(user, 'pull_request', 'opened', otherUserPayload),
+      ).toBe(true);
 
       // Own action, should not notify
       const ownActionPayload = {
         sender: { id: 12345, login: 'testuser', type: 'User' },
       };
-      expect(shouldNotifyUser(user, 'pull_request', 'opened', ownActionPayload)).toBe(false);
+      expect(
+        shouldNotifyUser(user, 'pull_request', 'opened', ownActionPayload),
+      ).toBe(false);
 
       // Bot action, should not notify
       const botPayload = {
         sender: { id: 98765, login: 'bot', type: 'Bot' },
       };
-      expect(shouldNotifyUser(user, 'pull_request', 'opened', botPayload)).toBe(false);
+      expect(shouldNotifyUser(user, 'pull_request', 'opened', botPayload)).toBe(
+        false,
+      );
     });
 
     it('should respect event type preferences individually', () => {
@@ -298,24 +337,30 @@ describe('Notification Settings Logic', () => {
           },
         },
       });
-      
+
       const payload = {
         sender: { id: 67890, login: 'otheruser', type: 'User' },
       };
 
-      expect(shouldNotifyUser(user, 'pull_request', 'opened', payload)).toBe(true);
-      expect(shouldNotifyUser(user, 'pull_request', 'closed', payload)).toBe(false);
+      expect(shouldNotifyUser(user, 'pull_request', 'opened', payload)).toBe(
+        true,
+      );
+      expect(shouldNotifyUser(user, 'pull_request', 'closed', payload)).toBe(
+        false,
+      );
       expect(shouldNotifyUser(user, 'issues', 'opened', payload)).toBe(false);
-      expect(shouldNotifyUser(user, 'issue_comment', 'created', payload)).toBe(true);
+      expect(shouldNotifyUser(user, 'issue_comment', 'created', payload)).toBe(
+        true,
+      );
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle missing sender information', () => {
       const user = createTestUser();
-      
+
       const payload = {}; // No sender
-      
+
       const result = shouldNotifyUser(user, 'pull_request', 'opened', payload);
       expect(result).toBe(true); // Should default to notify
     });
@@ -324,11 +369,11 @@ describe('Notification Settings Logic', () => {
       const user = createTestUser({
         githubId: '12345',
       });
-      
+
       const payload = {
         sender: { id: 'not-a-number', login: 'user', type: 'User' },
       };
-      
+
       const result = shouldNotifyUser(user, 'pull_request', 'opened', payload);
       expect(result).toBe(true); // Should not match own activity check
     });
@@ -342,13 +387,15 @@ describe('Notification Settings Logic', () => {
           },
         },
       });
-      
+
       const payload = {
         sender: { id: 67890, login: 'otheruser', type: 'User' },
       };
 
       // null and undefined should be treated as enabled (not === false)
-      expect(shouldNotifyUser(user, 'pull_request', 'opened', payload)).toBe(true);
+      expect(shouldNotifyUser(user, 'pull_request', 'opened', payload)).toBe(
+        true,
+      );
       expect(shouldNotifyUser(user, 'issues', 'opened', payload)).toBe(true);
     });
   });

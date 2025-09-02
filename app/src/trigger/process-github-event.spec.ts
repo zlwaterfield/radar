@@ -1,4 +1,8 @@
-import { TestDataFactory, TestMocks, TestAssertions } from '../test/test-utilities';
+import {
+  TestDataFactory,
+  TestMocks,
+  TestAssertions,
+} from '../test/test-utilities';
 
 // Mock external dependencies
 jest.mock('@prisma/client');
@@ -13,7 +17,7 @@ describe('GitHub Event Processing', () => {
     prismaMock = TestMocks.createPrismaMock();
     slackMock = TestMocks.createSlackMock();
     notificationServiceMock = TestMocks.createNotificationServiceMock();
-    
+
     // Reset all mocks
     jest.clearAllMocks();
   });
@@ -41,7 +45,9 @@ describe('GitHub Event Processing', () => {
       // Mock database responses
       prismaMock.event.findUnique.mockResolvedValue(event);
       prismaMock.user.findMany.mockResolvedValue([radarUser]);
-      prismaMock.notification.create.mockResolvedValue({ id: 'notification-123' });
+      prismaMock.notification.create.mockResolvedValue({
+        id: 'notification-123',
+      });
       prismaMock.notification.update.mockResolvedValue({});
       prismaMock.event.update.mockResolvedValue({});
 
@@ -68,7 +74,9 @@ describe('GitHub Event Processing', () => {
 
       // Assert
       expect(result.success).toBe(true);
-      expect(result.message).toContain('Successfully processed pull_request event');
+      expect(result.message).toContain(
+        'Successfully processed pull_request event',
+      );
 
       // Verify event marked as processed
       expect(prismaMock.event.update).toHaveBeenCalledWith({
@@ -80,7 +88,11 @@ describe('GitHub Event Processing', () => {
       });
 
       // Verify notification created
-      TestAssertions.expectNotificationCreated(prismaMock, radarUser.id, 'event-123');
+      TestAssertions.expectNotificationCreated(
+        prismaMock,
+        radarUser.id,
+        'event-123',
+      );
 
       // Verify Slack message sent
       TestAssertions.expectSlackMessageSent(slackMock);
@@ -88,13 +100,13 @@ describe('GitHub Event Processing', () => {
       // Verify Slack message structure
       const slackCall = slackMock.chat.postMessage.mock.calls[0][0];
       TestAssertions.expectSlackMessageStructure(slackCall);
-      
+
       // Verify PR-specific message content
       const attachment = slackCall.attachments[0];
       const titleBlock = attachment.blocks[0];
       expect(titleBlock.text.text).toContain('Pull Request Opened');
       expect(titleBlock.text.text).toContain('testuser');
-      
+
       const linkBlock = attachment.blocks[2];
       expect(linkBlock.text.text).toContain('PR #123');
       expect(linkBlock.text.text).toContain('Test PR');
@@ -144,7 +156,7 @@ describe('GitHub Event Processing', () => {
 
       // Assert
       expect(result.success).toBe(true);
-      
+
       // Verify event was processed but no notifications created
       expect(prismaMock.notification.create).not.toHaveBeenCalled();
       expect(slackMock.chat.postMessage).not.toHaveBeenCalled();
@@ -174,7 +186,9 @@ describe('GitHub Event Processing', () => {
       // Mock database responses
       prismaMock.event.findUnique.mockResolvedValue(event);
       prismaMock.user.findMany.mockResolvedValue([radarUser]);
-      prismaMock.notification.create.mockResolvedValue({ id: 'notification-125' });
+      prismaMock.notification.create.mockResolvedValue({
+        id: 'notification-125',
+      });
       prismaMock.notification.update.mockResolvedValue({});
       prismaMock.event.update.mockResolvedValue({});
 
@@ -219,17 +233,19 @@ describe('GitHub Event Processing', () => {
 
       // Act & Assert
       const { processGitHubEvent } = require('./process-github-event');
-      await expect(processGitHubEvent.run({
-        eventId: 'non-existent',
-        eventType: 'pull_request',
-        action: 'opened',
-        repositoryName: 'test/repo',
-        repositoryId: '123',
-        senderId: '456',
-        senderLogin: 'user',
-        payload: {},
-        createdAt: new Date().toISOString(),
-      })).rejects.toThrow('Event non-existent not found');
+      await expect(
+        processGitHubEvent.run({
+          eventId: 'non-existent',
+          eventType: 'pull_request',
+          action: 'opened',
+          repositoryName: 'test/repo',
+          repositoryId: '123',
+          senderId: '456',
+          senderLogin: 'user',
+          payload: {},
+          createdAt: new Date().toISOString(),
+        }),
+      ).rejects.toThrow('Event non-existent not found');
     });
 
     it('should skip already processed events', async () => {

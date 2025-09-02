@@ -3,9 +3,9 @@ import { DatabaseService } from '../database/database.service';
 import { GitHubService } from '../github/services/github.service';
 import { SlackService } from '../slack/services/slack.service';
 import type { GitHubPullRequest } from '../common/types/github.types';
-import type { 
-  DigestPRCategory, 
-  UserDigestData 
+import type {
+  DigestPRCategory,
+  UserDigestData,
 } from '../common/types/digest.types';
 
 @Injectable()
@@ -54,7 +54,8 @@ export class DigestService {
           repo: repo.name,
           githubId: repo.githubId,
         })),
-        digestTime: (user.settings?.notificationSchedule as any)?.digest_time || '09:00',
+        digestTime:
+          (user.settings?.notificationSchedule as any)?.digest_time || '09:00',
         slackId: user.slackId || undefined,
         slackAccessToken: user.slackAccessToken || undefined,
       }));
@@ -67,10 +68,12 @@ export class DigestService {
   /**
    * Generate digest content for a user
    */
-  async generateDigestForUser(userData: UserDigestData): Promise<DigestPRCategory> {
+  async generateDigestForUser(
+    userData: UserDigestData,
+  ): Promise<DigestPRCategory> {
     try {
       this.logger.log(`Generating digest for user ${userData.userId}`);
-      
+
       const digest: DigestPRCategory = {
         waitingOnUser: [],
         approvedReadyToMerge: [],
@@ -98,7 +101,7 @@ export class DigestService {
             repo.owner,
             repo.repo,
             'open',
-            accessToken
+            accessToken,
           );
 
           for (const pr of openPRs) {
@@ -107,7 +110,15 @@ export class DigestService {
               digest.waitingOnUser.push(pr);
             }
             // Category 2: PRs approved by user and ready to merge
-            else if (await this.isPRApprovedByUserAndReady(pr, repo.owner, repo.repo, userData.userGithubLogin, accessToken)) {
+            else if (
+              await this.isPRApprovedByUserAndReady(
+                pr,
+                repo.owner,
+                repo.repo,
+                userData.userGithubLogin,
+                accessToken,
+              )
+            ) {
               digest.approvedReadyToMerge.push(pr);
             }
             // Category 3: User's own open PRs
@@ -116,18 +127,24 @@ export class DigestService {
             }
           }
         } catch (error) {
-          this.logger.warn(`Error processing repository ${repo.owner}/${repo.repo}:`, error);
+          this.logger.warn(
+            `Error processing repository ${repo.owner}/${repo.repo}:`,
+            error,
+          );
           continue;
         }
       }
 
       this.logger.log(
-        `Generated digest for user ${userData.userId}: ${digest.waitingOnUser.length} waiting, ${digest.approvedReadyToMerge.length} approved, ${digest.userOpenPRs.length} own PRs`
+        `Generated digest for user ${userData.userId}: ${digest.waitingOnUser.length} waiting, ${digest.approvedReadyToMerge.length} approved, ${digest.userOpenPRs.length} own PRs`,
       );
 
       return digest;
     } catch (error) {
-      this.logger.error(`Error generating digest for user ${userData.userId}:`, error);
+      this.logger.error(
+        `Error generating digest for user ${userData.userId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -135,17 +152,27 @@ export class DigestService {
   /**
    * Send digest to user via Slack
    */
-  async sendDigestToUser(userData: UserDigestData, digest: DigestPRCategory): Promise<boolean> {
+  async sendDigestToUser(
+    userData: UserDigestData,
+    digest: DigestPRCategory,
+  ): Promise<boolean> {
     try {
       if (!userData.slackId || !userData.slackAccessToken) {
-        this.logger.warn(`User ${userData.userId} missing Slack credentials, skipping digest`);
+        this.logger.warn(
+          `User ${userData.userId} missing Slack credentials, skipping digest`,
+        );
         return false;
       }
 
       // Skip if no PRs to report
-      const totalPRs = digest.waitingOnUser.length + digest.approvedReadyToMerge.length + digest.userOpenPRs.length;
+      const totalPRs =
+        digest.waitingOnUser.length +
+        digest.approvedReadyToMerge.length +
+        digest.userOpenPRs.length;
       if (totalPRs === 0) {
-        this.logger.log(`No PRs to report for user ${userData.userId}, skipping digest`);
+        this.logger.log(
+          `No PRs to report for user ${userData.userId}, skipping digest`,
+        );
         return true;
       }
 
@@ -156,7 +183,7 @@ export class DigestService {
       const result = await this.slackService.sendDirectMessage(
         userData.slackAccessToken,
         userData.slackId,
-        message
+        message,
       );
 
       if (result) {
@@ -169,7 +196,10 @@ export class DigestService {
         return false;
       }
     } catch (error) {
-      this.logger.error(`Error sending digest to user ${userData.userId}:`, error);
+      this.logger.error(
+        `Error sending digest to user ${userData.userId}:`,
+        error,
+      );
       return false;
     }
   }
@@ -179,7 +209,9 @@ export class DigestService {
    */
   private isPRWaitingOnUser(pr: GitHubPullRequest, userLogin: string): boolean {
     // Check if user is in requested_reviewers
-    return pr.requested_reviewers.some((reviewer: any) => reviewer.login === userLogin);
+    return pr.requested_reviewers.some(
+      (reviewer: any) => reviewer.login === userLogin,
+    );
   }
 
   /**
@@ -190,7 +222,7 @@ export class DigestService {
     owner: string,
     repo: string,
     userLogin: string,
-    accessToken: string
+    accessToken: string,
   ): Promise<boolean> {
     try {
       // Check if PR is mergeable
@@ -208,8 +240,8 @@ export class DigestService {
 
       // Check if user has approved this PR
       const userApproval = reviews
-        .filter(review => review.user?.login === userLogin)
-        .find(review => review.state === 'APPROVED');
+        .filter((review) => review.user?.login === userLogin)
+        .find((review) => review.state === 'APPROVED');
 
       return !!userApproval;
     } catch (error) {
@@ -230,8 +262,8 @@ export class DigestService {
       text: {
         type: 'plain_text',
         text: '📊 Daily GitHub Digest',
-        emoji: true
-      }
+        emoji: true,
+      },
     });
 
     // Waiting on user section
@@ -240,27 +272,30 @@ export class DigestService {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*🔍 PRs waiting for your review (${digest.waitingOnUser.length})*`
-        }
+          text: `*🔍 PRs waiting for your review (${digest.waitingOnUser.length})*`,
+        },
       });
 
-      for (const pr of digest.waitingOnUser.slice(0, 5)) { // Limit to 5 PRs
+      for (const pr of digest.waitingOnUser.slice(0, 5)) {
+        // Limit to 5 PRs
         blocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\` by ${pr.user.login}`
-          }
+            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\` by ${pr.user.login}`,
+          },
         });
       }
 
       if (digest.waitingOnUser.length > 5) {
         blocks.push({
           type: 'context',
-          elements: [{
-            type: 'mrkdwn',
-            text: `_...and ${digest.waitingOnUser.length - 5} more_`
-          }]
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `_...and ${digest.waitingOnUser.length - 5} more_`,
+            },
+          ],
         });
       }
     }
@@ -272,8 +307,8 @@ export class DigestService {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*✅ PRs you approved - ready to merge (${digest.approvedReadyToMerge.length})*`
-        }
+          text: `*✅ PRs you approved - ready to merge (${digest.approvedReadyToMerge.length})*`,
+        },
       });
 
       for (const pr of digest.approvedReadyToMerge.slice(0, 5)) {
@@ -281,18 +316,20 @@ export class DigestService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\` by ${pr.user.login}`
-          }
+            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\` by ${pr.user.login}`,
+          },
         });
       }
 
       if (digest.approvedReadyToMerge.length > 5) {
         blocks.push({
           type: 'context',
-          elements: [{
-            type: 'mrkdwn',
-            text: `_...and ${digest.approvedReadyToMerge.length - 5} more_`
-          }]
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `_...and ${digest.approvedReadyToMerge.length - 5} more_`,
+            },
+          ],
         });
       }
     }
@@ -304,8 +341,8 @@ export class DigestService {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*🚀 Your open PRs (${digest.userOpenPRs.length})*`
-        }
+          text: `*🚀 Your open PRs (${digest.userOpenPRs.length})*`,
+        },
       });
 
       for (const pr of digest.userOpenPRs.slice(0, 5)) {
@@ -313,18 +350,20 @@ export class DigestService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\``
-          }
+            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\``,
+          },
         });
       }
 
       if (digest.userOpenPRs.length > 5) {
         blocks.push({
           type: 'context',
-          elements: [{
-            type: 'mrkdwn',
-            text: `_...and ${digest.userOpenPRs.length - 5} more_`
-          }]
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `_...and ${digest.userOpenPRs.length - 5} more_`,
+            },
+          ],
         });
       }
     }
@@ -333,10 +372,12 @@ export class DigestService {
     blocks.push({ type: 'divider' });
     blocks.push({
       type: 'context',
-      elements: [{
-        type: 'mrkdwn',
-        text: `📅 ${new Date().toLocaleDateString()} • Manage digest settings in your dashboard`
-      }]
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `📅 ${new Date().toLocaleDateString()} • Manage digest settings in your dashboard`,
+        },
+      ],
     });
 
     return { blocks };
@@ -348,7 +389,7 @@ export class DigestService {
   private async recordDigestSent(
     userId: string,
     digest: DigestPRCategory,
-    messageTs?: string
+    messageTs?: string,
   ): Promise<void> {
     try {
       await this.databaseService.userDigest.create({
@@ -356,7 +397,10 @@ export class DigestService {
           userId,
           sentAt: new Date(),
           messageTs: messageTs || '',
-          pullRequestCount: digest.waitingOnUser.length + digest.approvedReadyToMerge.length + digest.userOpenPRs.length,
+          pullRequestCount:
+            digest.waitingOnUser.length +
+            digest.approvedReadyToMerge.length +
+            digest.userOpenPRs.length,
           issueCount: 0, // We're only doing PRs for now
         },
       });
@@ -371,15 +415,15 @@ export class DigestService {
   calculateUserDigestTime(digestTime: string): Date {
     const now = new Date();
     const [hours, minutes] = digestTime.split(':').map(Number);
-    
+
     const nextDigest = new Date();
     nextDigest.setHours(hours, minutes, 0, 0);
-    
+
     // If the time has already passed today, schedule for tomorrow
     if (nextDigest <= now) {
       nextDigest.setDate(nextDigest.getDate() + 1);
     }
-    
+
     return nextDigest;
   }
 }

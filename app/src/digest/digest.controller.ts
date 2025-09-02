@@ -1,4 +1,11 @@
-import { Controller, Post, Get, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { DigestService } from './digest.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { DatabaseService } from '../database/database.service';
@@ -8,7 +15,7 @@ import { DatabaseService } from '../database/database.service';
 export class DigestController {
   constructor(
     private readonly digestService: DigestService,
-    private readonly databaseService: DatabaseService
+    private readonly databaseService: DatabaseService,
   ) {}
 
   /**
@@ -20,12 +27,12 @@ export class DigestController {
     try {
       // Get user data
       const users = await this.digestService.getUsersWithDigestEnabled();
-      const userData = users.find(u => u.userId === userId);
-      
+      const userData = users.find((u) => u.userId === userId);
+
       if (!userData) {
         return {
           success: false,
-          error: `User ${userId} not found or digest not enabled`
+          error: `User ${userId} not found or digest not enabled`,
         };
       }
 
@@ -38,36 +45,35 @@ export class DigestController {
           id: userData.userId,
           githubLogin: userData.userGithubLogin,
           digestTime: userData.digestTime,
-          repositoriesCount: userData.repositories.length
+          repositoriesCount: userData.repositories.length,
         },
         digest: {
           waitingOnUser: digest.waitingOnUser.length,
           approvedReadyToMerge: digest.approvedReadyToMerge.length,
           userOpenPRs: digest.userOpenPRs.length,
           details: {
-            waitingOnUser: digest.waitingOnUser.map(pr => ({
+            waitingOnUser: digest.waitingOnUser.map((pr) => ({
               title: pr.title,
               url: pr.html_url,
-              repo: pr.base.repo.full_name
+              repo: pr.base.repo.full_name,
             })),
-            approvedReadyToMerge: digest.approvedReadyToMerge.map(pr => ({
+            approvedReadyToMerge: digest.approvedReadyToMerge.map((pr) => ({
               title: pr.title,
               url: pr.html_url,
-              repo: pr.base.repo.full_name
+              repo: pr.base.repo.full_name,
             })),
-            userOpenPRs: digest.userOpenPRs.map(pr => ({
+            userOpenPRs: digest.userOpenPRs.map((pr) => ({
               title: pr.title,
               url: pr.html_url,
-              repo: pr.base.repo.full_name
-            }))
-          }
-        }
+              repo: pr.base.repo.full_name,
+            })),
+          },
+        },
       };
-
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -81,12 +87,12 @@ export class DigestController {
     try {
       // Get user data
       const users = await this.digestService.getUsersWithDigestEnabled();
-      const userData = users.find(u => u.userId === userId);
-      
+      const userData = users.find((u) => u.userId === userId);
+
       if (!userData) {
         return {
           success: false,
-          error: `User ${userId} not found or digest not enabled`
+          error: `User ${userId} not found or digest not enabled`,
         };
       }
 
@@ -96,18 +102,19 @@ export class DigestController {
 
       return {
         success: sent,
-        message: sent ? 'Test digest sent successfully' : 'Failed to send test digest',
+        message: sent
+          ? 'Test digest sent successfully'
+          : 'Failed to send test digest',
         digest: {
           waitingOnUser: digest.waitingOnUser.length,
           approvedReadyToMerge: digest.approvedReadyToMerge.length,
-          userOpenPRs: digest.userOpenPRs.length
-        }
+          userOpenPRs: digest.userOpenPRs.length,
+        },
       };
-
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -120,23 +127,22 @@ export class DigestController {
   async getDigestUsers() {
     try {
       const users = await this.digestService.getUsersWithDigestEnabled();
-      
+
       return {
         success: true,
         count: users.length,
-        users: users.map(user => ({
+        users: users.map((user) => ({
           id: user.userId,
           githubLogin: user.userGithubLogin,
           digestTime: user.digestTime,
           repositoriesCount: user.repositories.length,
-          hasSlack: !!(user.slackId && user.slackAccessToken)
-        }))
+          hasSlack: !!(user.slackId && user.slackAccessToken),
+        })),
       };
-
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -152,7 +158,7 @@ export class DigestController {
       if (!userId) {
         return {
           success: false,
-          error: 'User not found'
+          error: 'User not found',
         };
       }
 
@@ -164,18 +170,17 @@ export class DigestController {
 
       return {
         success: true,
-        history: history.map(digest => ({
+        history: history.map((digest) => ({
           id: digest.id,
           sentAt: digest.sentAt.toISOString(),
           pullRequestCount: digest.pullRequestCount,
-          issueCount: digest.issueCount
-        }))
+          issueCount: digest.issueCount,
+        })),
       };
-
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }

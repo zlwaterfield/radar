@@ -291,6 +291,8 @@ export class NotificationService {
     shouldNotify: boolean;
     matchedKeywords: string[];
     matchDetails: any;
+    reason?: string;
+    context?: any;
   }> {
     try {
       // Extract data from payload
@@ -311,7 +313,43 @@ export class NotificationService {
           'edited',
         ].includes(action)
       ) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        this.logger.debug(
+          `Skipping PR event with uninteresting action: ${action} for user ${userId}`,
+        );
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'UNINTERESTING_ACTION',
+          context: { action, eventId },
+        };
+      }
+
+      // Get watching reasons for this PR to check if user is actually involved
+      const watchingReasons = await this.determineWatchingReasons(userId, pr);
+
+      this.logger.debug(
+        `User ${userId} watching reasons for PR: ${Array.from(watchingReasons).join(', ')}`,
+      );
+
+      // Safety check: If user has no watching reasons, don't notify
+      if (watchingReasons.size === 0) {
+        this.logger.log(
+          `User ${userId} has no watching reasons for PR #${pr.number} - skipping notification`,
+        );
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'NOT_WATCHING',
+          context: {
+            prNumber: pr.number,
+            prTitle: pr.title,
+            action,
+            eventId,
+            repository: payload.repository?.full_name,
+          },
+        };
       }
 
       // Determine notification trigger based on action
@@ -335,7 +373,13 @@ export class NotificationService {
       }
 
       if (!trigger) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'NO_TRIGGER_MAPPED',
+          context: { action, eventId },
+        };
       }
 
       // Check if user should be notified based on notification preferences
@@ -358,10 +402,52 @@ export class NotificationService {
       const matchedKeywords = keywordResult.matchedKeywords;
       const matchDetails = keywordResult.matchDetails;
 
-      // Determine if notification should be sent
+      // Determine if notification should be sent and the primary reason
       const shouldNotify = shouldNotifyPreferences || shouldNotifyKeywords;
 
-      return { shouldNotify, matchedKeywords, matchDetails };
+      let reason: string;
+      const context: any = {
+        watchingReasons: Array.from(watchingReasons),
+        trigger: trigger,
+        action,
+        prNumber: pr.number,
+        prTitle: pr.title,
+        repository: payload.repository?.full_name,
+        eventId,
+        shouldNotifyPreferences,
+        shouldNotifyKeywords,
+      };
+
+      if (shouldNotifyKeywords && matchedKeywords.length > 0) {
+        reason = 'KEYWORD_MATCH';
+        context.matchedKeywords = matchedKeywords;
+        context.matchDetails = matchDetails;
+      } else if (shouldNotifyPreferences) {
+        // Determine the primary watching reason
+        if (watchingReasons.has(WatchingReason.MENTIONED)) {
+          reason = 'MENTIONED';
+        } else if (watchingReasons.has(WatchingReason.AUTHOR)) {
+          reason = 'AUTHOR';
+        } else if (watchingReasons.has(WatchingReason.REVIEWER)) {
+          reason = 'REVIEWER';
+        } else if (watchingReasons.has(WatchingReason.ASSIGNED)) {
+          reason = 'ASSIGNED';
+        } else if (watchingReasons.has(WatchingReason.TEAM_REVIEWER)) {
+          reason = 'TEAM_REVIEWER';
+        } else if (watchingReasons.has(WatchingReason.TEAM_ASSIGNED)) {
+          reason = 'TEAM_ASSIGNED';
+        } else {
+          reason = 'PREFERENCES';
+        }
+      } else {
+        reason = 'NO_MATCH';
+      }
+
+      this.logger.log(
+        `PR notification decision for user ${userId}: ${shouldNotify ? 'NOTIFY' : 'SKIP'} - Reason: ${reason}`,
+      );
+
+      return { shouldNotify, matchedKeywords, matchDetails, reason, context };
     } catch (error) {
       this.logger.error(`Error processing pull request event: ${error}`);
       return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
@@ -379,6 +465,8 @@ export class NotificationService {
     shouldNotify: boolean;
     matchedKeywords: string[];
     matchDetails: any;
+    reason?: string;
+    context?: any;
   }> {
     try {
       // Extract data from payload
@@ -405,7 +493,13 @@ export class NotificationService {
       });
 
       if (!user) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'USER_NOT_FOUND',
+          context: { userId, eventId },
+        };
       }
 
       const githubUsername = user.githubLogin;
@@ -413,7 +507,20 @@ export class NotificationService {
 
       // Don't notify for own activity if muted
       if (isOwnActivity && preferences.mute_own_activity) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'OWN_ACTIVITY_MUTED',
+          context: {
+            userId,
+            eventId,
+            senderLogin: sender.login,
+            githubUsername,
+            issueNumber: issue.number,
+            repository: payload.repository?.full_name,
+          },
+        };
       }
 
       // Check for keyword matches in comment body
@@ -429,7 +536,20 @@ export class NotificationService {
 
       // If we have keyword matches, always notify
       if (shouldNotifyKeywords) {
-        return { shouldNotify: true, matchedKeywords, matchDetails };
+        return {
+          shouldNotify: true,
+          matchedKeywords,
+          matchDetails,
+          reason: 'KEYWORD_MATCH',
+          context: {
+            userId,
+            eventId,
+            issueNumber: issue.number,
+            repository: payload.repository?.full_name,
+            matchedKeywords,
+            matchDetails,
+          },
+        };
       }
 
       // Check if user is mentioned in the comment first
@@ -437,9 +557,32 @@ export class NotificationService {
       if (commentBody && commentBody.includes(`@${githubUsername}`)) {
         // User is mentioned, check their mention preference
         if (preferences.mentioned_in_comments) {
-          return { shouldNotify: true, matchedKeywords: [], matchDetails: {} };
+          return {
+            shouldNotify: true,
+            matchedKeywords: [],
+            matchDetails: {},
+            reason: 'MENTIONED',
+            context: {
+              userId,
+              eventId,
+              issueNumber: issue.number,
+              repository: payload.repository?.full_name,
+              mentionedIn: 'comment',
+            },
+          };
         } else {
-          return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+          return {
+            shouldNotify: false,
+            matchedKeywords: [],
+            matchDetails: {},
+            reason: 'MENTIONED_BUT_DISABLED',
+            context: {
+              userId,
+              eventId,
+              issueNumber: issue.number,
+              repository: payload.repository?.full_name,
+            },
+          };
         }
       }
 
@@ -449,9 +592,24 @@ export class NotificationService {
         issue,
       );
 
+      this.logger.debug(
+        `User ${userId} watching reasons for issue comment: ${Array.from(watchingReasons).join(', ')}`,
+      );
+
       // If the user isn't watching the issue, don't notify
       if (watchingReasons.size === 0) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'NOT_WATCHING',
+          context: {
+            userId,
+            eventId,
+            issueNumber: issue.number,
+            repository: payload.repository?.full_name,
+          },
+        };
       }
 
       // Use general comment preference for all users involved with the PR/issue
@@ -470,10 +628,35 @@ export class NotificationService {
         shouldNotifyPreferences = true;
       }
 
+      let reason: string;
+      if (watchingReasons.has(WatchingReason.MENTIONED)) {
+        reason = 'MENTIONED';
+      } else if (watchingReasons.has(WatchingReason.AUTHOR)) {
+        reason = 'AUTHOR';
+      } else if (watchingReasons.has(WatchingReason.ASSIGNED)) {
+        reason = 'ASSIGNED';
+      } else {
+        reason = isPR ? 'PR_COMMENT_PREFERENCES' : 'ISSUE_COMMENT_PREFERENCES';
+      }
+
+      this.logger.log(
+        `Issue comment notification decision for user ${userId}: ${shouldNotifyPreferences ? 'NOTIFY' : 'SKIP'} - Reason: ${reason}`,
+      );
+
       return {
         shouldNotify: shouldNotifyPreferences,
         matchedKeywords: [],
         matchDetails: {},
+        reason,
+        context: {
+          userId,
+          eventId,
+          watchingReasons: Array.from(watchingReasons),
+          isPR,
+          issueNumber: issue.number,
+          repository: payload.repository?.full_name,
+          shouldNotifyPreferences,
+        },
       };
     } catch (error) {
       this.logger.error(`Error processing issue comment event: ${error}`);
@@ -533,6 +716,8 @@ export class NotificationService {
     shouldNotify: boolean;
     matchedKeywords: string[];
     matchDetails: any;
+    reason?: string;
+    context?: any;
   }> {
     try {
       // Extract data from payload
@@ -544,7 +729,13 @@ export class NotificationService {
       if (
         !['opened', 'closed', 'reopened', 'assigned', 'edited'].includes(action)
       ) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'UNINTERESTING_ACTION',
+          context: { action, eventId },
+        };
       }
 
       // Get user settings
@@ -566,7 +757,13 @@ export class NotificationService {
       });
 
       if (!user) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'USER_NOT_FOUND',
+          context: { userId, eventId },
+        };
       }
 
       const githubUsername = user.githubLogin;
@@ -574,7 +771,20 @@ export class NotificationService {
 
       // Don't notify for own activity if muted
       if (isOwnActivity && preferences.mute_own_activity) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'OWN_ACTIVITY_MUTED',
+          context: {
+            userId,
+            eventId,
+            senderLogin: sender.login,
+            githubUsername,
+            issueNumber: issue.number,
+            repository: payload.repository?.full_name,
+          },
+        };
       }
 
       // Check for keyword matches in issue title and body
@@ -596,7 +806,20 @@ export class NotificationService {
 
       // If we have keyword matches, always notify
       if (shouldNotifyKeywords) {
-        return { shouldNotify: true, matchedKeywords, matchDetails };
+        return {
+          shouldNotify: true,
+          matchedKeywords,
+          matchDetails,
+          reason: 'KEYWORD_MATCH',
+          context: {
+            userId,
+            eventId,
+            issueNumber: issue.number,
+            repository: payload.repository?.full_name,
+            matchedKeywords,
+            matchDetails,
+          },
+        };
       }
 
       // Get watching reasons for this issue (only check if no keyword matches)
@@ -605,9 +828,24 @@ export class NotificationService {
         issue,
       );
 
+      this.logger.debug(
+        `User ${userId} watching reasons for issue: ${Array.from(watchingReasons).join(', ')}`,
+      );
+
       // If the user isn't watching the issue, don't notify
       if (watchingReasons.size === 0) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'NOT_WATCHING',
+          context: {
+            userId,
+            eventId,
+            issueNumber: issue.number,
+            repository: payload.repository?.full_name,
+          },
+        };
       }
 
       // Always notify if mentioned (regardless of other preferences)
@@ -616,6 +854,14 @@ export class NotificationService {
           shouldNotify: preferences.mentioned_in_comments ?? true,
           matchedKeywords: [],
           matchDetails: {},
+          reason: 'MENTIONED',
+          context: {
+            userId,
+            eventId,
+            watchingReasons: Array.from(watchingReasons),
+            issueNumber: issue.number,
+            repository: payload.repository?.full_name,
+          },
         };
       }
 
@@ -632,10 +878,33 @@ export class NotificationService {
         shouldNotifyPreferences = true;
       }
 
+      let reason: string;
+      if (watchingReasons.has(WatchingReason.AUTHOR)) {
+        reason = 'AUTHOR';
+      } else if (watchingReasons.has(WatchingReason.ASSIGNED)) {
+        reason = 'ASSIGNED';
+      } else {
+        reason = `ISSUE_${action.toUpperCase()}_PREFERENCES`;
+      }
+
+      this.logger.log(
+        `Issue notification decision for user ${userId}: ${shouldNotifyPreferences ? 'NOTIFY' : 'SKIP'} - Reason: ${reason}`,
+      );
+
       return {
         shouldNotify: shouldNotifyPreferences,
         matchedKeywords: [],
         matchDetails: {},
+        reason,
+        context: {
+          userId,
+          eventId,
+          watchingReasons: Array.from(watchingReasons),
+          action,
+          issueNumber: issue.number,
+          repository: payload.repository?.full_name,
+          shouldNotifyPreferences,
+        },
       };
     } catch (error) {
       this.logger.error(`Error processing issue event: ${error}`);
@@ -654,6 +923,8 @@ export class NotificationService {
     shouldNotify: boolean;
     matchedKeywords: string[];
     matchDetails: any;
+    reason?: string;
+    context?: any;
   }> {
     try {
       const action = payload.action;
@@ -662,7 +933,13 @@ export class NotificationService {
 
       // Only handle submitted reviews for now
       if (action !== 'submitted') {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'UNINTERESTING_ACTION',
+          context: { action, eventId },
+        };
       }
 
       // Get user settings
@@ -671,7 +948,13 @@ export class NotificationService {
       });
 
       if (!settings) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'NO_SETTINGS',
+          context: { userId, eventId },
+        };
       }
 
       // Get user
@@ -680,8 +963,17 @@ export class NotificationService {
       });
 
       if (!user) {
-        return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'USER_NOT_FOUND',
+          context: { userId, eventId },
+        };
       }
+
+      // Get watching reasons for this PR
+      const watchingReasons = await this.determineWatchingReasons(userId, pr);
 
       // Check if user should be notified
       const shouldNotify = await this.shouldNotify(
@@ -691,7 +983,38 @@ export class NotificationService {
         sender.id?.toString(),
       );
 
-      return { shouldNotify, matchedKeywords: [], matchDetails: {} };
+      let reason: string;
+      if (shouldNotify) {
+        if (watchingReasons.has(WatchingReason.AUTHOR)) {
+          reason = 'AUTHOR';
+        } else if (watchingReasons.has(WatchingReason.MENTIONED)) {
+          reason = 'MENTIONED';
+        } else {
+          reason = 'REVIEW_PREFERENCES';
+        }
+      } else {
+        reason = 'REVIEW_DISABLED';
+      }
+
+      this.logger.log(
+        `PR review notification decision for user ${userId}: ${shouldNotify ? 'NOTIFY' : 'SKIP'} - Reason: ${reason}`,
+      );
+
+      return {
+        shouldNotify,
+        matchedKeywords: [],
+        matchDetails: {},
+        reason,
+        context: {
+          userId,
+          eventId,
+          watchingReasons: Array.from(watchingReasons),
+          prNumber: pr.number,
+          prTitle: pr.title,
+          repository: payload.repository?.full_name,
+          reviewState: payload.review?.state,
+        },
+      };
     } catch (error) {
       this.logger.error(`Error processing pull request review event: ${error}`);
       return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };

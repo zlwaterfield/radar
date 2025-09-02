@@ -278,7 +278,9 @@ export class SlackService {
         this.logger.log(`Direct message sent to user ${userId}`);
         return messageResponse as SlackMessageResponse;
       } else {
-        this.logger.error(`Failed to send direct message: ${messageResponse.error}`);
+        this.logger.error(
+          `Failed to send direct message: ${messageResponse.error}`,
+        );
         return null;
       }
     } catch (error) {

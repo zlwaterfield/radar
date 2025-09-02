@@ -18,10 +18,7 @@ describe('Watching Reasons Logic', () => {
   }
 
   // Extract the watching reasons determination logic
-  function determineWatchingReasons(
-    user: any,
-    data: any,
-  ): Set<WatchingReason> {
+  function determineWatchingReasons(user: any, data: any): Set<WatchingReason> {
     const watchingReasons = new Set<WatchingReason>();
 
     if (!user?.githubLogin) {
@@ -57,7 +54,7 @@ describe('Watching Reasons Logic', () => {
 
     if (isPR) {
       // For PRs, check various involvement types
-      let prData = data;
+      const prData = data;
 
       // If this is an issue comment on a PR, we'd need the PR data
       // For testing, assume we have the data already
@@ -65,7 +62,7 @@ describe('Watching Reasons Logic', () => {
       // Check if user is requested reviewer
       if (prData.requested_reviewers) {
         const isRequestedReviewer = prData.requested_reviewers.some(
-          (reviewer: any) => reviewer.login === githubUsername
+          (reviewer: any) => reviewer.login === githubUsername,
         );
         if (isRequestedReviewer) {
           watchingReasons.add(WatchingReason.REVIEWER);
@@ -75,7 +72,7 @@ describe('Watching Reasons Logic', () => {
       // Check if user is assigned
       if (prData.assignees) {
         const isAssigned = prData.assignees.some(
-          (assignee: any) => assignee.login === githubUsername
+          (assignee: any) => assignee.login === githubUsername,
         );
         if (isAssigned) {
           watchingReasons.add(WatchingReason.ASSIGNED);
@@ -89,7 +86,7 @@ describe('Watching Reasons Logic', () => {
         // Check team reviewers
         if (prData.requested_teams) {
           const hasTeamReviewRequest = prData.requested_teams.some(
-            (team: any) => userTeamSlugs.includes(team.slug)
+            (team: any) => userTeamSlugs.includes(team.slug),
           );
           if (hasTeamReviewRequest) {
             watchingReasons.add(WatchingReason.TEAM_REVIEWER);
@@ -101,7 +98,7 @@ describe('Watching Reasons Logic', () => {
       // Check if user is assigned to issue
       if (data.assignees) {
         const isAssigned = data.assignees.some(
-          (assignee: any) => assignee.login === githubUsername
+          (assignee: any) => assignee.login === githubUsername,
         );
         if (isAssigned) {
           watchingReasons.add(WatchingReason.ASSIGNED);
@@ -125,7 +122,7 @@ describe('Watching Reasons Logic', () => {
     // Check for team mentions
     if (user.teams && user.teams.length > 0) {
       const userTeamSlugs = user.teams.map((team: any) => team.slug);
-      const hasTeamMention = userTeamSlugs.some(teamSlug => {
+      const hasTeamMention = userTeamSlugs.some((teamSlug) => {
         const teamMentionRegex = new RegExp(`@${teamSlug}\\b`);
         return teamMentionRegex.test(textToCheck);
       });
@@ -330,9 +327,7 @@ describe('Watching Reasons Logic', () => {
     it('should identify team review request', () => {
       const user = createTestUser({
         githubLogin: 'teamember',
-        teams: [
-          { id: 'team-1', slug: 'backend-team', name: 'Backend Team' },
-        ],
+        teams: [{ id: 'team-1', slug: 'backend-team', name: 'Backend Team' }],
       });
       const prData = createPRData({
         requested_teams: [{ slug: 'backend-team' }],
@@ -346,9 +341,7 @@ describe('Watching Reasons Logic', () => {
     it('should detect team mention', () => {
       const user = createTestUser({
         githubLogin: 'teammember',
-        teams: [
-          { id: 'team-1', slug: 'frontend-team', name: 'Frontend Team' },
-        ],
+        teams: [{ id: 'team-1', slug: 'frontend-team', name: 'Frontend Team' }],
       });
       const prData = createPRData({
         body: 'This needs input from @frontend-team',
@@ -362,9 +355,7 @@ describe('Watching Reasons Logic', () => {
     it('should not match teams user is not part of', () => {
       const user = createTestUser({
         githubLogin: 'developer',
-        teams: [
-          { id: 'team-1', slug: 'backend-team', name: 'Backend Team' },
-        ],
+        teams: [{ id: 'team-1', slug: 'backend-team', name: 'Backend Team' }],
       });
       const prData = createPRData({
         requested_teams: [{ slug: 'frontend-team' }],
@@ -382,9 +373,7 @@ describe('Watching Reasons Logic', () => {
     it('should detect multiple watching reasons', () => {
       const user = createTestUser({
         githubLogin: 'developer',
-        teams: [
-          { id: 'team-1', slug: 'dev-team', name: 'Dev Team' },
-        ],
+        teams: [{ id: 'team-1', slug: 'dev-team', name: 'Dev Team' }],
       });
       const prData = createPRData({
         user: { login: 'developer' }, // Author
