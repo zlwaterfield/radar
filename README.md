@@ -85,8 +85,6 @@ MIT License - see LICENSE file for details.
 
 ## 🎯 Roadmap
 
-- Soon
-   - Improve event messages (general copying and PR descriptions, +/- changes, etc)
 - Next
    - Github Discussions support
    - Daily Digests support
