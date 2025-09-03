@@ -39,14 +39,16 @@ model User {
   teamsLastSyncedAt   DateTime? @map("teams_last_synced_at")
 
   // Relations
-  settings      UserSettings?
-  repositories  UserRepository[]
-  notifications Notification[]
-  digests       UserDigest[]
-  events        Event[]
-  sessions      Session[]
-  accounts      Account[]
-  teams         UserTeam[]
+  settings            UserSettings?
+  repositories        UserRepository[]
+  notifications       Notification[]
+  digestConfigs       DigestConfig[]
+  notificationProfiles NotificationProfile[]
+  digests             UserDigest[]
+  events              Event[]
+  sessions            Session[]
+  accounts            Account[]
+  teams               UserTeam[]
 
   @@map("user")
 }
@@ -161,6 +163,79 @@ model Notification {
   @@map("notification")
 }
 
+// User digest configurations
+model DigestConfig {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic settings
+  name        String
+  description String?
+  isEnabled   Boolean @default(true) @map("is_enabled")
+  
+  // Schedule
+  digestTime String @map("digest_time") // HH:MM format
+  timezone   String @default("UTC")
+  
+  // Scope settings
+  scopeType String @map("scope_type") // "user" | "team"
+  scopeValue String? @map("scope_value") // null for user, teamId for team
+  
+  // Repository filtering
+  repositoryFilter Json @default("{}") @map("repository_filter") // {type: "all" | "selected", repoIds?: string[]}
+  
+  // Delivery settings
+  deliveryType String @map("delivery_type") // "dm" | "channel"
+  deliveryTarget String? @map("delivery_target") // null for DM, channelId for channel
+  
+  // Relations
+  digestHistory UserDigest[]
+  
+  @@map("digest_config")
+}
+
+// Notification profiles - flexible notification configurations
+model NotificationProfile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic settings
+  name        String
+  description String?
+  isEnabled   Boolean @default(true) @map("is_enabled")
+  
+  // Scope settings (same as digests)
+  scopeType  String @map("scope_type") // "user" | "team"  
+  scopeValue String? @map("scope_value") // null for user, teamId for team
+  
+  // Repository filtering (same as digests)
+  repositoryFilter Json @default("{\"type\": \"all\"}") @map("repository_filter") // {type: "all" | "selected", repoIds?: string[]}
+  
+  // Delivery settings (same as digests)
+  deliveryType   String @map("delivery_type") // "dm" | "channel"
+  deliveryTarget String? @map("delivery_target") // null for DM, channelId for channel
+  
+  // Notification preferences (moved from UserSettings)
+  notificationPreferences Json @default("{}") @map("notification_preferences")
+  
+  // Keywords for this profile
+  keywords          String[] @default([])
+  keywordLLMEnabled Boolean  @default(true) @map("keyword_llm_enabled")
+  
+  // Priority for processing order (higher = processed first)
+  priority Int @default(0)
+  
+  @@map("notification_profile")
+}
+
 // User digest history
 
 model UserDigest {
@@ -169,12 +244,19 @@ model UserDigest {
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  digestConfigId String? @map("digest_config_id")
+  digestConfig   DigestConfig? @relation(fields: [digestConfigId], references: [id], onDelete: SetNull)
 
   // Digest details
   sentAt           DateTime @map("sent_at")
   messageTs        String   @map("message_ts")
   pullRequestCount Int      @default(0) @map("pull_request_count")
   issueCount       Int      @default(0) @map("issue_count")
+  
+  // Delivery info
+  deliveryType   String  @map("delivery_type") // "dm" | "channel"
+  deliveryTarget String? @map("delivery_target")
 
   @@map("user_digest")
 }
@@ -242,6 +324,7 @@ model UserTeam {
   teamName     String @map("team_name")
   organization String
   permission   String @default("member")
+  enabled      Boolean @default(true)
 
   @@unique([userId, teamId])
   @@map("user_team")
