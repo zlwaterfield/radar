@@ -488,32 +488,7 @@ function createPRSlackMessage(data: any) {
       text: {
         type: 'mrkdwn',
         text: `${icon} *<${url}|${title}>*`
-      }
-    },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `${githubUserLink} ${friendlyAction} this pull request in \`${repositoryName}\``
-        }
-      ]
-    } as any,
-    {
-      type: 'divider'
-    },
-    {
-      type: 'section',
-      fields: [
-        {
-          type: 'mrkdwn',
-          text: `*PR:* #${payload.pull_request?.number}`
-        },
-        {
-          type: 'mrkdwn',
-          text: `*Action:* ${actionText}`
-        }
-      ],
+      },
       accessory: {
         type: 'button',
         text: {
@@ -524,7 +499,16 @@ function createPRSlackMessage(data: any) {
         url: url,
         action_id: 'view_pr'
       }
-    }
+    },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `\`${repositoryName}\``
+        }
+      ]
+    } as any
   ];
 
   return {
@@ -586,32 +570,7 @@ function createIssueSlackMessage(data: any) {
       text: {
         type: 'mrkdwn',
         text: `${icon} *<${url}|${title}>*`
-      }
-    },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `${githubUserLink} ${action} this ${isPullRequest ? 'pull request' : 'issue'} in \`${repositoryName}\``
-        }
-      ]
-    } as any,
-    {
-      type: 'divider'
-    },
-    {
-      type: 'section',
-      fields: [
-        {
-          type: 'mrkdwn',
-          text: `*${itemPrefix}:* #${payload.issue?.number}`
-        },
-        {
-          type: 'mrkdwn',
-          text: `*Action:* ${actionText}`
-        }
-      ],
+      },
       accessory: {
         type: 'button',
         text: {
@@ -622,7 +581,16 @@ function createIssueSlackMessage(data: any) {
         url: url,
         action_id: 'view_issue'
       }
-    }
+    },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `\`${repositoryName}\``
+        }
+      ]
+    } as any
   ];
 
   return {
@@ -667,32 +635,7 @@ function createPRReviewSlackMessage(data: any) {
       text: {
         type: 'mrkdwn',
         text: `${icon} *<${url}|${title}>*`
-      }
-    },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `${githubUserLink} ${reviewState === 'approved' ? 'approved' : reviewState === 'changes_requested' ? 'requested changes on' : 'reviewed'} this pull request in \`${repositoryName}\``
-        }
-      ]
-    } as any,
-    {
-      type: 'divider'
-    },
-    {
-      type: 'section',
-      fields: [
-        {
-          type: 'mrkdwn',
-          text: `*PR:* #${payload.pull_request?.number}`
-        },
-        {
-          type: 'mrkdwn',
-          text: `*Review:* ${stateText}`
-        }
-      ],
+      },
       accessory: {
         type: 'button',
         text: {
@@ -703,7 +646,16 @@ function createPRReviewSlackMessage(data: any) {
         url: url,
         action_id: 'view_pr'
       }
-    }
+    },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `\`${repositoryName}\``
+        }
+      ]
+    } as any
   ];
   
   // Add review comment if present
@@ -716,17 +668,6 @@ function createPRReviewSlackMessage(data: any) {
       }
     });
   }
-  
-  // Add context section
-  blocks.push({
-    type: 'context',
-    elements: [
-      {
-        type: 'mrkdwn',
-        text: `${githubUserLink} ${reviewState.replace('_', ' ')} this pull request in \`${repositoryName}\``
-      }
-    ]
-  } as any);
 
   return {
     blocks: [],
@@ -757,6 +698,16 @@ function createPRCommentSlackMessage(data: any) {
       text: {
         type: 'mrkdwn',
         text: `💬 *<${url}|${title}>*`
+      },
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: 'View PR',
+          emoji: true
+        },
+        url: url,
+        action_id: 'view_pr'
       }
     },
     {
@@ -764,7 +715,7 @@ function createPRCommentSlackMessage(data: any) {
       elements: [
         {
           type: 'mrkdwn',
-          text: `${githubUserLink} commented on this pull request in \`${repositoryName}\``
+          text: `\`${repositoryName}\``
         }
       ]
     } as any,
@@ -776,25 +727,6 @@ function createPRCommentSlackMessage(data: any) {
       text: {
         type: 'mrkdwn',
         text: processMarkdownForSlack(payload.comment?.body || message, 300)
-      }
-    },
-    {
-      type: 'section',
-      fields: [
-        {
-          type: 'mrkdwn',
-          text: `*PR:* #${payload.pull_request?.number}`
-        }
-      ],
-      accessory: {
-        type: 'button',
-        text: {
-          type: 'plain_text',
-          text: 'View PR',
-          emoji: true
-        },
-        url: url,
-        action_id: 'view_pr'
       }
     }
   ];
@@ -852,7 +784,7 @@ function createIssueCommentSlackMessage(data: any) {
       elements: [
         {
           type: 'mrkdwn',
-          text: contextText
+          text: `\`${repositoryName}\``
         }
       ]
     } as any,
@@ -872,26 +804,17 @@ function createIssueCommentSlackMessage(data: any) {
     });
   }
   
-  // Add PR/Issue number and action button
-  blocks.push({
-    type: 'section',
-    fields: [
-      {
-        type: 'mrkdwn',
-        text: `*${itemPrefix}:* #${payload.issue?.number}`
-      }
-    ],
-    accessory: {
-      type: 'button',
-      text: {
-        type: 'plain_text',
-        text: viewText,
-        emoji: true
-      },
-      url: url,
-      action_id: 'view_issue'
-    }
-  });
+  // Add action button to the first section instead
+  blocks[0].accessory = {
+    type: 'button',
+    text: {
+      type: 'plain_text',
+      text: viewText,
+      emoji: true
+    },
+    url: url,
+    action_id: 'view_issue'
+  };
 
   return {
     blocks: [],
@@ -1065,16 +988,19 @@ function generateNotificationTitle(eventType: string, action: string, payload: a
   
   if (eventType === 'pull_request') {
     const prNumber = payload.pull_request?.number;
-    return `${sender} ${action} pull request #${prNumber} in ${repoName}`;
+    return `PR #${prNumber}: ${payload.pull_request?.title || 'Pull request'}`;
   } else if (eventType === 'issues') {
     const issueNumber = payload.issue?.number;
-    return `${sender} ${action} issue #${issueNumber} in ${repoName}`;
+    return `Issue #${issueNumber}: ${payload.issue?.title || 'Issue'}`;
   } else if (eventType === 'issue_comment') {
     const issueNumber = payload.issue?.number;
-    return `${sender} commented on issue #${issueNumber} in ${repoName}`;
+    return `Issue #${issueNumber}: ${payload.issue?.title || 'Issue'}`;
   } else if (eventType === 'pull_request_review') {
     const prNumber = payload.pull_request?.number;
-    return `${sender} reviewed pull request #${prNumber} in ${repoName}`;
+    return `PR #${prNumber}: ${payload.pull_request?.title || 'Pull request'}`;
+  } else if (eventType === 'pull_request_review_comment') {
+    const prNumber = payload.pull_request?.number;
+    return `PR #${prNumber}: ${payload.pull_request?.title || 'Pull request'}`;
   }
   
   return `${sender} performed ${eventType} action in ${repoName}`;
