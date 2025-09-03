@@ -2,6 +2,7 @@ import { task } from "@trigger.dev/sdk";
 import { PrismaClient } from "@prisma/client";
 import { WebClient } from "@slack/web-api";
 import { NotificationService } from "../src/notifications/services/notification.service";
+import { NotificationProfileService } from "../src/notifications/services/notification-profile.service";
 import { LLMAnalyzerService } from "../src/notifications/services/llm-analyzer.service";
 import { DatabaseService } from "../src/database/database.service";
 import { GitHubService } from "../src/github/services/github.service";
@@ -15,7 +16,9 @@ const configService = new ConfigService();
 const databaseService = new DatabaseService();
 const githubService = new GitHubService(configService, databaseService);
 const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
-const notificationService = new NotificationService(databaseService, githubService, llmAnalyzerService);
+// Initialize all services properly
+const notificationProfileService = new NotificationProfileService(databaseService);
+const notificationService = new NotificationService(databaseService, githubService, llmAnalyzerService, notificationProfileService);
 
 // Event processing task payload
 interface GitHubEventPayload {
@@ -122,42 +125,23 @@ async function processEventNotifications(event: any): Promise<boolean> {
       
       console.log(`\n--- Processing user ${user.id} (${user.githubLogin}) for ${eventType} ---`);
       
-      // Use the new notification service to determine if user should be notified
-      if (eventType === 'pull_request') {
-        const result = await notificationService.processPullRequestEvent(user.id, payload, event.id);
-        shouldNotify = result.shouldNotify;
-        matchedKeywords = result.matchedKeywords;
-        matchDetails = result.matchDetails;
-        reason = result.reason;
-        context = result.context;
-      } else if (eventType === 'issue_comment') {
-        const result = await notificationService.processIssueCommentEvent(user.id, payload, event.id);
-        shouldNotify = result.shouldNotify;
-        matchedKeywords = result.matchedKeywords;
-        matchDetails = result.matchDetails;
-        reason = result.reason;
-        context = result.context;
-      } else if (eventType === 'issues') {
-        const result = await notificationService.processIssueEvent(user.id, payload, event.id);
-        shouldNotify = result.shouldNotify;
-        matchedKeywords = result.matchedKeywords;
-        matchDetails = result.matchDetails;
-        reason = result.reason;
-        context = result.context;
-      } else if (eventType === 'pull_request_review') {
-        const result = await notificationService.processPullRequestReviewEvent(user.id, payload, event.id);
-        shouldNotify = result.shouldNotify;
-        matchedKeywords = result.matchedKeywords;
-        matchDetails = result.matchDetails;
-        reason = result.reason;
-        context = result.context;
-      } else if (eventType === 'pull_request_review_comment') {
-        const result = await notificationService.processPullRequestReviewCommentEvent(user.id, payload, event.id);
-        shouldNotify = result.shouldNotify;
-        matchedKeywords = result.matchedKeywords;
-        matchDetails = result.matchDetails;
-        reason = result.reason;
-        context = result.context;
+      // Use the profile-based notification service
+      const eventTypeMap = {
+        'pull_request': 'pull_request' as const,
+        'issue_comment': 'issue_comment' as const, 
+        'issues': 'issue' as const,
+        'pull_request_review': 'pull_request_review' as const,
+        'pull_request_review_comment': 'pull_request_review_comment' as const,
+      };
+
+      const mappedEventType = eventTypeMap[eventType as keyof typeof eventTypeMap];
+      if (mappedEventType) {
+        const decision = await notificationService.processEvent(user.id, payload, event.id, mappedEventType);
+        shouldNotify = decision.shouldNotify;
+        matchedKeywords = decision.primaryProfile?.matchedKeywords || [];
+        matchDetails = decision.primaryProfile?.matchDetails || {};
+        reason = decision.reason;
+        context = decision.context;
       } else {
         // For other event types, use the legacy shouldNotifyUser for now
         console.log(`Using legacy notification logic for ${eventType}`);
