@@ -82,15 +82,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📄 License
 
 MIT License - see LICENSE file for details.
-
-## 🎯 Roadmap
-
-- Next
-   - Customizable Digests to custom channels
-   - Keyword notifications to custom channels
-   - Github Discussions support
-   - Better Slack homepage
-   - Slack / Github user connecting to @ in notifications
-- Later
-   - Statistics
-   - Billing and subscription management
