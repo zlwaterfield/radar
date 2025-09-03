@@ -450,7 +450,7 @@ export class NotificationService {
       return { shouldNotify, matchedKeywords, matchDetails, reason, context };
     } catch (error) {
       this.logger.error(`Error processing pull request event: ${error}`);
-      return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+      return { shouldNotify: false, matchedKeywords: [], matchDetails: {}, reason: 'ERROR', context: { error: error.message } };
     }
   }
 
@@ -660,7 +660,7 @@ export class NotificationService {
       };
     } catch (error) {
       this.logger.error(`Error processing issue comment event: ${error}`);
-      return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+      return { shouldNotify: false, matchedKeywords: [], matchDetails: {}, reason: 'ERROR', context: { error: error.message } };
     }
   }
 
@@ -908,7 +908,7 @@ export class NotificationService {
       };
     } catch (error) {
       this.logger.error(`Error processing issue event: ${error}`);
-      return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+      return { shouldNotify: false, matchedKeywords: [], matchDetails: {}, reason: 'ERROR', context: { error: error.message } };
     }
   }
 
@@ -1017,7 +1017,225 @@ export class NotificationService {
       };
     } catch (error) {
       this.logger.error(`Error processing pull request review event: ${error}`);
-      return { shouldNotify: false, matchedKeywords: [], matchDetails: {} };
+      return { shouldNotify: false, matchedKeywords: [], matchDetails: {}, reason: 'ERROR', context: { error: error.message } };
+    }
+  }
+
+  /**
+   * Process a pull request review comment event and determine if a user should be notified.
+   */
+  async processPullRequestReviewCommentEvent(
+    userId: string,
+    payload: any,
+    eventId: string,
+  ): Promise<{
+    shouldNotify: boolean;
+    matchedKeywords: string[];
+    matchDetails: any;
+    reason?: string;
+    context?: any;
+  }> {
+    try {
+      // Extract data from payload
+      const comment = payload.comment || {};
+      const pr = payload.pull_request || {};
+      const sender = payload.sender || {};
+
+      // Get user settings
+      const settings = await this.databaseService.userSettings.findUnique({
+        where: { userId },
+      });
+
+      let preferences: NotificationPreferences;
+      if (!settings) {
+        preferences = this.getDefaultNotificationPreferences();
+      } else {
+        preferences =
+          settings.notificationPreferences as NotificationPreferences;
+      }
+
+      // Check if this is the user's own activity
+      const user = await this.databaseService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'USER_NOT_FOUND',
+          context: { userId, eventId },
+        };
+      }
+
+      const githubUsername = user.githubLogin;
+      const isOwnActivity = sender.login === githubUsername;
+
+      // Don't notify for own activity if muted
+      if (isOwnActivity && preferences.mute_own_activity) {
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'OWN_ACTIVITY_MUTED',
+          context: {
+            userId,
+            eventId,
+            senderLogin: sender.login,
+            githubUsername,
+            prNumber: pr.number,
+            repository: payload.repository?.full_name,
+          },
+        };
+      }
+
+      // Check for keyword matches in comment body
+      const contentToCheck = [comment.body || ''];
+      const commentContent = contentToCheck.join('\n\n');
+      const keywordResult = await this.llmAnalyzerService.analyzeContent(
+        commentContent,
+        userId,
+      );
+      const shouldNotifyKeywords = keywordResult.shouldNotify;
+      const matchedKeywords = keywordResult.matchedKeywords;
+      const matchDetails = keywordResult.matchDetails;
+
+      // If we have keyword matches, always notify
+      if (shouldNotifyKeywords) {
+        return {
+          shouldNotify: true,
+          matchedKeywords,
+          matchDetails,
+          reason: 'KEYWORD_MATCH',
+          context: {
+            userId,
+            eventId,
+            prNumber: pr.number,
+            repository: payload.repository?.full_name,
+            matchedKeywords,
+            matchDetails,
+          },
+        };
+      }
+
+      // Check if user is mentioned in the comment first
+      const commentBody = comment.body || '';
+      if (commentBody && commentBody.includes(`@${githubUsername}`)) {
+        // User is mentioned, check their mention preference
+        if (preferences.mentioned_in_comments) {
+          return {
+            shouldNotify: true,
+            matchedKeywords: [],
+            matchDetails: {},
+            reason: 'MENTIONED',
+            context: {
+              userId,
+              eventId,
+              prNumber: pr.number,
+              repository: payload.repository?.full_name,
+              mentionedIn: 'pr_review_comment',
+            },
+          };
+        } else {
+          return {
+            shouldNotify: false,
+            matchedKeywords: [],
+            matchDetails: {},
+            reason: 'MENTIONED_BUT_DISABLED',
+            context: {
+              userId,
+              eventId,
+              prNumber: pr.number,
+              repository: payload.repository?.full_name,
+            },
+          };
+        }
+      }
+
+      // Get watching reasons for this PR (only check if no keyword matches)
+      const watchingReasons = await this.determineWatchingReasons(
+        userId,
+        pr,
+      );
+
+      this.logger.debug(
+        `User ${userId} watching reasons for PR review comment: ${Array.from(watchingReasons).join(', ')}`,
+      );
+
+      // If the user isn't watching the PR, don't notify
+      if (watchingReasons.size === 0) {
+        return {
+          shouldNotify: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'NOT_WATCHING',
+          context: {
+            userId,
+            eventId,
+            prNumber: pr.number,
+            repository: payload.repository?.full_name,
+          },
+        };
+      }
+
+      // Use general PR comment preference for all users involved with the PR
+      const shouldNotifyPreferences = preferences.pull_request_commented ?? true;
+
+      // Always notify if mentioned
+      if (watchingReasons.has(WatchingReason.MENTIONED)) {
+        return {
+          shouldNotify: true,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'MENTIONED',
+          context: {
+            userId,
+            eventId,
+            watchingReasons: Array.from(watchingReasons),
+            prNumber: pr.number,
+            repository: payload.repository?.full_name,
+            shouldNotifyPreferences,
+          },
+        };
+      }
+
+      let reason: string;
+      if (watchingReasons.has(WatchingReason.AUTHOR)) {
+        reason = 'AUTHOR';
+      } else if (watchingReasons.has(WatchingReason.REVIEWER)) {
+        reason = 'REVIEWER';
+      } else if (watchingReasons.has(WatchingReason.ASSIGNED)) {
+        reason = 'ASSIGNED';
+      } else if (watchingReasons.has(WatchingReason.TEAM_REVIEWER)) {
+        reason = 'TEAM_REVIEWER';
+      } else if (watchingReasons.has(WatchingReason.TEAM_ASSIGNED)) {
+        reason = 'TEAM_ASSIGNED';
+      } else {
+        reason = 'PR_REVIEW_COMMENT_PREFERENCES';
+      }
+
+      this.logger.log(
+        `PR review comment notification decision for user ${userId}: ${shouldNotifyPreferences ? 'NOTIFY' : 'SKIP'} - Reason: ${reason}`,
+      );
+
+      return {
+        shouldNotify: shouldNotifyPreferences,
+        matchedKeywords: [],
+        matchDetails: {},
+        reason,
+        context: {
+          userId,
+          eventId,
+          watchingReasons: Array.from(watchingReasons),
+          prNumber: pr.number,
+          repository: payload.repository?.full_name,
+          shouldNotifyPreferences,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error processing pull request review comment event: ${error}`);
+      return { shouldNotify: false, matchedKeywords: [], matchDetails: {}, reason: 'ERROR', context: { error: error.message } };
     }
   }
 }

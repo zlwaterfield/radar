@@ -151,6 +151,13 @@ async function processEventNotifications(event: any): Promise<boolean> {
         matchDetails = result.matchDetails;
         reason = result.reason;
         context = result.context;
+      } else if (eventType === 'pull_request_review_comment') {
+        const result = await notificationService.processPullRequestReviewCommentEvent(user.id, payload, event.id);
+        shouldNotify = result.shouldNotify;
+        matchedKeywords = result.matchedKeywords;
+        matchDetails = result.matchDetails;
+        reason = result.reason;
+        context = result.context;
       } else {
         // For other event types, use the legacy shouldNotifyUser for now
         console.log(`Using legacy notification logic for ${eventType}`);
