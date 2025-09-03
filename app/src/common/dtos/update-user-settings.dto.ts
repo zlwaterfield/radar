@@ -140,12 +140,12 @@ export class NotificationScheduleDto {
   @IsBoolean()
   real_time?: boolean;
 
-  @ApiPropertyOptional({ description: 'Enable daily digest' })
+  @ApiPropertyOptional({ description: 'Enable digest' })
   @IsOptional()
   @IsBoolean()
   digest_enabled?: boolean;
 
-  @ApiPropertyOptional({ description: 'Time for daily digest (HH:mm format)' })
+  @ApiPropertyOptional({ description: 'Time for digest (HH:mm format)' })
   @IsOptional()
   @IsString()
   digest_time?: string;
@@ -159,13 +159,13 @@ export class NotificationScheduleDto {
   @IsString({ each: true })
   digest_days?: string[];
 
-  @ApiPropertyOptional({ description: 'Enable second daily digest' })
+  @ApiPropertyOptional({ description: 'Enable second digest' })
   @IsOptional()
   @IsBoolean()
   second_digest_enabled?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Time for second daily digest (HH:mm format)',
+    description: 'Time for second digest (HH:mm format)',
   })
   @IsOptional()
   @IsString()
