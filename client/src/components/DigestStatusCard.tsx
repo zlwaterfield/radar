@@ -22,7 +22,7 @@ const DigestStatusCard: React.FC<DigestStatusCardProps> = ({
           </div>
           <div className="ml-3">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Daily digest is disabled
+              Digest is disabled
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Enable it to start receiving daily PR summaries
@@ -42,7 +42,7 @@ const DigestStatusCard: React.FC<DigestStatusCardProps> = ({
           </div>
           <div className="ml-3">
             <p className="text-sm font-medium text-green-800 dark:text-green-200">
-              Daily digest is active
+              Digest is active
             </p>
             <p className="text-xs text-green-600 dark:text-green-400">
               {nextDelivery ? (

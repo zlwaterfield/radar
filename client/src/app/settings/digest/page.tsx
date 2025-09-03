@@ -8,43 +8,47 @@ import Button from '@/components/Button';
 import { toast } from 'sonner';
 import axios from '@/lib/axios';
 import { format } from 'date-fns';
-
-interface DigestSettings {
-  digest_enabled: boolean;
-  digest_time: string;
-}
-
-interface DigestPreview {
-  waitingOnUser: number;
-  approvedReadyToMerge: number;
-  userOpenPRs: number;
-  details?: {
-    waitingOnUser: Array<{ title: string; url: string; repo: string }>;
-    approvedReadyToMerge: Array<{ title: string; url: string; repo: string }>;
-    userOpenPRs: Array<{ title: string; url: string; repo: string }>;
-  };
-}
-
-interface DigestHistory {
-  id: string;
-  sentAt: string;
-  pullRequestCount: number;
-  issueCount: number;
-}
+import { 
+  DigestConfig, 
+  CreateDigestConfig, 
+  DigestPreview, 
+  DigestHistory,
+  Repository,
+  Team,
+  DigestScopeType,
+  DigestDeliveryType 
+} from '@/types/digest';
 
 export default function DigestSettings() {
   const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
-  const [isSaving, setIsSaving] = useState(false);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [isSendingTest, setIsSendingTest] = useState(false);
-  const [digestSettings, setDigestSettings] = useState<DigestSettings>({
-    digest_enabled: false,
-    digest_time: '09:00',
-  });
-  const [preview, setPreview] = useState<DigestPreview | null>(null);
+  
+  // State management
+  const [digestConfigs, setDigestConfigs] = useState<DigestConfig[]>([]);
   const [history, setHistory] = useState<DigestHistory[]>([]);
-  const [activeTab, setActiveTab] = useState<'settings' | 'preview' | 'history'>('settings');
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  
+  // UI state
+  const [activeTab, setActiveTab] = useState<'configs' | 'history'>('configs');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<DigestConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form state for create/edit
+  const [formData, setFormData] = useState<CreateDigestConfig>({
+    name: '',
+    description: '',
+    isEnabled: true,
+    digestTime: '09:00',
+    timezone: 'UTC',
+    scopeType: 'user',
+    scopeValue: undefined,
+    repositoryFilter: { type: 'all' },
+    deliveryType: 'dm',
+    deliveryTarget: undefined,
+  });
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -54,145 +58,189 @@ export default function DigestSettings() {
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      fetchUserSettings();
-      fetchDigestHistory();
+      loadData();
     }
   }, [isAuthenticated, user]);
 
-  const fetchUserSettings = async () => {
+  const loadData = async () => {
     try {
-      if (!user?.id) return;
-      
-      const response = await axios.get(`/api/users/me/settings`);
-      const data = response.data;
-      
-      // Update digest settings
-      if (data.notificationSchedule) {
-        const schedule = data.notificationSchedule;
-        
-        setDigestSettings({
-          digest_enabled: schedule.digest_enabled ?? false,
-          digest_time: schedule.digest_time ?? '09:00',
-        });
-      }
+      setIsLoading(true);
+      await Promise.all([
+        loadDigestConfigs(),
+        loadDigestHistory(),
+        loadRepositories(),
+        loadTeams(),
+      ]);
     } catch (error) {
-      console.error('Error fetching user settings:', error);
-      toast.error('Failed to load digest settings.');
+      console.error('Error loading data:', error);
+      toast.error('Failed to load digest settings');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const fetchDigestHistory = async () => {
+  const loadDigestConfigs = async () => {
     try {
-      if (!user?.id) return;
-      
-      const response = await axios.get(`/api/digest/history`);
-      
+      const response = await axios.get('/api/digest-configs');
+      setDigestConfigs(response.data);
+    } catch (error) {
+      console.error('Error loading digest configs:', error);
+    }
+  };
+
+  const loadDigestHistory = async () => {
+    try {
+      const response = await axios.get('/api/digest/history');
       if (response.data.success) {
         setHistory(response.data.history);
-      } else {
-        console.error('Failed to fetch digest history:', response.data.error);
       }
     } catch (error) {
-      console.error('Error fetching digest history:', error);
-      // If API fails, show empty history instead of crashing
+      console.error('Error loading digest history:', error);
       setHistory([]);
     }
   };
 
-  const handleDigestChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, type, checked, value } = e.target;
-    
-    setDigestSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  const validateSettings = (): boolean => {
-    if (digestSettings.digest_enabled && !digestSettings.digest_time) {
-      toast.error('Please select a delivery time.');
-      return false;
-    }
-    
-    const [hours, minutes] = digestSettings.digest_time.split(':').map(Number);
-    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-      toast.error('Please enter a valid time.');
-      return false;
-    }
-    
-    return true;
-  };
-
-  const saveDigestSettings = async () => {
-    if (!validateSettings()) return;
-    
-    setIsSaving(true);
-    
+  const loadRepositories = async () => {
     try {
-      // Format settings for API
-      const settings = {
-        notificationSchedule: {
-          digest_enabled: digestSettings.digest_enabled,
-          digest_time: digestSettings.digest_time
-        }
-      };
-      
-      // Save settings to API
-      await axios.post(`/api/users/me/settings`, settings);
-      
-      toast.success('Your digest preferences have been updated.');
-      
-      // Refresh history after enabling/disabling
-      if (digestSettings.digest_enabled) {
-        fetchDigestHistory();
+      const response = await axios.get('/api/users/me/repositories');
+      if (response.data.success) {
+        setRepositories(response.data.repositories);
       }
     } catch (error) {
-      console.error('Error saving digest settings:', error);
-      toast.error('Failed to save digest settings.');
+      console.error('Error loading repositories:', error);
+    }
+  };
+
+  const loadTeams = async () => {
+    try {
+      const response = await axios.get('/api/users/me/teams');
+      if (response.data.success) {
+        setTeams(response.data.teams);
+      }
+    } catch (error) {
+      console.error('Error loading teams:', error);
+    }
+  };
+
+  const handleCreateConfig = () => {
+    setEditingConfig(null);
+    setFormData({
+      name: '',
+      description: '',
+      isEnabled: true,
+      digestTime: '09:00',
+      timezone: 'UTC',
+      scopeType: 'user',
+      scopeValue: undefined,
+      repositoryFilter: { type: 'all' },
+      deliveryType: 'dm',
+      deliveryTarget: undefined,
+    });
+    setShowCreateForm(true);
+  };
+
+  const handleEditConfig = (config: DigestConfig) => {
+    setEditingConfig(config);
+    setFormData({
+      name: config.name,
+      description: config.description || '',
+      isEnabled: config.isEnabled,
+      digestTime: config.digestTime,
+      timezone: config.timezone,
+      scopeType: config.scopeType,
+      scopeValue: config.scopeValue || undefined,
+      repositoryFilter: config.repositoryFilter,
+      deliveryType: config.deliveryType,
+      deliveryTarget: config.deliveryTarget || undefined,
+    });
+    setShowCreateForm(true);
+  };
+
+  const handleSaveConfig = async () => {
+    try {
+      setIsSaving(true);
+      
+      if (editingConfig) {
+        // Update existing config
+        await axios.put(`/api/digest-configs/${editingConfig.id}`, formData);
+        toast.success('Digest configuration updated successfully');
+      } else {
+        // Create new config
+        await axios.post('/api/digest-configs', formData);
+        toast.success('Digest configuration created successfully');
+      }
+      
+      await loadDigestConfigs();
+      setShowCreateForm(false);
+      setEditingConfig(null);
+    } catch (error: any) {
+      console.error('Error saving config:', error);
+      toast.error(error.response?.data?.message || 'Failed to save digest configuration');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const loadPreview = async () => {
-    if (!user?.id) return;
-    
-    setIsPreviewLoading(true);
+  const handleDeleteConfig = async (configId: string) => {
+    if (!confirm('Are you sure you want to delete this digest configuration?')) {
+      return;
+    }
+
     try {
-      const response = await axios.post(`/api/digest/test/${user.id}`);
-      
-      if (response.data.success) {
-        setPreview(response.data.digest);
-      } else {
-        toast.error(response.data.error || 'Failed to generate preview');
-      }
+      await axios.delete(`/api/digest-configs/${configId}`);
+      toast.success('Digest configuration deleted successfully');
+      await loadDigestConfigs();
     } catch (error: any) {
-      console.error('Error loading preview:', error);
-      toast.error(error.response?.data?.error || 'Failed to generate preview');
-    } finally {
-      setIsPreviewLoading(false);
+      console.error('Error deleting config:', error);
+      toast.error('Failed to delete digest configuration');
     }
   };
 
-  const sendTestDigest = async () => {
-    if (!user?.id) return;
-    
-    setIsSendingTest(true);
+  const handleToggleConfig = async (config: DigestConfig) => {
     try {
-      const response = await axios.post(`/api/digest/send/${user.id}`);
-      
+      await axios.put(`/api/digest-configs/${config.id}`, {
+        isEnabled: !config.isEnabled
+      });
+      await loadDigestConfigs();
+      toast.success(`Digest configuration ${!config.isEnabled ? 'enabled' : 'disabled'}`);
+    } catch (error: any) {
+      console.error('Error toggling config:', error);
+      toast.error('Failed to update digest configuration');
+    }
+  };
+
+  const handleTestDigest = async (configId: string) => {
+    try {
+      const response = await axios.post(`/api/digest-configs/${configId}/test`);
       if (response.data.success) {
-        toast.success('Test digest sent to your Slack! Check your DMs.');
-        // Refresh history
-        fetchDigestHistory();
+        toast.success('Test digest sent successfully! Check your Slack.');
       } else {
         toast.error(response.data.error || 'Failed to send test digest');
       }
     } catch (error: any) {
       console.error('Error sending test digest:', error);
-      toast.error(error.response?.data?.error || 'Failed to send test digest');
-    } finally {
-      setIsSendingTest(false);
+      toast.error('Failed to send test digest');
+    }
+  };
+
+  const handlePreviewDigest = async (configId: string) => {
+    try {
+      const response = await axios.post(`/api/digest-configs/${configId}/preview`);
+      if (response.data.success) {
+        // You could show a modal with preview data here
+        const digest = response.data.digest;
+        const totalPRs = digest.waitingOnUser + digest.approvedReadyToMerge + digest.userOpenPRs;
+        if (totalPRs > 0) {
+          toast.success(`Preview: ${totalPRs} PRs would be included in this digest`);
+        } else {
+          toast.info('No PRs would be included in this digest right now');
+        }
+      } else {
+        toast.error('Failed to generate preview');
+      }
+    } catch (error: any) {
+      console.error('Error generating preview:', error);
+      toast.error('Failed to generate preview');
     }
   };
 
@@ -203,37 +251,45 @@ export default function DigestSettings() {
     return format(date, 'h:mm a');
   };
 
-  const getNextDeliveryTime = () => {
-    if (!digestSettings.digest_enabled) return null;
-    
-    const [hours, minutes] = digestSettings.digest_time.split(':').map(Number);
-    const now = new Date();
-    const nextDelivery = new Date();
-    nextDelivery.setHours(hours, minutes, 0, 0);
-    
-    // If time has passed today, schedule for tomorrow
-    if (nextDelivery <= now) {
-      nextDelivery.setDate(nextDelivery.getDate() + 1);
+  const getDeliveryDisplay = (config: DigestConfig) => {
+    if (config.deliveryType === 'dm') {
+      return 'Direct Message';
+    } else {
+      return `Channel: ${config.deliveryTarget || 'Not specified'}`;
     }
-    
-    return nextDelivery;
   };
 
-  if (loading) {
+  const getScopeDisplay = (config: DigestConfig) => {
+    if (config.scopeType === 'user') {
+      return 'Your activity';
+    } else {
+      const team = teams.find(t => t.teamId === config.scopeValue);
+      return `Team: ${team ? team.teamName : 'Unknown team'}`;
+    }
+  };
+
+  const getRepositoryDisplay = (config: DigestConfig) => {
+    if (config.repositoryFilter.type === 'all') {
+      return 'All repositories';
+    } else {
+      const count = config.repositoryFilter.repoIds?.length || 0;
+      return `${count} selected repositories`;
+    }
+  };
+
+  if (loading || isLoading) {
     return <Loader size="large" />;
   }
-
-  const nextDelivery = getNextDeliveryTime();
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-100 dark:border-gray-700">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-          📊 Daily Digest
+          Digests
         </h3>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Get a daily summary of GitHub activity that matters to you
+          Manage multiple digest configurations with different schedules and delivery options.
         </p>
       </div>
 
@@ -242,8 +298,7 @@ export default function DigestSettings() {
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8">
             {[
-              { key: 'settings', label: 'Settings', icon: '⚙️' },
-              { key: 'preview', label: 'Preview', icon: '👀' },
+              { key: 'configs', label: 'Configurations', icon: '⚙️' },
               { key: 'history', label: 'History', icon: '📈' }
             ].map((tab) => (
               <button
@@ -264,270 +319,131 @@ export default function DigestSettings() {
 
       {/* Tab Content */}
       <div className="p-6">
-        {activeTab === 'settings' && (
+        {activeTab === 'configs' && (
           <div className="space-y-6">
-            {/* Enable Toggle */}
-            <div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer"
-                  name="digest_enabled"
-                  checked={digestSettings.digest_enabled}
-                  onChange={handleDigestChange}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-marian-blue-300 dark:peer-focus:ring-marian-blue-600 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-marian-blue-600"></div>
-                <span className="ms-3 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Enable daily digest
-                </span>
-              </label>
-              
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Receive a daily summary of PRs waiting for your review, approved PRs ready to merge, and your open PRs.
-              </p>
-            </div>
-
-            {/* Time Selection */}
-            {digestSettings.digest_enabled && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <label htmlFor="digest-time" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      ⏰ Delivery time
-                    </label>
-                    <div className="mt-1 flex items-center">
-                      <input
-                        type="time"
-                        name="digest_time"
-                        id="digest-time"
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 dark:focus:ring-marian-blue-500 dark:focus:border-marian-blue-500"
-                        value={digestSettings.digest_time}
-                        onChange={handleDigestChange}
-                      />
-                      <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                        ({formatTime(digestSettings.digest_time)})
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {nextDelivery && (
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        📅 Next delivery
-                      </p>
-                      <p className="text-sm text-marian-blue-600 dark:text-marian-blue-400">
-                        {format(nextDelivery, 'MMM d, yyyy')} at {formatTime(digestSettings.digest_time)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* What's Included */}
-            {digestSettings.digest_enabled && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">
-                  📋 What&apos;s included in your digest
-                </h4>
-                <ul className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
-                  <li className="flex items-center">
-                    <span className="mr-2">🔍</span>
-                    <strong>PRs waiting for your review</strong> - Pull requests where you&apos;ve been asked to review
-                  </li>
-                  <li className="flex items-center">
-                    <span className="mr-2">✅</span>
-                    <strong>Approved PRs ready to merge</strong> - PRs you&apos;ve approved that are now ready to merge
-                  </li>
-                  <li className="flex items-center">
-                    <span className="mr-2">🚀</span>
-                    <strong>Your open PRs</strong> - Pull requests you&apos;ve created that are still open
-                  </li>
-                </ul>
-                <p className="mt-3 text-xs text-blue-700 dark:text-blue-300">
-                  Only includes activity from repositories you&apos;re watching
-                </p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            {/* Create New Button */}
+            <div className="flex justify-between items-center">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white">
+                Digest Configurations
+              </h4>
               <Button
                 type="button"
                 variant="primary"
-                onClick={saveDigestSettings}
-                disabled={isSaving}
-                loading={isSaving}
-                className="flex-1 sm:flex-initial"
+                onClick={handleCreateConfig}
+                className="flex items-center gap-2"
               >
-                💾 Save Settings
-              </Button>
-              
-              {digestSettings.digest_enabled && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={sendTestDigest}
-                  disabled={isSendingTest || !user?.id}
-                  loading={isSendingTest}
-                  className="flex-1 sm:flex-initial"
-                >
-                  🧪 Send Test Digest
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'preview' && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                👀 Preview Your Digest
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                See what your digest would look like based on current GitHub activity
-              </p>
-              
-              <Button
-                onClick={loadPreview}
-                loading={isPreviewLoading}
-                disabled={isPreviewLoading || !digestSettings.digest_enabled}
-                variant="primary"
-              >
-                {isPreviewLoading ? 'Generating...' : '🔍 Generate Preview'}
+                Create New Digest
               </Button>
             </div>
 
-            {!digestSettings.digest_enabled && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  ⚠️ Enable daily digest to see preview
+            {/* Configurations List */}
+            {digestConfigs.length === 0 ? (
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 text-center">
+                <div className="text-4xl mb-2">📭</div>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  No digest configurations yet
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
+                  Create your first digest to start receiving GitHub activity summaries
                 </p>
               </div>
-            )}
-
-            {preview && (
+            ) : (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                      {preview.waitingOnUser}
-                    </div>
-                    <div className="text-sm text-orange-800 dark:text-orange-300">
-                      🔍 Waiting for Review
-                    </div>
-                  </div>
-                  
-                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {preview.approvedReadyToMerge}
-                    </div>
-                    <div className="text-sm text-green-800 dark:text-green-300">
-                      ✅ Ready to Merge
-                    </div>
-                  </div>
-                  
-                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {preview.userOpenPRs}
-                    </div>
-                    <div className="text-sm text-blue-800 dark:text-blue-300">
-                      🚀 Your Open PRs
-                    </div>
-                  </div>
-                </div>
+                {digestConfigs.map((config) => (
+                  <div key={config.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h5 className="font-medium text-gray-900 dark:text-white">
+                            {config.name}
+                          </h5>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            config.isEnabled 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                          }`}>
+                            {config.isEnabled ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </div>
+                        
+                        {config.description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            {config.description}
+                          </p>
+                        )}
 
-                {preview.details && (
-                  <div className="space-y-4">
-                    {preview.details.waitingOnUser.length > 0 && (
-                      <div className="bg-white dark:bg-gray-700 rounded-lg border border-orange-200 dark:border-orange-800 p-4">
-                        <h5 className="font-medium text-orange-800 dark:text-orange-200 mb-2">
-                          🔍 PRs Waiting for Your Review
-                        </h5>
-                        <div className="space-y-2">
-                          {preview.details.waitingOnUser.slice(0, 3).map((pr, i) => (
-                            <div key={i} className="text-sm">
-                              <a href={pr.url} target="_blank" rel="noopener noreferrer" 
-                                 className="text-marian-blue-600 hover:text-marian-blue-800 dark:text-marian-blue-400 font-medium">
-                                {pr.title}
-                              </a>
-                              <div className="text-gray-500 dark:text-gray-400 text-xs">
-                                {pr.repo}
-                              </div>
-                            </div>
-                          ))}
-                          {preview.details.waitingOnUser.length > 3 && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              ...and {preview.details.waitingOnUser.length - 3} more
-                            </p>
-                          )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">⏰ Time:</span>
+                            <span className="ml-1 text-gray-900 dark:text-white">
+                              {formatTime(config.digestTime)}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">👤 Scope:</span>
+                            <span className="ml-1 text-gray-900 dark:text-white">
+                              {getScopeDisplay(config)}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">📁 Repos:</span>
+                            <span className="ml-1 text-gray-900 dark:text-white">
+                              {getRepositoryDisplay(config)}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">📤 Delivery:</span>
+                            <span className="ml-1 text-gray-900 dark:text-white">
+                              {getDeliveryDisplay(config)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    )}
 
-                    {preview.details.approvedReadyToMerge.length > 0 && (
-                      <div className="bg-white dark:bg-gray-700 rounded-lg border border-green-200 dark:border-green-800 p-4">
-                        <h5 className="font-medium text-green-800 dark:text-green-200 mb-2">
-                          ✅ Ready to Merge
-                        </h5>
-                        <div className="space-y-2">
-                          {preview.details.approvedReadyToMerge.slice(0, 3).map((pr, i) => (
-                            <div key={i} className="text-sm">
-                              <a href={pr.url} target="_blank" rel="noopener noreferrer" 
-                                 className="text-marian-blue-600 hover:text-marian-blue-800 dark:text-marian-blue-400 font-medium">
-                                {pr.title}
-                              </a>
-                              <div className="text-gray-500 dark:text-gray-400 text-xs">
-                                {pr.repo}
-                              </div>
-                            </div>
-                          ))}
-                          {preview.details.approvedReadyToMerge.length > 3 && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              ...and {preview.details.approvedReadyToMerge.length - 3} more
-                            </p>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleTestDigest(config.id)}
+                          className="text-xs"
+                        >
+                          Test
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleEditConfig(config)}
+                          className="text-xs"
+                        >
+                          Edit
+                        </Button>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={config.isEnabled}
+                            onChange={() => handleToggleConfig(config)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-marian-blue-300 dark:peer-focus:ring-marian-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-marian-blue-600"></div>
+                          <span className="ml-3 text-xs text-gray-900 dark:text-gray-300">
+                            {config.isEnabled ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </label>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDeleteConfig(config.id)}
+                          className="text-xs text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
+                        >
+                          Delete
+                        </Button>
                       </div>
-                    )}
-
-                    {preview.details.userOpenPRs.length > 0 && (
-                      <div className="bg-white dark:bg-gray-700 rounded-lg border border-blue-200 dark:border-blue-800 p-4">
-                        <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
-                          🚀 Your Open PRs
-                        </h5>
-                        <div className="space-y-2">
-                          {preview.details.userOpenPRs.slice(0, 3).map((pr, i) => (
-                            <div key={i} className="text-sm">
-                              <a href={pr.url} target="_blank" rel="noopener noreferrer" 
-                                 className="text-marian-blue-600 hover:text-marian-blue-800 dark:text-marian-blue-400 font-medium">
-                                {pr.title}
-                              </a>
-                              <div className="text-gray-500 dark:text-gray-400 text-xs">
-                                {pr.repo}
-                              </div>
-                            </div>
-                          ))}
-                          {preview.details.userOpenPRs.length > 3 && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              ...and {preview.details.userOpenPRs.length - 3} more
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {preview.waitingOnUser === 0 && preview.approvedReadyToMerge === 0 && preview.userOpenPRs === 0 && (
-                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 text-center">
-                        <div className="text-4xl mb-2">🎉</div>
-                        <p className="text-gray-600 dark:text-gray-400">
-                          No PRs to show right now. Your digest would be skipped today.
-                        </p>
-                      </div>
-                    )}
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
             )}
           </div>
@@ -535,15 +451,10 @@ export default function DigestSettings() {
 
         {activeTab === 'history' && (
           <div className="space-y-6">
-            <div>
-              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                📈 Digest History
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Recent digest deliveries and their contents
-              </p>
-            </div>
-
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white">
+              📈 Digest History
+            </h4>
+            
             {history.length > 0 ? (
               <div className="space-y-3">
                 {history.map((digest) => (
@@ -556,6 +467,11 @@ export default function DigestSettings() {
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           Delivered at {format(new Date(digest.sentAt), 'h:mm a')}
                         </p>
+                        {digest.digestConfig && (
+                          <p className="text-sm text-gray-500 dark:text-gray-500">
+                            Configuration: {digest.digestConfig.name}
+                          </p>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="flex items-center gap-4 text-sm">
@@ -567,6 +483,9 @@ export default function DigestSettings() {
                               🐛 {digest.issueCount} Issues
                             </span>
                           )}
+                          <span className="text-gray-500 dark:text-gray-400">
+                            📤 {digest.deliveryType === 'dm' ? 'DM' : `Channel: ${digest.deliveryTarget}`}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -580,16 +499,288 @@ export default function DigestSettings() {
                   No digest history yet
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-500">
-                  {digestSettings.digest_enabled 
-                    ? "Your first digest will appear here after it's delivered"
-                    : "Enable daily digest to start receiving summaries"
-                  }
+                  Create and enable digest configurations to start receiving summaries
                 </p>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Create/Edit Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {editingConfig ? 'Edit' : 'Create'} Digest Configuration
+              </h3>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Basic Settings */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 dark:text-white">Basic Settings</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                    placeholder="e.g., Morning Team Updates"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                    rows={2}
+                    placeholder="Optional description for this digest"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Delivery Time
+                  </label>
+                  <div className="flex gap-3">
+                    <input
+                      type="time"
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                      value={formData.digestTime}
+                      onChange={(e) => setFormData({...formData, digestTime: e.target.value})}
+                    />
+                    <select
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                      value={formData.timezone}
+                      onChange={(e) => setFormData({...formData, timezone: e.target.value})}
+                    >
+                      <option value="UTC">UTC</option>
+                      <option value="America/New_York">Eastern Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/Denver">Mountain Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scope Settings */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 dark:text-white">Scope</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Activity Scope
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="scopeType"
+                        value="user"
+                        checked={formData.scopeType === 'user'}
+                        onChange={(e) => setFormData({...formData, scopeType: e.target.value as DigestScopeType, scopeValue: undefined})}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Your activity (includes your teams)
+                      </span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="scopeType"
+                        value="team"
+                        checked={formData.scopeType === 'team'}
+                        onChange={(e) => setFormData({...formData, scopeType: e.target.value as DigestScopeType})}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Specific team activity
+                      </span>
+                    </label>
+                  </div>
+                  
+                  {formData.scopeType === 'team' && (
+                    <div className="mt-2">
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                        value={formData.scopeValue || ''}
+                        onChange={(e) => setFormData({...formData, scopeValue: e.target.value})}
+                      >
+                        <option value="">Select a team</option>
+                        {teams.map((team) => (
+                          <option key={team.teamId} value={team.teamId}>
+                            {team.teamName} ({team.organization})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Repository Settings */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 dark:text-white">Repositories</h4>
+                
+                <div>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="repositoryType"
+                        value="all"
+                        checked={formData.repositoryFilter.type === 'all'}
+                        onChange={(e) => setFormData({...formData, repositoryFilter: { type: 'all' }})}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        All repositories
+                      </span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="repositoryType"
+                        value="selected"
+                        checked={formData.repositoryFilter.type === 'selected'}
+                        onChange={(e) => setFormData({...formData, repositoryFilter: { type: 'selected', repoIds: [] }})}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Selected repositories
+                      </span>
+                    </label>
+                  </div>
+                  
+                  {formData.repositoryFilter.type === 'selected' && (
+                    <div className="mt-3 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-md p-3">
+                      {repositories.filter(repo => repo.enabled).map((repo) => (
+                        <label key={repo.githubId} className="flex items-center py-1">
+                          <input
+                            type="checkbox"
+                            checked={formData.repositoryFilter.repoIds?.includes(repo.githubId) || false}
+                            onChange={(e) => {
+                              const currentIds = formData.repositoryFilter.repoIds || [];
+                              const newIds = e.target.checked
+                                ? [...currentIds, repo.githubId]
+                                : currentIds.filter(id => id !== repo.githubId);
+                              setFormData({
+                                ...formData,
+                                repositoryFilter: { ...formData.repositoryFilter, repoIds: newIds }
+                              });
+                            }}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {repo.fullName}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Delivery Settings */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 dark:text-white">Delivery</h4>
+                
+                <div>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="deliveryType"
+                        value="dm"
+                        checked={formData.deliveryType === 'dm'}
+                        onChange={(e) => setFormData({...formData, deliveryType: e.target.value as DigestDeliveryType, deliveryTarget: undefined})}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Direct Message
+                      </span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="deliveryType"
+                        value="channel"
+                        checked={formData.deliveryType === 'channel'}
+                        onChange={(e) => setFormData({...formData, deliveryType: e.target.value as DigestDeliveryType})}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Slack Channel
+                      </span>
+                    </label>
+                  </div>
+                  
+                  {formData.deliveryType === 'channel' && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                        placeholder="Channel ID (e.g., C1234567890)"
+                        value={formData.deliveryTarget || ''}
+                        onChange={(e) => setFormData({...formData, deliveryTarget: e.target.value})}
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        You can find the channel ID in Slack by right-clicking on the channel name
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Enable Toggle */}
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.isEnabled}
+                    onChange={(e) => setFormData({...formData, isEnabled: e.target.checked})}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Enable this digest configuration
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowCreateForm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSaveConfig}
+                disabled={isSaving || !formData.name.trim()}
+                loading={isSaving}
+              >
+                {editingConfig ? 'Update' : 'Create'} Configuration
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
