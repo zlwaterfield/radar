@@ -25,6 +25,25 @@ function AuthSuccessContent() {
     }
   }, [token]);
 
+  const checkOnboardingStatus = async (authToken: string) => {
+    try {
+      const authHeaders = { Authorization: `Bearer ${authToken}` };
+      
+      const [slackResponse, githubResponse] = await Promise.all([
+        axios.get('/api/integrations/slack/status', { headers: authHeaders }),
+        axios.get('/api/integrations/github/status', { headers: authHeaders }),
+      ]);
+
+      const slackConnected = slackResponse.data?.connected || false;
+      const githubConnected = githubResponse.data?.connected || false;
+      
+      return slackConnected || githubConnected;
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      return false;
+    }
+  };
+
   const handleTokenAuth = async (authToken: string) => {
     try {
       // Validate token and get user info
@@ -48,12 +67,15 @@ function AuthSuccessContent() {
         // Set axios auth header for immediate use
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
         
+        const onboardingComplete = await checkOnboardingStatus(authToken);
+        
         toast.success('Successfully authenticated! Redirecting...');
         
         // Small delay to ensure cookies are set before redirect
         setTimeout(() => {
+          const redirectUrl = onboardingComplete ? '/settings/notifications' : '/onboarding';
           // Use window.location.href to ensure a full navigation that triggers AuthContext
-          window.location.href = '/settings/notifications';
+          window.location.href = redirectUrl;
         }, 200);
       } else {
         setError('Invalid authentication response');
