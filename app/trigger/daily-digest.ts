@@ -1,16 +1,44 @@
 import { schedules, wait, task } from "@trigger.dev/sdk";
 import { PrismaClient } from "@prisma/client";
 import { DigestService } from "../src/digest/digest.service";
+import { DigestConfigService } from "../src/digest/digest-config.service";
 import { DatabaseService } from "../src/database/database.service";
 import { GitHubService } from "../src/github/services/github.service";
 import { SlackService } from "../src/slack/services/slack.service";
+import { GitHubIntegrationService } from "../src/integrations/services/github-integration.service";
+import { UserTeamsSyncService } from "../src/users/services/user-teams-sync.service";
+import { UserRepositoriesService } from "../src/users/services/user-repositories.service";
 import { ConfigService } from "@nestjs/config";
+import appConfig from "../src/config/app.config";
+import slackConfig from "../src/config/slack.config";
+import githubConfig from "../src/config/github.config";
+import databaseConfig from "../src/config/database.config";
+import monitoringConfig from "../src/config/monitoring.config";
 
 // Initialize services for the task
 const prisma = new PrismaClient();
-const configService = new ConfigService();
+
+// Create properly configured ConfigService with all configs loaded
+const configService = new ConfigService({
+  app: appConfig(),
+  slack: slackConfig(),
+  github: githubConfig(),
+  database: databaseConfig(),
+  monitoring: monitoringConfig(),
+});
+
+// Log configuration status for debugging
+console.log('ConfigService initialized with configs:');
+console.log(`- Slack signing secret: ${configService.get('slack.signingSecret') ? 'present' : 'missing'}`);
+console.log(`- Slack bot token: ${configService.get('slack.botToken') ? 'present' : 'missing'}`);
+console.log(`- GitHub app ID: ${configService.get('github.appId') ? 'present' : 'missing'}`);
+
 const databaseService = new DatabaseService();
 const githubService = new GitHubService(configService, databaseService);
+const digestConfigService = new DigestConfigService(databaseService);
+const userRepositoriesService = new UserRepositoriesService(databaseService, githubService);
+const userTeamsSyncService = new UserTeamsSyncService(databaseService, githubService, userRepositoriesService);
+const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, userTeamsSyncService);
 
 
 export const dailyDigest = schedules.task({
@@ -24,90 +52,110 @@ export const dailyDigest = schedules.task({
     maxTimeoutInMs: 30000,
   },
   run: async (payload, { ctx }) => {
+    console.log('Initializing SlackService in dailyDigest task...');
     const slackService = new SlackService(configService, databaseService);
-    const digestService = new DigestService(databaseService, githubService, slackService);
+    console.log('SlackService initialized successfully in dailyDigest task');
+    
+    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService);
     
     try {
-      console.log("Starting daily digest processing...");
+      console.log("Starting multiple digest processing...");
 
-      // Get all users who have digest enabled
-      const users = await digestService.getUsersWithDigestEnabled();
+      // Get all users with enabled digest configurations
+      const users = await digestConfigService.getUsersWithEnabledDigests();
       
       if (users.length === 0) {
-        console.log("No users have digest enabled, skipping");
+        console.log("No users have digest configurations enabled, skipping");
         return { success: true, message: "No users to process" };
       }
 
-      console.log(`Processing digests for ${users.length} users`);
+      console.log(`Processing digest configs for ${users.length} users`);
 
+      let totalConfigs = 0;
       let successCount = 0;
       let errorCount = 0;
 
-      // Process each user individually
+      // Process each user's digest configurations
       for (const userData of users) {
         try {
-          console.log(`Processing digest for user ${userData.userId} (${userData.userGithubLogin})`);
+          console.log(`Processing ${userData.digestConfigs.length} digest configs for user ${userData.userId} (${userData.userGithubLogin})`);
 
-          // Calculate when to send this user's digest
-          const digestTime = digestService.calculateUserDigestTime(userData.digestTime);
-          const now = new Date();
+          for (const config of userData.digestConfigs) {
+            totalConfigs++;
+            try {
+              console.log(`Processing digest config "${config.name}" (${config.id}) for user ${userData.userId}`);
 
-          console.log(`User ${userData.userId} digest scheduled for ${digestTime.toISOString()}`);
+              // Calculate when to send this digest
+              const digestTime = digestService.calculateUserDigestTime(config.digestTime);
+              const now = new Date();
 
-          // Wait until the user's preferred time
-          if (digestTime > now) {
-            console.log(`Waiting until ${digestTime.toISOString()} for user ${userData.userId}`);
-            await wait.until({ 
-              date: digestTime,
-              idempotencyKey: `digest-${userData.userId}-${digestTime.toDateString()}`,
-              idempotencyKeyTTL: "1d"
-            });
-          }
+              console.log(`Config ${config.id} digest scheduled for ${digestTime.toISOString()}`);
 
-          // Generate digest content
-          console.log(`Generating digest content for user ${userData.userId}`);
-          const digest = await digestService.generateDigestForUser(userData);
+              // Wait until the configured time
+              if (digestTime > now) {
+                console.log(`Waiting until ${digestTime.toISOString()} for config ${config.id}`);
+                await wait.until({ 
+                  date: digestTime,
+                  idempotencyKey: `digest-config-${config.id}-${digestTime.toDateString()}`,
+                  idempotencyKeyTTL: "1d"
+                });
+              }
 
-          // Send digest if there's content
-          const totalPRs = digest.waitingOnUser.length + 
-                           digest.approvedReadyToMerge.length + 
-                           digest.userOpenPRs.length;
+              // Get execution data for this config
+              const executionData = await digestConfigService.getDigestExecutionData(config.id);
 
-          if (totalPRs > 0) {
-            const sent = await digestService.sendDigestToUser(userData, digest);
-            if (sent) {
-              successCount++;
-              console.log(`Successfully sent digest to user ${userData.userId}`);
-            } else {
+              // Generate digest content
+              console.log(`Generating digest content for config ${config.id}`);
+              const digest = await digestService.generateDigestForConfig(executionData);
+
+              // Send digest using the configured delivery method
+              const totalPRs = digest.waitingOnUser.length + 
+                               digest.approvedReadyToMerge.length + 
+                               digest.userOpenPRs.length;
+
+              if (totalPRs > 0) {
+                const sent = await digestService.sendDigestForConfig(executionData, digest);
+                if (sent) {
+                  successCount++;
+                  console.log(`Successfully sent digest for config ${config.id} (${config.name})`);
+                } else {
+                  errorCount++;
+                  console.log(`Failed to send digest for config ${config.id} (${config.name})`);
+                }
+              } else {
+                console.log(`No PRs to report for config ${config.id}, skipping`);
+                successCount++; // Count as success since there was nothing to send
+              }
+
+            } catch (configError) {
               errorCount++;
-              console.log(`Failed to send digest to user ${userData.userId}`);
+              console.error(`Error processing config ${config.id}:`, configError);
+              // Continue with next config even if this one fails
             }
-          } else {
-            console.log(`No PRs to report for user ${userData.userId}, skipping`);
-            successCount++; // Count as success since there was nothing to send
           }
 
         } catch (userError) {
           errorCount++;
-          console.error(`Error processing digest for user ${userData.userId}:`, userError);
+          console.error(`Error processing configs for user ${userData.userId}:`, userError);
           // Continue with next user even if this one fails
         }
       }
 
-      console.log(`Daily digest processing complete: ${successCount} successful, ${errorCount} errors`);
+      console.log(`Multiple digest processing complete: ${successCount} successful, ${errorCount} errors out of ${totalConfigs} total configs`);
 
       return {
         success: true,
-        message: `Processed ${users.length} users`,
+        message: `Processed ${totalConfigs} digest configurations for ${users.length} users`,
         stats: {
           totalUsers: users.length,
+          totalConfigs: totalConfigs,
           successful: successCount,
           errors: errorCount
         }
       };
 
     } catch (error) {
-      console.error("Error in daily digest task:", error);
+      console.error("Error in digest task:", error);
       throw error;
     } finally {
       await prisma.$disconnect();
@@ -115,31 +163,79 @@ export const dailyDigest = schedules.task({
   },
 });
 
-// Helper task for testing individual user digests
-export const testUserDigest = task({
-  id: "test-user-digest",
-  run: async (payload: { userId: string }) => {
+// Helper task for testing individual digest configurations
+export const testDigestConfig = task({
+  id: "test-digest-config",
+  run: async (payload: { configId: string }) => {
+    console.log('Initializing SlackService in testDigestConfig task...');
     const slackService = new SlackService(configService, databaseService);
-    const digestService = new DigestService(databaseService, githubService, slackService);
+    console.log('SlackService initialized successfully in testDigestConfig task');
+    
+    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService);
     
     try {
-      const { userId } = payload;
+      const { configId } = payload;
       
-      // Get user data
-      const users = await digestService.getUsersWithDigestEnabled();
-      const userData = users.find(u => u.userId === userId);
-      
-      if (!userData) {
-        throw new Error(`User ${userId} not found or digest not enabled`);
-      }
+      // Get execution data for this config
+      const executionData = await digestConfigService.getDigestExecutionData(configId);
 
       // Generate and send digest immediately (no waiting)
-      const digest = await digestService.generateDigestForUser(userData);
-      const sent = await digestService.sendDigestToUser(userData, digest);
+      const digest = await digestService.generateDigestForConfig(executionData);
+      const sent = await digestService.sendDigestForConfig(executionData, digest);
 
       return {
         success: sent,
         message: sent ? "Test digest sent successfully" : "Failed to send test digest",
+        configName: executionData.config.name,
+        digest: {
+          waitingOnUser: digest.waitingOnUser.length,
+          approvedReadyToMerge: digest.approvedReadyToMerge.length,
+          userOpenPRs: digest.userOpenPRs.length
+        }
+      };
+
+    } catch (error) {
+      console.error("Error in test digest config:", error);
+      throw error;
+    } finally {
+      await prisma.$disconnect();
+    }
+  },
+});
+
+// Legacy task for testing individual user digests (for backward compatibility)
+export const testUserDigest = task({
+  id: "test-user-digest", 
+  run: async (payload: { userId: string }) => {
+    console.log('Initializing SlackService in testUserDigest task...');
+    const slackService = new SlackService(configService, databaseService);
+    console.log('SlackService initialized successfully in testUserDigest task');
+    
+    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService);
+    
+    try {
+      const { userId } = payload;
+      
+      // Get user data - use new multiple digest system
+      const users = await digestConfigService.getUsersWithEnabledDigests();
+      const userData = users.find(u => u.userId === userId);
+      
+      if (!userData || userData.digestConfigs.length === 0) {
+        throw new Error(`User ${userId} not found or no digest configurations enabled`);
+      }
+
+      // Test the first enabled digest config
+      const config = userData.digestConfigs[0];
+      const executionData = await digestConfigService.getDigestExecutionData(config.id);
+
+      // Generate and send digest immediately (no waiting)
+      const digest = await digestService.generateDigestForConfig(executionData);
+      const sent = await digestService.sendDigestForConfig(executionData, digest);
+
+      return {
+        success: sent,
+        message: sent ? "Test digest sent successfully" : "Failed to send test digest",
+        configName: config.name,
         digest: {
           waitingOnUser: digest.waitingOnUser.length,
           approvedReadyToMerge: digest.approvedReadyToMerge.length,
