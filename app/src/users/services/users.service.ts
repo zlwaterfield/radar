@@ -219,4 +219,25 @@ export class UsersService {
       return [];
     }
   }
+
+  /**
+   * Get user's GitHub teams
+   */
+  async getUserTeams(userId: string): Promise<any[]> {
+    try {
+      const userTeams = await this.databaseService.userTeam.findMany({
+        where: {
+          userId,
+        },
+        orderBy: {
+          teamName: 'asc',
+        },
+      });
+
+      return userTeams;
+    } catch (error) {
+      this.logger.error(`Error getting teams for user ${userId}:`, error);
+      return [];
+    }
+  }
 }

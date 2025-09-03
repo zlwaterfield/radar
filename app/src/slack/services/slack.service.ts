@@ -22,14 +22,21 @@ export class SlackService {
     private readonly databaseService: DatabaseService,
   ) {
     const botToken = this.configService.get('slack.botToken');
+    const signingSecret = this.configService.get('slack.signingSecret');
+
+    this.logger.log(
+      `SlackService initialized with botToken: ${botToken ? 'present' : 'missing'}, signingSecret: ${signingSecret ? 'present' : 'missing'}`,
+    );
+
     this.botClient = new WebClient(botToken);
 
     this.slackApp = new SlackApp({
       token: botToken,
-      signingSecret: this.configService.get('slack.signingSecret'),
+      signingSecret,
       socketMode: false,
     });
 
+    this.logger.log('SlackApp initialized successfully');
     this.setupSlackEventHandlers();
   }
 
@@ -285,6 +292,42 @@ export class SlackService {
       }
     } catch (error) {
       this.logger.error('Error sending direct message:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Send message to a specific Slack channel
+   */
+  async sendChannelMessage(
+    accessToken: string,
+    channelId: string,
+    message: { blocks?: any[]; text?: string; attachments?: any[] },
+  ): Promise<SlackMessageResponse | null> {
+    try {
+      const client = this.createUserClient(accessToken);
+
+      // Send message to channel
+      const messageResponse = await client.chat.postMessage({
+        channel: channelId,
+        ...message,
+      });
+
+      if (messageResponse.ok) {
+        this.logger.log(`Channel message sent to channel ${channelId}`);
+        return {
+          ok: true,
+          ts: messageResponse.ts,
+          channel: channelId,
+        } as SlackMessageResponse;
+      } else {
+        this.logger.error(
+          `Failed to send channel message: ${messageResponse.error}`,
+        );
+        return null;
+      }
+    } catch (error) {
+      this.logger.error('Error sending channel message:', error);
       return null;
     }
   }
