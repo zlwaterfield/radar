@@ -180,7 +180,7 @@ export default function RepositoriesSettings() {
       <div className="px-6 py-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Monitored repositories
+            Repositories
           </h3>
           <Button 
             onClick={refreshRepositories}

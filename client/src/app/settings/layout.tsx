@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
-import { FiBell, FiCalendar, FiGitBranch, FiSearch, FiGithub, FiLogOut } from 'react-icons/fi';
+import { FiBell, FiCalendar, FiGitBranch, FiUsers, FiSearch, FiGithub, FiLogOut } from 'react-icons/fi';
 
 export default function SettingsLayout({
   children,
@@ -64,7 +64,7 @@ export default function SettingsLayout({
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
               <FiCalendar size={20} className="mr-3 flex-shrink-0" />
-              Daily digest
+              Digests
             </Link>
           </li>
           <li>
@@ -79,14 +79,14 @@ export default function SettingsLayout({
             </Link>
           </li>
           <li>
-            <Link href="/settings/keywords"
+            <Link href="/settings/teams"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
-                isActive('/settings/keywords')
+                isActive('/settings/teams')
                   ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
-              <FiSearch size={20} className="mr-3 flex-shrink-0" />
-              Keywords
+              <FiUsers size={20} className="mr-3 flex-shrink-0" />
+              Teams
             </Link>
           </li>
           </ul>
@@ -138,9 +138,9 @@ export default function SettingsLayout({
           <div className="px-6 py-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               {pathname === '/settings/notifications' && 'Notifications'}
-              {pathname === '/settings/digest' && 'Daily Digest'}
+              {pathname === '/settings/digest' && 'Digests'}
               {pathname === '/settings/repositories' && 'Repositories'}
-              {pathname === '/settings/keywords' && 'Keywords'}
+              {pathname === '/settings/teams' && 'Teams'}
               {pathname === '/onboarding' && 'Setup Integrations'}
             </h2>
             <div className="flex items-center space-x-4">
