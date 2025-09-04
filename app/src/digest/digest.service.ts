@@ -23,9 +23,6 @@ export class DigestService {
     private readonly githubIntegrationService: GitHubIntegrationService,
   ) {}
 
-
-
-
   /**
    * Check if PR is waiting on user for review
    */
@@ -71,7 +68,6 @@ export class DigestService {
       return false;
     }
   }
-
 
   /**
    * Calculate the next digest time for a user
@@ -146,22 +142,27 @@ export class DigestService {
               this.logger.warn(
                 `GitHub token invalid for user ${executionData.userId} - attempting token refresh`,
               );
-              
-              const newAccessToken = await this.githubIntegrationService.refreshAccessToken(executionData.userId);
-              
+
+              const newAccessToken =
+                await this.githubIntegrationService.refreshAccessToken(
+                  executionData.userId,
+                );
+
               if (newAccessToken) {
-                this.logger.log(`Successfully refreshed token for user ${executionData.userId}, retrying repository ${repo.owner}/${repo.repo}`);
+                this.logger.log(
+                  `Successfully refreshed token for user ${executionData.userId}, retrying repository ${repo.owner}/${repo.repo}`,
+                );
                 currentAccessToken = newAccessToken;
                 retryCount++;
                 continue; // Retry with new token
               }
-              
+
               this.logger.warn(
                 `Token refresh failed for user ${executionData.userId} - needs manual re-authentication`,
               );
               throw new Error('GITHUB_TOKEN_INVALID');
             }
-            
+
             // Non-401 error or max retries exceeded
             this.logger.warn(
               `Error processing repository ${repo.owner}/${repo.repo} for config ${executionData.configId}:`,

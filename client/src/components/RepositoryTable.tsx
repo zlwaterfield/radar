@@ -1,5 +1,6 @@
 import React from 'react';
 import Loader from '@/components/Loader';
+import Switch from '@/components/Switch';
 
 interface Repository {
   id: string;
@@ -52,48 +53,14 @@ const RepositoryTable: React.FC<RepositoryTableProps> = ({
                 {repo.organization || repo.owner_name || '-'}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="flex items-center space-x-3">
-                  <div className="relative inline-block w-10 align-middle select-none">
-                    <input
-                      type="checkbox"
-                      id={`toggle-${repo.id}`}
-                      className="hidden"
-                      checked={repo.enabled}
-                      onChange={() => toggleRepository(repo.id)}
-                      disabled={togglingRepos.has(repo.id)}
-                    />
-                    <label
-                      htmlFor={`toggle-${repo.id}`}
-                      className={`block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${
-                        togglingRepos.has(repo.id) ? 'opacity-50' : ''
-                      } ${repo.enabled ? 'bg-marian-blue-600 dark:bg-marian-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                    >
-                      <span 
-                        className={`block h-5 w-5 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out ${
-                          repo.enabled ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                        style={{ margin: '2px' }}
-                      ></span>
-                    </label>
-                  </div>
-                  <span className="text-sm font-medium flex items-center">
-                    {togglingRepos.has(repo.id) ? (
-                      <div className="flex items-center">
-                        <div className="relative h-4 w-4 mr-2">
-                          <div className="h-4 w-4 rounded-full border-2 border-gray-200 dark:border-gray-600"></div>
-                          <div className="absolute top-0 left-0 h-4 w-4 rounded-full border-2 border-marian-blue-600 border-t-transparent animate-spin"></div>
-                        </div>
-                        <span className="dark:text-white text-marian-blue-500">
-                          {repo.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="dark:text-white text-marian-blue-500">
-                        {repo.enabled ? 'Enabled' : 'Disabled'}
-                      </span>
-                    )}
-                  </span>
-                </div>
+                <Switch
+                  id={`toggle-${repo.id}`}
+                  checked={repo.enabled}
+                  onChange={() => toggleRepository(repo.id)}
+                  disabled={togglingRepos.has(repo.id)}
+                  loading={togglingRepos.has(repo.id)}
+                  showStatusText={true}
+                />
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 {/* Actions can be added here if needed */}

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
+import { NotificationProfileService } from '../../notifications/services/notification-profile.service';
 import { auth } from '../auth.config';
 import * as crypto from 'crypto-js';
 
@@ -11,6 +12,7 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
+    private readonly notificationProfileService: NotificationProfileService,
   ) {}
 
   /**
@@ -166,6 +168,68 @@ export class AuthService {
             },
           },
         });
+
+        // Create default notification profile
+        try {
+          await this.notificationProfileService.createNotificationProfile(
+            user.id,
+            {
+              name: 'Default Notifications',
+              description: 'Default notification profile for all activities',
+              isEnabled: true,
+              scopeType: 'user',
+              repositoryFilter: { type: 'all' },
+              deliveryType: 'dm',
+              notificationPreferences: {
+                // PR Activity
+                pull_request_opened: true,
+                pull_request_closed: true,
+                pull_request_merged: true,
+                pull_request_reviewed: true,
+                pull_request_commented: true,
+                pull_request_assigned: true,
+
+                // Issue Activity
+                issue_opened: true,
+                issue_closed: true,
+                issue_commented: true,
+                issue_assigned: true,
+
+                // CI/CD
+                check_failures: true,
+                check_successes: false,
+
+                // Mentions
+                mention_in_comment: true,
+                mention_in_pull_request: true,
+                mention_in_issue: true,
+                mentioned_in_comments: true,
+
+                // Team notifications
+                team_assignments: true,
+                team_mentions: true,
+                team_review_requests: true,
+
+                // Noise Control
+                mute_own_activity: true,
+                mute_bot_comments: true,
+                mute_draft_pull_requests: true,
+              },
+              keywords: [],
+              keywordLLMEnabled: false,
+              priority: 0,
+            },
+          );
+
+          this.logger.log(
+            `Created default notification profile for new user ${user.id}`,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Failed to create default notification profile for user ${user.id}:`,
+            error,
+          );
+        }
       }
 
       this.logger.log(`User ${user.id} authenticated via ${providerId}`);

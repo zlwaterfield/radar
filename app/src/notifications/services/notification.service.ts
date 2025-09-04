@@ -8,10 +8,10 @@ import {
   NotificationTrigger,
 } from '../../common/types/notification-enums';
 import type { NotificationPreferences } from '../../common/types/user.types';
-import type { 
+import type {
   NotificationDecision,
   NotificationProfileMatch,
-  NotificationProfileWithMeta 
+  NotificationProfileWithMeta,
 } from '../../common/types/notification-profile.types';
 
 @Injectable()
@@ -32,19 +32,27 @@ export class NotificationService {
     userId: string,
     payload: any,
     eventId: string,
-    eventType: 'pull_request' | 'issue_comment' | 'issue' | 'pull_request_review' | 'pull_request_review_comment'
+    eventType:
+      | 'pull_request'
+      | 'issue_comment'
+      | 'issue'
+      | 'pull_request_review'
+      | 'pull_request_review_comment',
   ): Promise<NotificationDecision> {
     try {
       // Get user's enabled notification profiles
-      const profiles = await this.notificationProfileService.getEnabledNotificationProfiles(userId);
-      
+      const profiles =
+        await this.notificationProfileService.getEnabledNotificationProfiles(
+          userId,
+        );
+
       if (profiles.length === 0) {
         this.logger.log(`No notification profiles found for user ${userId}`);
         return {
           shouldNotify: false,
           matchedProfiles: [],
           reason: 'NO_PROFILES',
-          context: { userId, eventId, eventType }
+          context: { userId, eventId, eventType },
         };
       }
 
@@ -52,20 +60,27 @@ export class NotificationService {
 
       // Check each profile for matches (in priority order)
       for (const profile of profiles) {
-        const match = await this.checkProfileMatch(userId, profile, payload, eventId, eventType);
+        const match = await this.checkProfileMatch(
+          userId,
+          profile,
+          payload,
+          eventId,
+          eventType,
+        );
         if (match.shouldMatch) {
           matchedProfiles.push({
             profile,
             matchedKeywords: match.matchedKeywords,
             matchDetails: match.matchDetails,
             reason: match.reason,
-            context: match.context
+            context: match.context,
           });
         }
       }
 
       // Determine primary profile (highest priority match)
-      const primaryProfile = matchedProfiles.length > 0 ? matchedProfiles[0] : undefined;
+      const primaryProfile =
+        matchedProfiles.length > 0 ? matchedProfiles[0] : undefined;
 
       const decision: NotificationDecision = {
         shouldNotify: matchedProfiles.length > 0,
@@ -77,12 +92,12 @@ export class NotificationService {
           eventId,
           eventType,
           profilesChecked: profiles.length,
-          matchedProfilesCount: matchedProfiles.length
-        }
+          matchedProfilesCount: matchedProfiles.length,
+        },
       };
 
       this.logger.log(
-        `Notification decision for user ${userId}: ${decision.shouldNotify ? 'NOTIFY' : 'SKIP'} - Reason: ${decision.reason}, Profiles matched: ${matchedProfiles.length}/${profiles.length}`
+        `Notification decision for user ${userId}: ${decision.shouldNotify ? 'NOTIFY' : 'SKIP'} - Reason: ${decision.reason}, Profiles matched: ${matchedProfiles.length}/${profiles.length}`,
       );
 
       return decision;
@@ -92,7 +107,7 @@ export class NotificationService {
         shouldNotify: false,
         matchedProfiles: [],
         reason: 'ERROR',
-        context: { error: error.message }
+        context: { error: error.message },
       };
     }
   }
@@ -105,7 +120,7 @@ export class NotificationService {
     profile: NotificationProfileWithMeta,
     payload: any,
     eventId: string,
-    eventType: string
+    eventType: string,
   ): Promise<{
     shouldMatch: boolean;
     matchedKeywords: string[];
@@ -116,17 +131,21 @@ export class NotificationService {
     try {
       // Extract content for keyword matching
       const content = this.extractContentFromPayload(payload, eventType);
-      
+
       // Check keyword matches first (highest priority)
       if (profile.keywords.length > 0 && profile.keywordLLMEnabled) {
-        const keywordResult = await this.llmAnalyzerService.matchKeywordsWithLLM(content, profile.keywords);
+        const keywordResult =
+          await this.llmAnalyzerService.matchKeywordsWithLLM(
+            content,
+            profile.keywords,
+          );
         if (keywordResult.matchedKeywords.length > 0) {
           return {
             shouldMatch: true,
             matchedKeywords: keywordResult.matchedKeywords,
             matchDetails: keywordResult.matchDetails,
             reason: 'KEYWORD_MATCH',
-            context: { profileId: profile.id, profileName: profile.name }
+            context: { profileId: profile.id, profileName: profile.name },
           };
         }
       }
@@ -141,7 +160,7 @@ export class NotificationService {
           matchedKeywords: [],
           matchDetails: {},
           reason: 'NOT_WATCHING',
-          context: { profileId: profile.id, profileName: profile.name }
+          context: { profileId: profile.id, profileName: profile.name },
         };
       }
 
@@ -152,13 +171,24 @@ export class NotificationService {
           matchedKeywords: [],
           matchDetails: {},
           reason: 'SCOPE_MISMATCH',
-          context: { profileId: profile.id, profileName: profile.name, scopeType: profile.scopeType }
+          context: {
+            profileId: profile.id,
+            profileName: profile.name,
+            scopeType: profile.scopeType,
+          },
         };
       }
 
       // Check notification preferences for this event type
       const trigger = this.getTriggerFromEvent(payload, eventType);
-      if (trigger && this.shouldNotifyBasedOnPreferences(profile.notificationPreferences, trigger, watchingReasons)) {
+      if (
+        trigger &&
+        this.shouldNotifyBasedOnPreferences(
+          profile.notificationPreferences,
+          trigger,
+          watchingReasons,
+        )
+      ) {
         let reason = 'PREFERENCES_MATCH';
         if (watchingReasons.has(WatchingReason.MENTIONED)) {
           reason = 'MENTIONED';
@@ -175,12 +205,12 @@ export class NotificationService {
           matchedKeywords: [],
           matchDetails: {},
           reason,
-          context: { 
-            profileId: profile.id, 
+          context: {
+            profileId: profile.id,
             profileName: profile.name,
             watchingReasons: Array.from(watchingReasons),
-            trigger
-          }
+            trigger,
+          },
         };
       }
 
@@ -189,7 +219,7 @@ export class NotificationService {
         matchedKeywords: [],
         matchDetails: {},
         reason: 'PREFERENCES_NO_MATCH',
-        context: { profileId: profile.id, profileName: profile.name }
+        context: { profileId: profile.id, profileName: profile.name },
       };
     } catch (error) {
       this.logger.error(`Error checking profile match: ${error}`);
@@ -198,7 +228,7 @@ export class NotificationService {
         matchedKeywords: [],
         matchDetails: {},
         reason: 'ERROR',
-        context: { error: error.message, profileId: profile.id }
+        context: { error: error.message, profileId: profile.id },
       };
     }
   }
@@ -258,7 +288,9 @@ export class NotificationService {
             const prNumber = data.issue?.number;
 
             if (repository && prNumber && user.githubAccessToken) {
-              const githubClient = this.githubService.createUserClient(user.githubAccessToken);
+              const githubClient = this.githubService.createUserClient(
+                user.githubAccessToken,
+              );
               const prDetails = await githubClient.rest.pulls.get({
                 owner: repository.split('/')[0],
                 repo: repository.split('/')[1],
@@ -285,7 +317,9 @@ export class NotificationService {
 
         // Check if user's teams are requested for review
         const requestedTeams = prData.requested_teams || [];
-        const userTeamSlugs = user.teams.map((t) => `${t.organization}/${t.teamSlug}`);
+        const userTeamSlugs = user.teams.map(
+          (t) => `${t.organization}/${t.teamSlug}`,
+        );
 
         for (const team of requestedTeams) {
           const teamPath = `${team.parent?.login || data.repository?.owner?.login}/${team.slug}`;
@@ -306,7 +340,9 @@ export class NotificationService {
 
         // Check if any of user's teams are assigned
         if (assignee.type === 'Team') {
-          const userTeamSlugs = user.teams.map((t) => `${t.organization}/${t.teamSlug}`);
+          const userTeamSlugs = user.teams.map(
+            (t) => `${t.organization}/${t.teamSlug}`,
+          );
           if (userTeamSlugs.includes(assignee.name)) {
             watchingReasons.add(WatchingReason.TEAM_ASSIGNED);
             break;
@@ -342,7 +378,7 @@ export class NotificationService {
    */
   private extractContentFromPayload(payload: any, eventType: string): string {
     const parts: string[] = [];
-    
+
     switch (eventType) {
       case 'pull_request':
         const pr = payload.pull_request || {};
@@ -365,7 +401,7 @@ export class NotificationService {
         parts.push(reviewComment.body || '');
         break;
     }
-    
+
     return parts.join('\n\n');
   }
 
@@ -390,17 +426,24 @@ export class NotificationService {
   /**
    * Helper to get notification trigger from event
    */
-  private getTriggerFromEvent(payload: any, eventType: string): NotificationTrigger | null {
+  private getTriggerFromEvent(
+    payload: any,
+    eventType: string,
+  ): NotificationTrigger | null {
     const action = payload.action;
-    
+
     switch (eventType) {
       case 'pull_request':
         if (action === 'opened') return NotificationTrigger.OPENED;
         if (action === 'reopened') return NotificationTrigger.REOPENED;
-        if (action === 'closed' && payload.pull_request?.merged) return NotificationTrigger.MERGED;
-        if (action === 'closed' && !payload.pull_request?.merged) return NotificationTrigger.CLOSED;
-        if (action === 'review_requested') return NotificationTrigger.REVIEW_REQUESTED;
-        if (action === 'review_request_removed') return NotificationTrigger.REVIEW_REQUEST_REMOVED;
+        if (action === 'closed' && payload.pull_request?.merged)
+          return NotificationTrigger.MERGED;
+        if (action === 'closed' && !payload.pull_request?.merged)
+          return NotificationTrigger.CLOSED;
+        if (action === 'review_requested')
+          return NotificationTrigger.REVIEW_REQUESTED;
+        if (action === 'review_request_removed')
+          return NotificationTrigger.REVIEW_REQUEST_REMOVED;
         if (action === 'assigned') return NotificationTrigger.ASSIGNED;
         if (action === 'unassigned') return NotificationTrigger.UNASSIGNED;
         break;
@@ -418,14 +461,18 @@ export class NotificationService {
         if (action === 'unassigned') return NotificationTrigger.UNASSIGNED;
         break;
     }
-    
+
     return null;
   }
 
   /**
    * Check if profile scope matches the current context
    */
-  private checkProfileScope(profile: NotificationProfileWithMeta, userId: string, payload: any): boolean {
+  private checkProfileScope(
+    profile: NotificationProfileWithMeta,
+    userId: string,
+    payload: any,
+  ): boolean {
     // For now, we'll implement basic scope checking
     // TODO: Add team scope validation when we have team context in payloads
     return true; // All scopes match for now
@@ -437,13 +484,13 @@ export class NotificationService {
   private shouldNotifyBasedOnPreferences(
     preferences: NotificationPreferences,
     trigger: NotificationTrigger,
-    watchingReasons: Set<WatchingReason>
+    watchingReasons: Set<WatchingReason>,
   ): boolean {
     // Always notify if mentioned
     if (watchingReasons.has(WatchingReason.MENTIONED)) {
       return preferences.mentioned_in_comments ?? true;
     }
-    
+
     if (watchingReasons.has(WatchingReason.TEAM_MENTIONED)) {
       return preferences.team_mentions ?? true;
     }
@@ -461,17 +508,21 @@ export class NotificationService {
         return preferences.pull_request_closed ?? true;
       case NotificationTrigger.ASSIGNED:
       case NotificationTrigger.UNASSIGNED:
-        const individualAssigned = watchingReasons.has(WatchingReason.ASSIGNED) && 
-                                  (preferences.pull_request_assigned ?? true);
-        const teamAssigned = watchingReasons.has(WatchingReason.TEAM_ASSIGNED) && 
-                            (preferences.team_assignments ?? true);
+        const individualAssigned =
+          watchingReasons.has(WatchingReason.ASSIGNED) &&
+          (preferences.pull_request_assigned ?? true);
+        const teamAssigned =
+          watchingReasons.has(WatchingReason.TEAM_ASSIGNED) &&
+          (preferences.team_assignments ?? true);
         return individualAssigned || teamAssigned;
       case NotificationTrigger.REVIEW_REQUESTED:
       case NotificationTrigger.REVIEW_REQUEST_REMOVED:
-        const individualReviewer = watchingReasons.has(WatchingReason.REVIEWER) && 
-                                  (preferences.pull_request_assigned ?? true);
-        const teamReviewer = watchingReasons.has(WatchingReason.TEAM_REVIEWER) && 
-                            (preferences.team_review_requests ?? true);
+        const individualReviewer =
+          watchingReasons.has(WatchingReason.REVIEWER) &&
+          (preferences.pull_request_assigned ?? true);
+        const teamReviewer =
+          watchingReasons.has(WatchingReason.TEAM_REVIEWER) &&
+          (preferences.team_review_requests ?? true);
         return individualReviewer || teamReviewer;
       case NotificationTrigger.OPENED:
         return preferences.pull_request_opened ?? true;

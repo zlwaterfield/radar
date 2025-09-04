@@ -141,11 +141,12 @@ export class DigestConfigController {
       if (error.message === 'GITHUB_TOKEN_INVALID') {
         return {
           success: false,
-          error: 'GitHub token expired. Please reconnect your GitHub account in settings.',
+          error:
+            'GitHub token expired. Please reconnect your GitHub account in settings.',
           requiresReauth: true,
         };
       }
-      
+
       return {
         success: false,
         error: error.message || 'Failed to generate digest preview',
@@ -192,11 +193,12 @@ export class DigestConfigController {
       if (error.message === 'GITHUB_TOKEN_INVALID') {
         return {
           success: false,
-          error: 'GitHub token expired. Please reconnect your GitHub account in settings.',
+          error:
+            'GitHub token expired. Please reconnect your GitHub account in settings.',
           requiresReauth: true,
         };
       }
-      
+
       return {
         success: false,
         error: error.message || 'Failed to send test digest',

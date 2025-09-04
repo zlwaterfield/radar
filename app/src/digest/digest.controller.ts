@@ -1,18 +1,11 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Request,
-} from '@nestjs/common';
+import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { DatabaseService } from '../database/database.service';
 
 @Controller('digest')
 @UseGuards(AuthGuard)
 export class DigestController {
-  constructor(
-    private readonly databaseService: DatabaseService,
-  ) {}
+  constructor(private readonly databaseService: DatabaseService) {}
 
   /**
    * Get digest history for current user

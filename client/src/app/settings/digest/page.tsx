@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
+import Switch from '@/components/Switch';
 import { toast } from 'sonner';
 import axios from '@/lib/axios';
 import { format } from 'date-fns';
@@ -364,6 +365,11 @@ export default function DigestSettings() {
                           }`}>
                             {config.isEnabled ? 'Enabled' : 'Disabled'}
                           </span>
+                          <Switch
+                            checked={config.isEnabled}
+                            onChange={() => handleToggleConfig(config)}
+                            label={config.isEnabled ? 'Enabled' : 'Disabled'}
+                          />
                         </div>
                         
                         {config.description && (
@@ -372,7 +378,7 @@ export default function DigestSettings() {
                           </p>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                           <div>
                             <span className="text-gray-500 dark:text-gray-400">⏰ Time:</span>
                             <span className="ml-1 text-gray-900 dark:text-white">
@@ -380,25 +386,27 @@ export default function DigestSettings() {
                             </span>
                           </div>
                           
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">👤 Scope:</span>
-                            <span className="ml-1 text-gray-900 dark:text-white">
-                              {getScopeDisplay(config)}
-                            </span>
-                          </div>
-                          
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">📁 Repos:</span>
-                            <span className="ml-1 text-gray-900 dark:text-white">
-                              {getRepositoryDisplay(config)}
-                            </span>
-                          </div>
-                          
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">📤 Delivery:</span>
-                            <span className="ml-1 text-gray-900 dark:text-white">
-                              {getDeliveryDisplay(config)}
-                            </span>
+                          <div className="flex flex-col gap-2">
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">👤 Scope:</span>
+                              <span className="ml-1 text-gray-900 dark:text-white">
+                                {getScopeDisplay(config)}
+                              </span>
+                            </div>
+                            
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">📁 Repos:</span>
+                              <span className="ml-1 text-gray-900 dark:text-white">
+                                {getRepositoryDisplay(config)}
+                              </span>
+                            </div>
+                            
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">📤 Delivery:</span>
+                              <span className="ml-1 text-gray-900 dark:text-white">
+                                {getDeliveryDisplay(config)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -420,18 +428,6 @@ export default function DigestSettings() {
                         >
                           Edit
                         </Button>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={config.isEnabled}
-                            onChange={() => handleToggleConfig(config)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-marian-blue-300 dark:peer-focus:ring-marian-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-marian-blue-600"></div>
-                          <span className="ml-3 text-xs text-gray-900 dark:text-gray-300">
-                            {config.isEnabled ? 'Enabled' : 'Disabled'}
-                          </span>
-                        </label>
                         <Button
                           size="sm"
                           variant="secondary"
@@ -746,17 +742,12 @@ export default function DigestSettings() {
 
               {/* Enable Toggle */}
               <div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.isEnabled}
-                    onChange={(e) => setFormData({...formData, isEnabled: e.target.checked})}
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Enable this digest configuration
-                  </span>
-                </label>
+                <Switch
+                  checked={formData.isEnabled}
+                  onChange={(checked) => setFormData({...formData, isEnabled: checked})}
+                  label="Enable this digest configuration"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                />
               </div>
             </div>
 

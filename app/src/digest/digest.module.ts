@@ -10,7 +10,13 @@ import { RadarAuthModule } from '../auth/auth.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
-  imports: [DatabaseModule, GitHubModule, SlackModule, RadarAuthModule, IntegrationsModule],
+  imports: [
+    DatabaseModule,
+    GitHubModule,
+    SlackModule,
+    RadarAuthModule,
+    IntegrationsModule,
+  ],
   controllers: [DigestController, DigestConfigController],
   providers: [DigestService, DigestConfigService],
   exports: [DigestService, DigestConfigService],

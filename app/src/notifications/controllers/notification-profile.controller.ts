@@ -44,7 +44,10 @@ export class NotificationProfileController {
     @Param('id') profileId: string,
     @GetUser('id') userId: string,
   ): Promise<NotificationProfileWithMeta> {
-    return this.notificationProfileService.getNotificationProfile(profileId, userId);
+    return this.notificationProfileService.getNotificationProfile(
+      profileId,
+      userId,
+    );
   }
 
   /**
@@ -55,7 +58,10 @@ export class NotificationProfileController {
     @Body() createDto: CreateNotificationProfileDto,
     @GetUser('id') userId: string,
   ): Promise<NotificationProfileWithMeta> {
-    return this.notificationProfileService.createNotificationProfile(userId, createDto);
+    return this.notificationProfileService.createNotificationProfile(
+      userId,
+      createDto,
+    );
   }
 
   /**
@@ -83,7 +89,10 @@ export class NotificationProfileController {
     @Param('id') profileId: string,
     @GetUser('id') userId: string,
   ): Promise<void> {
-    return this.notificationProfileService.deleteNotificationProfile(profileId, userId);
+    return this.notificationProfileService.deleteNotificationProfile(
+      profileId,
+      userId,
+    );
   }
 
   /**
@@ -93,6 +102,8 @@ export class NotificationProfileController {
   async createDefaultFromSettings(
     @GetUser('id') userId: string,
   ): Promise<NotificationProfileWithMeta | null> {
-    return this.notificationProfileService.createDefaultProfileFromSettings(userId);
+    return this.notificationProfileService.createDefaultProfileFromSettings(
+      userId,
+    );
   }
 }

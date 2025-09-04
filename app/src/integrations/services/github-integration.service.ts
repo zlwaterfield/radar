@@ -215,7 +215,9 @@ export class GitHubIntegrationService {
       const tokens = await refreshResponse.json();
 
       if (tokens.error) {
-        this.logger.warn(`Failed to refresh GitHub token for user ${userId}: ${tokens.error_description || tokens.error}`);
+        this.logger.warn(
+          `Failed to refresh GitHub token for user ${userId}: ${tokens.error_description || tokens.error}`,
+        );
         return null;
       }
 
@@ -231,7 +233,10 @@ export class GitHubIntegrationService {
       this.logger.log(`Successfully refreshed GitHub token for user ${userId}`);
       return tokens.access_token;
     } catch (error) {
-      this.logger.error(`Error refreshing GitHub token for user ${userId}:`, error);
+      this.logger.error(
+        `Error refreshing GitHub token for user ${userId}:`,
+        error,
+      );
       return null;
     }
   }

@@ -13,9 +13,7 @@ import type {
   NotificationProfileData,
   NotificationProfileWithMeta,
 } from '../../common/types/notification-profile.types';
-import type {
-  RepositoryFilter,
-} from '../../common/types/digest.types';
+import type { RepositoryFilter } from '../../common/types/digest.types';
 import type { NotificationPreferences } from '../../common/types/user.types';
 
 @Injectable()
@@ -27,26 +25,30 @@ export class NotificationProfileService {
   /**
    * Get all notification profiles for a user
    */
-  async getUserNotificationProfiles(userId: string): Promise<NotificationProfileWithMeta[]> {
+  async getUserNotificationProfiles(
+    userId: string,
+  ): Promise<NotificationProfileWithMeta[]> {
     try {
       const profiles = await this.databaseService.notificationProfile.findMany({
         where: { userId },
-        orderBy: [
-          { priority: 'desc' },
-          { createdAt: 'desc' }
-        ]
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       });
 
-      return profiles.map(profile => ({
+      return profiles.map((profile) => ({
         ...profile,
-        repositoryFilter: (profile.repositoryFilter as unknown) as RepositoryFilter,
+        repositoryFilter:
+          profile.repositoryFilter as unknown as RepositoryFilter,
         scopeType: profile.scopeType as any,
         deliveryType: profile.deliveryType as any,
-        notificationPreferences: profile.notificationPreferences as NotificationPreferences,
-        description: profile.description
+        notificationPreferences:
+          profile.notificationPreferences as NotificationPreferences,
+        description: profile.description,
       }));
     } catch (error) {
-      this.logger.error(`Error fetching notification profiles for user ${userId}:`, error);
+      this.logger.error(
+        `Error fetching notification profiles for user ${userId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -54,29 +56,33 @@ export class NotificationProfileService {
   /**
    * Get all enabled notification profiles for a user (for processing)
    */
-  async getEnabledNotificationProfiles(userId: string): Promise<NotificationProfileWithMeta[]> {
+  async getEnabledNotificationProfiles(
+    userId: string,
+  ): Promise<NotificationProfileWithMeta[]> {
     try {
       const profiles = await this.databaseService.notificationProfile.findMany({
-        where: { 
+        where: {
           userId,
-          isEnabled: true
+          isEnabled: true,
         },
-        orderBy: [
-          { priority: 'desc' },
-          { createdAt: 'desc' }
-        ]
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       });
 
-      return profiles.map(profile => ({
+      return profiles.map((profile) => ({
         ...profile,
-        repositoryFilter: (profile.repositoryFilter as unknown) as RepositoryFilter,
+        repositoryFilter:
+          profile.repositoryFilter as unknown as RepositoryFilter,
         scopeType: profile.scopeType as any,
         deliveryType: profile.deliveryType as any,
-        notificationPreferences: profile.notificationPreferences as NotificationPreferences,
-        description: profile.description
+        notificationPreferences:
+          profile.notificationPreferences as NotificationPreferences,
+        description: profile.description,
       }));
     } catch (error) {
-      this.logger.error(`Error fetching enabled notification profiles for user ${userId}:`, error);
+      this.logger.error(
+        `Error fetching enabled notification profiles for user ${userId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -84,14 +90,19 @@ export class NotificationProfileService {
   /**
    * Get a specific notification profile
    */
-  async getNotificationProfile(profileId: string, userId: string): Promise<NotificationProfileWithMeta> {
+  async getNotificationProfile(
+    profileId: string,
+    userId: string,
+  ): Promise<NotificationProfileWithMeta> {
     try {
-      const profile = await this.databaseService.notificationProfile.findUnique({
-        where: {
-          id: profileId,
-          userId // Ensure user can only access their own profiles
-        }
-      });
+      const profile = await this.databaseService.notificationProfile.findUnique(
+        {
+          where: {
+            id: profileId,
+            userId, // Ensure user can only access their own profiles
+          },
+        },
+      );
 
       if (!profile) {
         throw new NotFoundException('Notification profile not found');
@@ -99,14 +110,19 @@ export class NotificationProfileService {
 
       return {
         ...profile,
-        repositoryFilter: (profile.repositoryFilter as unknown) as RepositoryFilter,
+        repositoryFilter:
+          profile.repositoryFilter as unknown as RepositoryFilter,
         scopeType: profile.scopeType as any,
         deliveryType: profile.deliveryType as any,
-        notificationPreferences: profile.notificationPreferences as NotificationPreferences,
-        description: profile.description
+        notificationPreferences:
+          profile.notificationPreferences as NotificationPreferences,
+        description: profile.description,
       };
     } catch (error) {
-      this.logger.error(`Error fetching notification profile ${profileId}:`, error);
+      this.logger.error(
+        `Error fetching notification profile ${profileId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -116,7 +132,7 @@ export class NotificationProfileService {
    */
   async createNotificationProfile(
     userId: string,
-    data: CreateNotificationProfileDto
+    data: CreateNotificationProfileDto,
   ): Promise<NotificationProfileWithMeta> {
     try {
       // Validate scope and delivery settings
@@ -137,21 +153,28 @@ export class NotificationProfileService {
           keywords: data.keywords,
           keywordLLMEnabled: data.keywordLLMEnabled,
           priority: data.priority || 0,
-        }
+        },
       });
 
-      this.logger.log(`Created notification profile ${profile.id} for user ${userId}`);
+      this.logger.log(
+        `Created notification profile ${profile.id} for user ${userId}`,
+      );
 
       return {
         ...profile,
-        repositoryFilter: (profile.repositoryFilter as unknown) as RepositoryFilter,
+        repositoryFilter:
+          profile.repositoryFilter as unknown as RepositoryFilter,
         scopeType: profile.scopeType as any,
         deliveryType: profile.deliveryType as any,
-        notificationPreferences: profile.notificationPreferences as NotificationPreferences,
-        description: profile.description
+        notificationPreferences:
+          profile.notificationPreferences as NotificationPreferences,
+        description: profile.description,
       };
     } catch (error) {
-      this.logger.error(`Error creating notification profile for user ${userId}:`, error);
+      this.logger.error(
+        `Error creating notification profile for user ${userId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -162,7 +185,7 @@ export class NotificationProfileService {
   async updateNotificationProfile(
     profileId: string,
     userId: string,
-    data: UpdateNotificationProfileDto
+    data: UpdateNotificationProfileDto,
   ): Promise<NotificationProfileWithMeta> {
     try {
       // Check if profile exists and belongs to user
@@ -180,35 +203,49 @@ export class NotificationProfileService {
 
       const updateData: any = {};
       if (data.name !== undefined) updateData.name = data.name;
-      if (data.description !== undefined) updateData.description = data.description;
+      if (data.description !== undefined)
+        updateData.description = data.description;
       if (data.isEnabled !== undefined) updateData.isEnabled = data.isEnabled;
       if (data.scopeType !== undefined) updateData.scopeType = data.scopeType;
-      if (data.scopeValue !== undefined) updateData.scopeValue = data.scopeValue;
-      if (data.repositoryFilter !== undefined) updateData.repositoryFilter = data.repositoryFilter;
-      if (data.deliveryType !== undefined) updateData.deliveryType = data.deliveryType;
-      if (data.deliveryTarget !== undefined) updateData.deliveryTarget = data.deliveryTarget;
-      if (data.notificationPreferences !== undefined) updateData.notificationPreferences = data.notificationPreferences;
+      if (data.scopeValue !== undefined)
+        updateData.scopeValue = data.scopeValue;
+      if (data.repositoryFilter !== undefined)
+        updateData.repositoryFilter = data.repositoryFilter;
+      if (data.deliveryType !== undefined)
+        updateData.deliveryType = data.deliveryType;
+      if (data.deliveryTarget !== undefined)
+        updateData.deliveryTarget = data.deliveryTarget;
+      if (data.notificationPreferences !== undefined)
+        updateData.notificationPreferences = data.notificationPreferences;
       if (data.keywords !== undefined) updateData.keywords = data.keywords;
-      if (data.keywordLLMEnabled !== undefined) updateData.keywordLLMEnabled = data.keywordLLMEnabled;
+      if (data.keywordLLMEnabled !== undefined)
+        updateData.keywordLLMEnabled = data.keywordLLMEnabled;
       if (data.priority !== undefined) updateData.priority = data.priority;
 
       const profile = await this.databaseService.notificationProfile.update({
         where: { id: profileId },
-        data: updateData
+        data: updateData,
       });
 
-      this.logger.log(`Updated notification profile ${profileId} for user ${userId}`);
+      this.logger.log(
+        `Updated notification profile ${profileId} for user ${userId}`,
+      );
 
       return {
         ...profile,
-        repositoryFilter: (profile.repositoryFilter as unknown) as RepositoryFilter,
+        repositoryFilter:
+          profile.repositoryFilter as unknown as RepositoryFilter,
         scopeType: profile.scopeType as any,
         deliveryType: profile.deliveryType as any,
-        notificationPreferences: profile.notificationPreferences as NotificationPreferences,
-        description: profile.description
+        notificationPreferences:
+          profile.notificationPreferences as NotificationPreferences,
+        description: profile.description,
       };
     } catch (error) {
-      this.logger.error(`Error updating notification profile ${profileId}:`, error);
+      this.logger.error(
+        `Error updating notification profile ${profileId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -216,18 +253,26 @@ export class NotificationProfileService {
   /**
    * Delete a notification profile
    */
-  async deleteNotificationProfile(profileId: string, userId: string): Promise<void> {
+  async deleteNotificationProfile(
+    profileId: string,
+    userId: string,
+  ): Promise<void> {
     try {
       // Check if profile exists and belongs to user
       await this.getNotificationProfile(profileId, userId);
 
       await this.databaseService.notificationProfile.delete({
-        where: { id: profileId }
+        where: { id: profileId },
       });
 
-      this.logger.log(`Deleted notification profile ${profileId} for user ${userId}`);
+      this.logger.log(
+        `Deleted notification profile ${profileId} for user ${userId}`,
+      );
     } catch (error) {
-      this.logger.error(`Error deleting notification profile ${profileId}:`, error);
+      this.logger.error(
+        `Error deleting notification profile ${profileId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -235,7 +280,9 @@ export class NotificationProfileService {
   /**
    * Create a default notification profile from existing user settings
    */
-  async createDefaultProfileFromSettings(userId: string): Promise<NotificationProfileWithMeta | null> {
+  async createDefaultProfileFromSettings(
+    userId: string,
+  ): Promise<NotificationProfileWithMeta | null> {
     try {
       // Check if user already has profiles
       const existingProfiles = await this.getUserNotificationProfiles(userId);
@@ -245,14 +292,15 @@ export class NotificationProfileService {
 
       // Get existing user settings
       const settings = await this.databaseService.userSettings.findUnique({
-        where: { userId }
+        where: { userId },
       });
 
       if (!settings) {
         return null; // No settings to migrate
       }
 
-      const notificationPreferences = settings.notificationPreferences as NotificationPreferences;
+      const notificationPreferences =
+        settings.notificationPreferences as NotificationPreferences;
       const keywordPrefs = (settings.keywordPreferences as any) || {};
 
       // Create default profile
@@ -263,16 +311,22 @@ export class NotificationProfileService {
         scopeType: 'user',
         repositoryFilter: { type: 'all' },
         deliveryType: 'dm',
-        notificationPreferences: notificationPreferences || this.getDefaultNotificationPreferences(),
+        notificationPreferences:
+          notificationPreferences || this.getDefaultNotificationPreferences(),
         keywords: keywordPrefs.keywords || [],
         keywordLLMEnabled: keywordPrefs.enabled || false,
-        priority: 0
+        priority: 0,
       });
 
-      this.logger.log(`Created default notification profile for user ${userId}`);
+      this.logger.log(
+        `Created default notification profile for user ${userId}`,
+      );
       return defaultProfile;
     } catch (error) {
-      this.logger.error(`Error creating default profile for user ${userId}:`, error);
+      this.logger.error(
+        `Error creating default profile for user ${userId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -282,33 +336,38 @@ export class NotificationProfileService {
    */
   private async validateScopeAndDelivery(
     userId: string,
-    data: Partial<CreateNotificationProfileDto>
+    data: Partial<CreateNotificationProfileDto>,
   ): Promise<void> {
     // Validate team scope
     if (data.scopeType === 'team' && data.scopeValue) {
       const userTeam = await this.databaseService.userTeam.findFirst({
         where: {
           userId,
-          teamId: data.scopeValue
-        }
+          teamId: data.scopeValue,
+        },
       });
       if (!userTeam) {
-        throw new BadRequestException('User is not a member of the specified team');
+        throw new BadRequestException(
+          'User is not a member of the specified team',
+        );
       }
     }
 
     // Validate channel delivery
     if (data.deliveryType === 'channel' && !data.deliveryTarget) {
-      throw new BadRequestException('Channel ID is required for channel delivery');
+      throw new BadRequestException(
+        'Channel ID is required for channel delivery',
+      );
     }
 
     // Validate repository filter
     if (
       data.repositoryFilter?.type === 'selected' &&
-      (!data.repositoryFilter.repoIds || data.repositoryFilter.repoIds.length === 0)
+      (!data.repositoryFilter.repoIds ||
+        data.repositoryFilter.repoIds.length === 0)
     ) {
       throw new BadRequestException(
-        'Repository IDs are required when using selected repository filter'
+        'Repository IDs are required when using selected repository filter',
       );
     }
   }

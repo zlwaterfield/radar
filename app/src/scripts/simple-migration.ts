@@ -64,19 +64,21 @@ const DEFAULT_NOTIFICATION_PREFERENCES: LegacyNotificationPreferences = {
 };
 
 async function createDefaultProfiles() {
-  console.log('🚀 Creating default notification profiles for users without profiles...');
+  console.log(
+    '🚀 Creating default notification profiles for users without profiles...',
+  );
 
   try {
     // Get all users without notification profiles
     const users = await prisma.user.findMany({
       where: {
         notificationProfiles: {
-          none: {}
-        }
+          none: {},
+        },
       },
       include: {
         settings: true,
-      }
+      },
     });
 
     console.log(`📊 Found ${users.length} users without notification profiles`);
@@ -86,8 +88,15 @@ async function createDefaultProfiles() {
     for (const user of users) {
       try {
         // Get existing preferences if they exist
-        const notificationPreferences = user.settings?.notificationPreferences as LegacyNotificationPreferences || DEFAULT_NOTIFICATION_PREFERENCES;
-        const keywordPreferences = user.settings?.keywordPreferences as LegacyKeywordPreferences || { enabled: false, keywords: [] };
+        const notificationPreferences =
+          (user.settings
+            ?.notificationPreferences as LegacyNotificationPreferences) ||
+          DEFAULT_NOTIFICATION_PREFERENCES;
+        const keywordPreferences = (user.settings
+          ?.keywordPreferences as LegacyKeywordPreferences) || {
+          enabled: false,
+          keywords: [],
+        };
 
         // Create default profile
         await prisma.notificationProfile.create({
@@ -105,21 +114,24 @@ async function createDefaultProfiles() {
             keywords: keywordPreferences.keywords || [],
             keywordLLMEnabled: keywordPreferences.enabled || false,
             priority: 0,
-          }
+          },
         });
 
-        console.log(`✅ Created default profile for user ${user.githubLogin || user.id}`);
+        console.log(
+          `✅ Created default profile for user ${user.githubLogin || user.id}`,
+        );
         created++;
-
       } catch (error) {
-        console.error(`❌ Error creating profile for user ${user.githubLogin || user.id}:`, error);
+        console.error(
+          `❌ Error creating profile for user ${user.githubLogin || user.id}:`,
+          error,
+        );
       }
     }
 
     console.log('\n📈 Migration Summary:');
     console.log(`✅ Successfully created default profiles: ${created} users`);
     console.log('🎉 Migration completed successfully!');
-
   } catch (error) {
     console.error('💥 Fatal error during migration:', error);
     process.exit(1);

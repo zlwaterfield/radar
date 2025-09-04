@@ -1,7 +1,7 @@
-import type { 
-  DigestScopeType, 
-  DigestDeliveryType, 
-  RepositoryFilter 
+import type {
+  DigestScopeType,
+  DigestDeliveryType,
+  RepositoryFilter,
 } from './digest.types';
 import type { NotificationPreferences } from './user.types';
 

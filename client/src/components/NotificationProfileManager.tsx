@@ -3,6 +3,7 @@ import { FiPlus, FiSettings, FiBell, FiBellOff, FiTarget, FiHash, FiMessageSquar
 import { useNotificationProfiles } from '../hooks/useNotificationProfiles';
 import { NotificationProfileForm } from './NotificationProfileForm';
 import Button from './Button';
+import Switch from './Switch';
 import type { NotificationProfile } from '../types/notification-profile';
 
 interface NotificationProfileManagerProps {
@@ -150,6 +151,14 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                           Priority {profile.priority}
                         </span>
                       )}
+                      <Switch
+                        checked={profile.isEnabled}
+                        onChange={() => {
+                          // Toggle profile enabled state
+                          // This would need to be implemented in the hook
+                        }}
+                        label={profile.isEnabled ? 'Enabled' : 'Disabled'}
+                      />
                     </div>
                     
                     {profile.description && (
@@ -212,21 +221,6 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                   >
                     Edit
                   </Button>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={profile.isEnabled}
-                      onChange={() => {
-                        // Toggle profile enabled state
-                        // This would need to be implemented in the hook
-                      }}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-marian-blue-300 dark:peer-focus:ring-marian-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-marian-blue-600"></div>
-                    <span className="ml-3 text-xs text-gray-900 dark:text-gray-300">
-                      {profile.isEnabled ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </label>
                   <Button
                     size="sm"
                     variant="secondary"

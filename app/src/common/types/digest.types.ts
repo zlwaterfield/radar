@@ -6,7 +6,6 @@ export interface DigestPRCategory {
   userOpenPRs: GitHubPullRequest[];
 }
 
-
 export interface DigestStats {
   totalUsers: number;
   successful: number;

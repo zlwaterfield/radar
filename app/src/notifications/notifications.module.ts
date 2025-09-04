@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '../database/database.module';
 import { GitHubModule } from '../github/github.module';
@@ -8,9 +8,17 @@ import { NotificationProfileService } from './services/notification-profile.serv
 import { NotificationProfileController } from './controllers/notification-profile.controller';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, GitHubModule],
-  providers: [NotificationService, LLMAnalyzerService, NotificationProfileService],
+  imports: [ConfigModule, DatabaseModule, forwardRef(() => GitHubModule)],
+  providers: [
+    NotificationService,
+    LLMAnalyzerService,
+    NotificationProfileService,
+  ],
   controllers: [NotificationProfileController],
-  exports: [NotificationService, LLMAnalyzerService, NotificationProfileService],
+  exports: [
+    NotificationService,
+    LLMAnalyzerService,
+    NotificationProfileService,
+  ],
 })
 export class NotificationsModule {}
