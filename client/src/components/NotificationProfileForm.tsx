@@ -28,6 +28,7 @@ interface NotificationProfileFormProps {
 }
 
 export function NotificationProfileForm({ profile, onClose }: NotificationProfileFormProps) {
+  console.log('NotificationProfileForm rendered with profile:', profile);
   const { createProfile, updateProfile } = useNotificationProfiles();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export function NotificationProfileForm({ profile, onClose }: NotificationProfil
       setFormData({
         name: profile.name,
         description: profile.description || '',
-        isEnabled: true, // Always default to enabled
+        isEnabled: profile.isEnabled,
         scopeType: profile.scopeType,
         scopeValue: profile.scopeValue || '',
         repositoryFilter: profile.repositoryFilter,
@@ -149,6 +150,27 @@ export function NotificationProfileForm({ profile, onClose }: NotificationProfil
     }));
   };
 
+  const handleToggleEnabled = async (enabled: boolean) => {
+    console.log('handleToggleEnabled called:', { enabled, profile: !!profile, profileId: profile?.id });
+    if (!profile) {
+      console.log('No profile, skipping toggle');
+      return;
+    }
+    
+    setFormData(prev => ({ ...prev, isEnabled: enabled }));
+    
+    try {
+      console.log('Making update request with:', { isEnabled: enabled });
+      const result = await updateProfile(profile.id!, { isEnabled: enabled });
+      console.log('Update successful:', result);
+    } catch (err) {
+      console.error('Update failed:', err);
+      // Revert the toggle if the update fails
+      setFormData(prev => ({ ...prev, isEnabled: !enabled }));
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -194,6 +216,34 @@ export function NotificationProfileForm({ profile, onClose }: NotificationProfil
                 rows={2}
                 placeholder="Optional description for this profile"
               />
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isEnabled"
+                checked={formData.isEnabled}
+                onClick={(e) => {
+                  console.log('Checkbox clicked (onClick)');
+                }}
+                onChange={(e) => {
+                  const newValue = e.target.checked;
+                  console.log('Toggle changed (onChange):', { newValue, hasProfile: !!profile });
+                  if (profile) {
+                    handleToggleEnabled(newValue);
+                  } else {
+                    setFormData(prev => ({ ...prev, isEnabled: newValue }));
+                  }
+                }}
+                className="h-4 w-4 text-marian-blue-600 focus:ring-marian-blue-500 border-gray-300 dark:border-gray-600 rounded"
+              />
+              <label 
+                htmlFor="isEnabled" 
+                className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                onClick={() => console.log('Label clicked')}
+              >
+                Enable this notification profile
+              </label>
             </div>
           </div>
 
