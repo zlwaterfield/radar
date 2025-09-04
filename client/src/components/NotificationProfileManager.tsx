@@ -4,6 +4,7 @@ import { useNotificationProfiles } from '../hooks/useNotificationProfiles';
 import { NotificationProfileForm } from './NotificationProfileForm';
 import Button from './Button';
 import Switch from './Switch';
+import { toast } from 'sonner';
 import type { NotificationProfile } from '../types/notification-profile';
 
 interface NotificationProfileManagerProps {
@@ -71,9 +72,10 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
   const handleToggleProfile = async (profile: NotificationProfile) => {
     try {
       await updateProfile(profile.id!, { isEnabled: !profile.isEnabled });
+      toast.success(`Notification profile ${!profile.isEnabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       console.error('Failed to toggle profile:', error);
-      // You might want to show a toast notification here
+      toast.error('Failed to update notification profile');
     }
   };
 
