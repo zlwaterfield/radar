@@ -14,9 +14,19 @@ import { Transform, Type } from 'class-transformer';
 import type {
   DigestScopeType,
   DigestDeliveryType,
-  RepositoryFilter,
 } from '../types/digest.types';
 import type { NotificationPreferences } from '../types/user.types';
+
+export class RepositoryFilterDto {
+  @IsString()
+  @IsEnum(['all', 'selected'])
+  type: 'all' | 'selected';
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  repoIds?: string[];
+}
 
 export class CreateNotificationProfileDto {
   @IsString()
@@ -41,8 +51,8 @@ export class CreateNotificationProfileDto {
 
   @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  repositoryFilter: RepositoryFilter;
+  @Type(() => RepositoryFilterDto)
+  repositoryFilter: RepositoryFilterDto;
 
   @IsString()
   @IsEnum(['dm', 'channel'])
@@ -96,8 +106,8 @@ export class UpdateNotificationProfileDto {
   @IsOptional()
   @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  repositoryFilter?: RepositoryFilter;
+  @Type(() => RepositoryFilterDto)
+  repositoryFilter?: RepositoryFilterDto;
 
   @IsOptional()
   @IsString()
