@@ -290,7 +290,7 @@ export default function DigestSettings() {
           Digests
         </h3>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Manage multiple digest configurations with different schedules and delivery options.
+          Manage multiple digest configurations with different schedules and delivery options
         </p>
       </div>
 
@@ -325,7 +325,7 @@ export default function DigestSettings() {
             {/* Create New Button */}
             <div className="flex justify-between items-center">
               <h4 className="text-lg font-medium text-gray-900 dark:text-white">
-                Digest Configurations
+                Digest configurations
               </h4>
               <Button
                 type="button"
@@ -351,20 +351,13 @@ export default function DigestSettings() {
             ) : (
               <div className="space-y-4">
                 {digestConfigs.map((config) => (
-                  <div key={config.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <div key={config.id} className="bg-gray-100 shadow-sm dark:bg-gray-700 rounded-lg px-7 py-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-4">
                           <h5 className="font-medium text-gray-900 dark:text-white">
                             {config.name}
                           </h5>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            config.isEnabled 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                          }`}>
-                            {config.isEnabled ? 'Enabled' : 'Disabled'}
-                          </span>
                           <Switch
                             checked={config.isEnabled}
                             onChange={() => handleToggleConfig(config)}
@@ -448,7 +441,7 @@ export default function DigestSettings() {
         {activeTab === 'history' && (
           <div className="space-y-6">
             <h4 className="text-lg font-medium text-gray-900 dark:text-white">
-              📈 Digest History
+              Digest history
             </h4>
             
             {history.length > 0 ? (
@@ -458,7 +451,7 @@ export default function DigestSettings() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">
-                          📊 {format(new Date(digest.sentAt), 'MMM d, yyyy')}
+                          {format(new Date(digest.sentAt), 'MMM d, yyyy')}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           Delivered at {format(new Date(digest.sentAt), 'h:mm a')}

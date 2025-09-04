@@ -21,7 +21,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <FiBell className="h-5 w-5" />
-            Notification Profiles
+            Notification profiles
           </h2>
         </div>
         <div className="space-y-3">
@@ -38,7 +38,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
       <div className={`space-y-4 ${className}`}>
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <FiBell className="h-5 w-5" />
-          Notification Profiles
+          Notification profiles
         </h2>
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-600">{error}</p>
@@ -96,7 +96,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <FiBell className="h-5 w-5" />
-            Notification Profiles
+            Notification profiles
           </h2>
           <p className="text-sm text-gray-600 mt-1">
             Create multiple notification configurations for different scenarios
@@ -127,24 +127,12 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
           {profiles.map((profile) => (
             <div
               key={profile.id}
-              className={`p-4 border rounded-lg transition-colors ${
-                profile.isEnabled
-                  ? 'border-green-200 bg-green-50'
-                  : 'border-gray-200 bg-gray-50'
-              }`}
+              className="bg-gray-100 shadow-sm dark:bg-gray-700 rounded-lg px-7 py-6"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3 flex-1">
-                  <div className="flex-shrink-0 mt-1">
-                    {profile.isEnabled ? (
-                      <FiBell className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <FiBellOff className="h-5 w-5 text-gray-400" />
-                    )}
-                  </div>
-                  
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-4">
                       <h3 className="font-medium text-gray-900">{profile.name}</h3>
                       {profile.priority > 0 && (
                         <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
