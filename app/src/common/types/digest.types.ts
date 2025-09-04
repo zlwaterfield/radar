@@ -4,6 +4,7 @@ export interface DigestPRCategory {
   waitingOnUser: GitHubPullRequest[];
   approvedReadyToMerge: GitHubPullRequest[];
   userOpenPRs: GitHubPullRequest[];
+  userDraftPRs: GitHubPullRequest[];
 }
 
 export interface DigestStats {

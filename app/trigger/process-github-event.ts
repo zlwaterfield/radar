@@ -730,7 +730,7 @@ function createPRCommentSlackMessage(data: any) {
  * Create Slack message for issue comment notifications
  */
 function createIssueCommentSlackMessage(data: any) {
-  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const { repositoryName, title, url, payload } = data;
   const color = EVENT_COLORS.issue_commented;
   
   // Create GitHub user link
@@ -815,7 +815,7 @@ function createIssueCommentSlackMessage(data: any) {
  * Create generic Slack message for other notification types
  */
 function createGenericSlackMessage(data: any) {
-  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const { eventType, repositoryName, title, message, url, payload } = data;
   const color = EVENT_COLORS.default;
   
   // Create GitHub user link

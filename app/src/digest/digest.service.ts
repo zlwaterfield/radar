@@ -34,9 +34,9 @@ export class DigestService {
   }
 
   /**
-   * Check if PR is approved by user and ready to merge
+   * Check if user's PR is approved by others and ready to merge
    */
-  private async isPRApprovedByUserAndReady(
+  private async isPRApprovedByOthersAndReady(
     pr: GitHubPullRequest,
     owner: string,
     repo: string,
@@ -44,12 +44,24 @@ export class DigestService {
     accessToken: string,
   ): Promise<boolean> {
     try {
-      // Check if PR is mergeable
-      if (!pr.mergeable || pr.draft) {
+      // Must be user's own PR
+      if (pr.user.login !== userLogin) {
         return false;
       }
 
-      // Get PR reviews to check if user approved
+      // Check if PR is not a draft
+      if (pr.draft) {
+        this.logger.debug(`PR #${pr.number} is draft, not ready to merge`);
+        return false;
+      }
+
+      // Check if PR is mergeable (null means unknown, treat as potentially mergeable)
+      if (pr.mergeable === false) {
+        this.logger.debug(`PR #${pr.number} is not mergeable, skipping`);
+        return false;
+      }
+
+      // Get PR reviews to check if others have approved
       const octokit = this.githubService.createUserClient(accessToken);
       const { data: reviews } = await octokit.pulls.listReviews({
         owner,
@@ -57,12 +69,14 @@ export class DigestService {
         pull_number: pr.number,
       });
 
-      // Check if user has approved this PR
-      const userApproval = reviews
-        .filter((review) => review.user?.login === userLogin)
-        .find((review) => review.state === 'APPROVED');
+      // Check if there are any approvals from other users (not the PR author)
+      const otherApprovals = reviews
+        .filter((review) => review.user?.login !== userLogin)
+        .filter((review) => review.state === 'APPROVED');
 
-      return !!userApproval;
+      this.logger.debug(`PR #${pr.number} has ${otherApprovals.length} approvals from others`);
+      
+      return otherApprovals.length > 0;
     } catch (error) {
       this.logger.warn(`Error checking PR approval status: ${error}`);
       return false;
@@ -104,6 +118,7 @@ export class DigestService {
         waitingOnUser: [],
         approvedReadyToMerge: [],
         userOpenPRs: [],
+        userDraftPRs: [],
       };
 
       // Get user's access token
@@ -174,7 +189,7 @@ export class DigestService {
       }
 
       this.logger.log(
-        `Generated digest for config ${executionData.configId}: ${digest.waitingOnUser.length} waiting, ${digest.approvedReadyToMerge.length} approved, ${digest.userOpenPRs.length} own PRs`,
+        `Generated digest for config ${executionData.configId}: ${digest.waitingOnUser.length} waiting, ${digest.approvedReadyToMerge.length} approved, ${digest.userOpenPRs.length} open PRs, ${digest.userDraftPRs.length} draft PRs`,
       );
 
       return digest;
@@ -201,7 +216,8 @@ export class DigestService {
       const totalPRs =
         digest.waitingOnUser.length +
         digest.approvedReadyToMerge.length +
-        digest.userOpenPRs.length;
+        digest.userOpenPRs.length +
+        digest.userDraftPRs.length;
       if (totalPRs === 0) {
         this.logger.log(
           `No PRs to report for config ${config.id}, skipping digest`,
@@ -290,11 +306,12 @@ export class DigestService {
     configName?: string,
   ) {
     const blocks = [];
+    const attachments = [];
 
     // Header with config name if provided
     const headerText = configName
-      ? `📊 ${configName} - Daily GitHub Digest`
-      : '📊 Daily GitHub Digest';
+      ? `${configName} - Radar digest`
+      : 'Radar digest';
 
     blocks.push({
       type: 'header',
@@ -305,18 +322,20 @@ export class DigestService {
       },
     });
 
-    // Rest of the message is the same as the original
+    // PRs waiting for user review (red color)
     if (digest.waitingOnUser.length > 0) {
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*🔍 PRs waiting for your review (${digest.waitingOnUser.length})*`,
+      const waitingBlocks = [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*PRs waiting for your review (${digest.waitingOnUser.length})*`,
+          },
         },
-      });
+      ];
 
       for (const pr of digest.waitingOnUser.slice(0, 5)) {
-        blocks.push({
+        waitingBlocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
@@ -326,7 +345,7 @@ export class DigestService {
       }
 
       if (digest.waitingOnUser.length > 5) {
-        blocks.push({
+        waitingBlocks.push({
           type: 'context',
           elements: [
             {
@@ -334,32 +353,39 @@ export class DigestService {
               text: `_...and ${digest.waitingOnUser.length - 5} more_`,
             },
           ],
-        });
+        } as any);
       }
+
+      attachments.push({
+        color: '#f56565', // Pastel red
+        blocks: waitingBlocks,
+      });
     }
 
+    // User's PRs approved and ready to merge (green color)
     if (digest.approvedReadyToMerge.length > 0) {
-      blocks.push({ type: 'divider' });
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*✅ PRs you approved - ready to merge (${digest.approvedReadyToMerge.length})*`,
-        },
-      });
-
-      for (const pr of digest.approvedReadyToMerge.slice(0, 5)) {
-        blocks.push({
+      const approvedBlocks = [
+        {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\` by ${pr.user.login}`,
+            text: `*Your PRs approved and ready to merge (${digest.approvedReadyToMerge.length})*`,
+          },
+        },
+      ];
+
+      for (const pr of digest.approvedReadyToMerge.slice(0, 5)) {
+        approvedBlocks.push({
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\``,
           },
         });
       }
 
       if (digest.approvedReadyToMerge.length > 5) {
-        blocks.push({
+        approvedBlocks.push({
           type: 'context',
           elements: [
             {
@@ -367,22 +393,29 @@ export class DigestService {
               text: `_...and ${digest.approvedReadyToMerge.length - 5} more_`,
             },
           ],
-        });
+        } as any);
       }
+
+      attachments.push({
+        color: '#48bb78', // Pastel green
+        blocks: approvedBlocks,
+      });
     }
 
+    // User's open PRs (yellow/orange color)
     if (digest.userOpenPRs.length > 0) {
-      blocks.push({ type: 'divider' });
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*🚀 Your open PRs (${digest.userOpenPRs.length})*`,
+      const openBlocks = [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Your open PRs (${digest.userOpenPRs.length})*`,
+          },
         },
-      });
+      ];
 
       for (const pr of digest.userOpenPRs.slice(0, 5)) {
-        blocks.push({
+        openBlocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
@@ -392,7 +425,7 @@ export class DigestService {
       }
 
       if (digest.userOpenPRs.length > 5) {
-        blocks.push({
+        openBlocks.push({
           type: 'context',
           elements: [
             {
@@ -400,8 +433,53 @@ export class DigestService {
               text: `_...and ${digest.userOpenPRs.length - 5} more_`,
             },
           ],
+        } as any);
+      }
+
+      attachments.push({
+        color: '#ed8936', // Pastel orange
+        blocks: openBlocks,
+      });
+    }
+
+    // User's draft PRs (blue color)
+    if (digest.userDraftPRs.length > 0) {
+      const draftBlocks = [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Your draft PRs (${digest.userDraftPRs.length})*`,
+          },
+        },
+      ];
+
+      for (const pr of digest.userDraftPRs.slice(0, 5)) {
+        draftBlocks.push({
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `• <${pr.html_url}|*${pr.title}*> 📝\n  \`${pr.base.repo.full_name}\``,
+          },
         });
       }
+
+      if (digest.userDraftPRs.length > 5) {
+        draftBlocks.push({
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `_...and ${digest.userDraftPRs.length - 5} more_`,
+            },
+          ],
+        } as any);
+      }
+
+      attachments.push({
+        color: '#4299e1', // Pastel blue
+        blocks: draftBlocks,
+      });
     }
 
     // Footer
@@ -416,7 +494,7 @@ export class DigestService {
       ],
     });
 
-    return { blocks };
+    return { blocks, attachments };
   }
 
   /**
@@ -448,25 +526,35 @@ export class DigestService {
         continue;
       }
 
-      // Category 1: PRs waiting on user (review requested)
-      if (this.isPRWaitingOnUser(pr, executionData.userGithubLogin)) {
-        digest.waitingOnUser.push(pr);
-      }
-      // Category 2: PRs approved by user and ready to merge
-      else if (
-        await this.isPRApprovedByUserAndReady(
+      // Check if this is the user's own PR first
+      if (pr.user.login === executionData.userGithubLogin) {
+        this.logger.debug(`Processing user's own PR #${pr.number}: ${pr.title}`);
+        
+        // Category 2: User's PRs approved by others and ready to merge
+        const isApprovedAndReady = await this.isPRApprovedByOthersAndReady(
           pr,
           repo.owner,
           repo.repo,
           executionData.userGithubLogin,
           accessToken,
-        )
-      ) {
-        digest.approvedReadyToMerge.push(pr);
+        );
+        
+        if (isApprovedAndReady) {
+          this.logger.debug(`PR #${pr.number} categorized as approvedReadyToMerge`);
+          digest.approvedReadyToMerge.push(pr);
+        }
+        // Category 3 & 4: User's own PRs (separate draft from not-yet-approved)
+        else if (pr.draft) {
+          this.logger.debug(`PR #${pr.number} categorized as userDraftPRs`);
+          digest.userDraftPRs.push(pr);
+        } else {
+          this.logger.debug(`PR #${pr.number} categorized as userOpenPRs`);
+          digest.userOpenPRs.push(pr);
+        }
       }
-      // Category 3: User's own open PRs
-      else if (pr.user.login === executionData.userGithubLogin) {
-        digest.userOpenPRs.push(pr);
+      // Category 1: PRs waiting on user (review requested) - other people's PRs
+      else if (this.isPRWaitingOnUser(pr, executionData.userGithubLogin)) {
+        digest.waitingOnUser.push(pr);
       }
     }
   }
@@ -489,7 +577,8 @@ export class DigestService {
           pullRequestCount:
             digest.waitingOnUser.length +
             digest.approvedReadyToMerge.length +
-            digest.userOpenPRs.length,
+            digest.userOpenPRs.length +
+            digest.userDraftPRs.length,
           issueCount: 0,
           deliveryType: executionData.deliveryInfo.type,
           deliveryTarget: executionData.deliveryInfo.target || null,

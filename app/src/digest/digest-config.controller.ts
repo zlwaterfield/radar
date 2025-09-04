@@ -116,6 +116,7 @@ export class DigestConfigController {
           waitingOnUser: digest.waitingOnUser.length,
           approvedReadyToMerge: digest.approvedReadyToMerge.length,
           userOpenPRs: digest.userOpenPRs.length,
+          userDraftPRs: digest.userDraftPRs.length,
           details: {
             waitingOnUser: digest.waitingOnUser.slice(0, 3).map((pr) => ({
               title: pr.title,
@@ -130,6 +131,11 @@ export class DigestConfigController {
                 repo: pr.base.repo.full_name,
               })),
             userOpenPRs: digest.userOpenPRs.slice(0, 3).map((pr) => ({
+              title: pr.title,
+              url: pr.html_url,
+              repo: pr.base.repo.full_name,
+            })),
+            userDraftPRs: digest.userDraftPRs.slice(0, 3).map((pr) => ({
               title: pr.title,
               url: pr.html_url,
               repo: pr.base.repo.full_name,
@@ -187,6 +193,7 @@ export class DigestConfigController {
           waitingOnUser: digest.waitingOnUser.length,
           approvedReadyToMerge: digest.approvedReadyToMerge.length,
           userOpenPRs: digest.userOpenPRs.length,
+          userDraftPRs: digest.userDraftPRs.length,
         },
       };
     } catch (error) {

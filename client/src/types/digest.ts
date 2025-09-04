@@ -41,10 +41,12 @@ export interface DigestPreview {
   waitingOnUser: number;
   approvedReadyToMerge: number;
   userOpenPRs: number;
+  userDraftPRs: number;
   details?: {
     waitingOnUser: Array<{ title: string; url: string; repo: string }>;
     approvedReadyToMerge: Array<{ title: string; url: string; repo: string }>;
     userOpenPRs: Array<{ title: string; url: string; repo: string }>;
+    userDraftPRs: Array<{ title: string; url: string; repo: string }>;
   };
 }
 

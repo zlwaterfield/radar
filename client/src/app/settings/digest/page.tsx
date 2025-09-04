@@ -230,7 +230,7 @@ export default function DigestSettings() {
       if (response.data.success) {
         // You could show a modal with preview data here
         const digest = response.data.digest;
-        const totalPRs = digest.waitingOnUser + digest.approvedReadyToMerge + digest.userOpenPRs;
+        const totalPRs = digest.waitingOnUser + digest.approvedReadyToMerge + digest.userOpenPRs + digest.userDraftPRs;
         if (totalPRs > 0) {
           toast.success(`Preview: ${totalPRs} PRs would be included in this digest`);
         } else {
