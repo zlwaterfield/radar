@@ -42,24 +42,6 @@ export default function TeamsSettings() {
     }
   }, [isAuthenticated, loading, router]);
 
-  // Fetch teams when user is authenticated or filters/pagination changes
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      fetchTeams();
-    }
-  }, [isAuthenticated, user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm]);
-
-  // Debounced search effect
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
-    
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm]);
-
   const fetchTeams = useCallback(async () => {
     if (!user?.id) return;
     
@@ -87,6 +69,24 @@ export default function TeamsSettings() {
       setTeamsLoading(false);
     }
   }, [user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm]);
+
+  // Fetch teams when user is authenticated or filters/pagination changes
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchTeams();
+    }
+  }, [isAuthenticated, user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm, fetchTeams]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   const refreshTeams = async () => {
     try {

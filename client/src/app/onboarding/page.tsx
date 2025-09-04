@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -34,7 +34,7 @@ function OnboardingContent() {
   const [message, setMessage] = useState<string | null>(null);
 
   // Function to refresh integration status
-  const refreshIntegrationStatus = async () => {
+  const refreshIntegrationStatus = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -60,7 +60,7 @@ function OnboardingContent() {
     } finally {
       setLoadingStatus(false);
     }
-  };
+  }, [user]);
 
   // Handle URL parameters for success/error messages
   useEffect(() => {
@@ -95,14 +95,14 @@ function OnboardingContent() {
       setMessage(errorMessage);
       toast.error(errorMessage);
     }
-  }, [searchParams, user]);
+  }, [searchParams, user, refreshIntegrationStatus]);
 
   // Fetch integration status on initial load
   useEffect(() => {
     if (user && !loading) {
       refreshIntegrationStatus();
     }
-  }, [user, loading]);
+  }, [user, loading, refreshIntegrationStatus]);
 
   const connectSlack = () => {
     window.location.href = '/api/integrations/slack/connect';

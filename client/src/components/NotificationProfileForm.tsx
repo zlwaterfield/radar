@@ -8,6 +8,7 @@ import type {
   NotificationPreferences,
 } from '../types/notification-profile';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '../types/notification-profile';
+import type { DigestScopeType, DigestDeliveryType, RepositoryFilter } from '../types/digest';
 import axios from '@/lib/axios';
 
 interface Team {
@@ -39,10 +40,10 @@ export function NotificationProfileForm({ profile, onClose }: NotificationProfil
     name: '',
     description: '',
     isEnabled: true,
-    scopeType: 'user' as const,
+    scopeType: 'user' as DigestScopeType,
     scopeValue: '',
-    repositoryFilter: { type: 'all' as const, repoIds: [] as string[] },
-    deliveryType: 'dm' as const,
+    repositoryFilter: { type: 'all', repoIds: [] } as RepositoryFilter,
+    deliveryType: 'dm' as DigestDeliveryType,
     deliveryTarget: '',
     notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
     keywords: [] as string[],

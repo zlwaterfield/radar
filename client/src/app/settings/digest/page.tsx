@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
@@ -51,19 +51,7 @@ export default function DigestSettings() {
     deliveryTarget: undefined,
   });
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/');
-    }
-  }, [isAuthenticated, loading, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      loadData();
-    }
-  }, [isAuthenticated, user]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       await Promise.all([
@@ -78,7 +66,19 @@ export default function DigestSettings() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      loadData();
+    }
+  }, [isAuthenticated, user, loadData]);
 
   const loadDigestConfigs = async () => {
     try {

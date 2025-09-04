@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
@@ -25,19 +25,7 @@ export default function KeywordsSettings() {
   });
   const [keywordInput, setKeywordInput] = useState('');
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/');
-    }
-  }, [isAuthenticated, loading, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      fetchUserSettings();
-    }
-  }, [isAuthenticated, user]);
-
-  const fetchUserSettings = async () => {
+  const fetchUserSettings = useCallback(async () => {
     try {
       if (!user?.id) return;
       
@@ -63,10 +51,21 @@ export default function KeywordsSettings() {
       console.error('Error fetching user settings:', error);
       toast.error('Failed to load keyword settings.');
     }
-  };
+  }, [user]);
 
-  const handleKeywordToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { checked } = e.target;
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchUserSettings();
+    }
+  }, [isAuthenticated, user, fetchUserSettings]);
+
+  const handleKeywordToggle = (checked: boolean) => {
     setKeywordSettings(prev => ({
       ...prev,
       enabled: checked

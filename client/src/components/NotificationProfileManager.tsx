@@ -139,7 +139,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                     {profile.isEnabled ? (
                       <FiBell className="h-5 w-5 text-green-600" />
                     ) : (
-                      <FiFiBellOff className="h-5 w-5 text-gray-400" />
+                      <FiBellOff className="h-5 w-5 text-gray-400" />
                     )}
                   </div>
                   
@@ -177,7 +177,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                         {getDeliveryIcon(profile.deliveryType)}
                         <span>
                           {profile.deliveryType === 'dm' ? 'Direct messages' : 'Channel'}
-                          {profile.deliveryFiTarget && ` (${profile.deliveryFiTarget})`}
+                          {profile.deliveryTarget && ` (${profile.deliveryTarget})`}
                         </span>
                       </div>
                       

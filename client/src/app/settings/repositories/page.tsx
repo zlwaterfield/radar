@@ -44,24 +44,6 @@ export default function RepositoriesSettings() {
     }
   }, [isAuthenticated, loading, router]);
 
-  // Fetch repositories when user is authenticated or filters/pagination changes
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      fetchRepositories();
-    }
-  }, [isAuthenticated, user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm]);
-
-  // Debounced search effect
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
-    
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm]);
-
   const fetchRepositories = useCallback(async () => {
     if (!user?.id) return;
     
@@ -89,6 +71,24 @@ export default function RepositoriesSettings() {
       setRepoLoading(false);
     }
   }, [user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm]);
+
+  // Fetch repositories when user is authenticated or filters/pagination changes
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchRepositories();
+    }
+  }, [isAuthenticated, user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm, fetchRepositories]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   const refreshRepositories = async () => {
     try {
