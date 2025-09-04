@@ -11,7 +11,7 @@ interface NotificationProfileManagerProps {
 }
 
 export function NotificationProfileManager({ className = '' }: NotificationProfileManagerProps) {
-  const { profiles, loading, error, deleteProfile } = useNotificationProfiles();
+  const { profiles, loading, error, deleteProfile, createProfile, updateProfile } = useNotificationProfiles();
   const [showForm, setShowForm] = useState(false);
   const [editingProfile, setEditingProfile] = useState<NotificationProfile | null>(null);
 
@@ -68,6 +68,15 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     setEditingProfile(null);
   };
 
+  const handleToggleProfile = async (profile: NotificationProfile) => {
+    try {
+      await updateProfile(profile.id!, { isEnabled: !profile.isEnabled });
+    } catch (error) {
+      console.error('Failed to toggle profile:', error);
+      // You might want to show a toast notification here
+    }
+  };
+
   const getDeliveryIcon = (deliveryType: string) => {
     switch (deliveryType) {
       case 'dm':
@@ -108,7 +117,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2"
         >
-          Create New Profile
+          Create profile
         </Button>
       </div>
 
@@ -141,10 +150,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                       )}
                       <Switch
                         checked={profile.isEnabled}
-                        onChange={() => {
-                          // Toggle profile enabled state
-                          // This would need to be implemented in the hook
-                        }}
+                        onChange={() => handleToggleProfile(profile)}
                         label={profile.isEnabled ? 'Enabled' : 'Disabled'}
                       />
                     </div>
@@ -228,6 +234,8 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
         <NotificationProfileForm
           profile={editingProfile}
           onClose={handleFormClose}
+          createProfile={createProfile}
+          updateProfile={updateProfile}
         />
       )}
     </div>

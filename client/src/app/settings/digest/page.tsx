@@ -104,8 +104,8 @@ export default function DigestSettings() {
   const loadRepositories = async () => {
     try {
       const response = await axios.get('/api/users/me/repositories');
-      if (response.data.success) {
-        setRepositories(response.data.repositories);
+      if (response.data && response.data.data) {
+        setRepositories(response.data.data);
       }
     } catch (error) {
       console.error('Error loading repositories:', error);
@@ -115,8 +115,8 @@ export default function DigestSettings() {
   const loadTeams = async () => {
     try {
       const response = await axios.get('/api/users/me/teams');
-      if (response.data.success) {
-        setTeams(response.data.teams);
+      if (response.data && response.data.data) {
+        setTeams(response.data.data);
       }
     } catch (error) {
       console.error('Error loading teams:', error);
@@ -254,7 +254,7 @@ export default function DigestSettings() {
 
   const getDeliveryDisplay = (config: DigestConfig) => {
     if (config.deliveryType === 'dm') {
-      return 'Direct Message';
+      return 'Direct message';
     } else {
       return `Channel: ${config.deliveryTarget || 'Not specified'}`;
     }
@@ -299,8 +299,8 @@ export default function DigestSettings() {
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8">
             {[
-              { key: 'configs', label: 'Configurations', icon: '⚙️' },
-              { key: 'history', label: 'History', icon: '📈' }
+              { key: 'configs', label: 'Configurations' },
+              { key: 'history', label: 'History' }
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -311,7 +311,7 @@ export default function DigestSettings() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
               >
-                {tab.icon} {tab.label}
+                {tab.label}
               </button>
             ))}
           </nav>
@@ -322,7 +322,6 @@ export default function DigestSettings() {
       <div className="p-6">
         {activeTab === 'configs' && (
           <div className="space-y-6">
-            {/* Create New Button */}
             <div className="flex justify-between items-center">
               <h4 className="text-lg font-medium text-gray-900 dark:text-white">
                 Digest configurations
@@ -333,7 +332,7 @@ export default function DigestSettings() {
                 onClick={handleCreateConfig}
                 className="flex items-center gap-2"
               >
-                Create New Digest
+                Create digest
               </Button>
             </div>
 
@@ -731,16 +730,6 @@ export default function DigestSettings() {
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Enable Toggle */}
-              <div>
-                <Switch
-                  checked={formData.isEnabled}
-                  onChange={(checked) => setFormData({...formData, isEnabled: checked})}
-                  label="Enable this digest configuration"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                />
               </div>
             </div>
 

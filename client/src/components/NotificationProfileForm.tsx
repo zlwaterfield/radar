@@ -26,11 +26,13 @@ interface Repository {
 interface NotificationProfileFormProps {
   profile?: NotificationProfile | null;
   onClose: () => void;
+  createProfile: (data: CreateNotificationProfileRequest) => Promise<NotificationProfile>;
+  updateProfile: (id: string, data: UpdateNotificationProfileRequest) => Promise<NotificationProfile>;
 }
 
-export function NotificationProfileForm({ profile, onClose }: NotificationProfileFormProps) {
+export function NotificationProfileForm({ profile, onClose, createProfile, updateProfile }: NotificationProfileFormProps) {
   console.log('NotificationProfileForm rendered with profile:', profile);
-  const { createProfile, updateProfile } = useNotificationProfiles();
+  // Using passed-in functions instead of hook to avoid multiple hook instances
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -78,8 +80,8 @@ export function NotificationProfileForm({ profile, onClose }: NotificationProfil
   const loadTeams = async () => {
     try {
       const response = await axios.get('/api/users/me/teams');
-      if (response.data.success) {
-        setTeams(response.data.teams);
+      if (response.data && response.data.data) {
+        setTeams(response.data.data);
       }
     } catch (error) {
       console.error('Error loading teams:', error);
@@ -89,8 +91,8 @@ export function NotificationProfileForm({ profile, onClose }: NotificationProfil
   const loadRepositories = async () => {
     try {
       const response = await axios.get('/api/users/me/repositories');
-      if (response.data.success) {
-        setRepositories(response.data.repositories);
+      if (response.data && response.data.data) {
+        setRepositories(response.data.data);
       }
     } catch (error) {
       console.error('Error loading repositories:', error);
@@ -217,34 +219,6 @@ export function NotificationProfileForm({ profile, onClose }: NotificationProfil
                 rows={2}
                 placeholder="Optional description for this profile"
               />
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isEnabled"
-                checked={formData.isEnabled}
-                onClick={(e) => {
-                  console.log('Checkbox clicked (onClick)');
-                }}
-                onChange={(e) => {
-                  const newValue = e.target.checked;
-                  console.log('Toggle changed (onChange):', { newValue, hasProfile: !!profile });
-                  if (profile) {
-                    handleToggleEnabled(newValue);
-                  } else {
-                    setFormData(prev => ({ ...prev, isEnabled: newValue }));
-                  }
-                }}
-                className="h-4 w-4 text-marian-blue-600 focus:ring-marian-blue-500 border-gray-300 dark:border-gray-600 rounded"
-              />
-              <label 
-                htmlFor="isEnabled" 
-                className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-                onClick={() => console.log('Label clicked')}
-              >
-                Enable this notification profile
-              </label>
             </div>
           </div>
 
