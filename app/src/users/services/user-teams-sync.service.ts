@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { GitHubService } from '../../github/services/github.service';
+import { GitHubIntegrationService } from '../../integrations/services/github-integration.service';
 import { UserRepositoriesService } from './user-repositories.service';
 import type { GitHubTeam } from '../../common/types/github.types';
 
@@ -11,6 +12,9 @@ export class UserTeamsSyncService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly githubService: GitHubService,
+    @Inject(forwardRef(() => GitHubIntegrationService))
+    private readonly githubIntegrationService: GitHubIntegrationService,
+    @Inject(forwardRef(() => UserRepositoriesService))
     private readonly userRepositoriesService: UserRepositoriesService,
   ) {}
 
@@ -56,19 +60,9 @@ export class UserTeamsSyncService {
    */
   async syncUserTeams(userId: string): Promise<void> {
     try {
-      const user = await this.databaseService.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user?.githubAccessToken) {
-        throw new Error('User not connected to GitHub');
-      }
-
       this.logger.log(`Syncing teams for user ${userId}`);
 
-      const teams = await this.githubService.getUserTeams(
-        user.githubAccessToken,
-      );
+      const teams = await this.getUserTeamsWithRetry(userId);
 
       // Clear existing team memberships for this user
       await this.databaseService.userTeam.deleteMany({
@@ -92,6 +86,45 @@ export class UserTeamsSyncService {
       this.logger.log(`Synced ${teams.length} teams for user ${userId}`);
     } catch (error) {
       this.logger.error(`Error syncing teams for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user teams with automatic token refresh on 401 errors
+   */
+  private async getUserTeamsWithRetry(userId: string): Promise<GitHubTeam[]> {
+    const user = await this.databaseService.user.findUnique({
+      where: { id: userId },
+      select: { githubAccessToken: true },
+    });
+
+    if (!user?.githubAccessToken) {
+      throw new Error('User not connected to GitHub');
+    }
+
+    try {
+      // Try with current token first
+      return await this.githubService.getUserTeams(user.githubAccessToken);
+    } catch (error: any) {
+      // Check if it's a 401 Unauthorized error
+      if (error?.status === 401 || error?.response?.status === 401) {
+        this.logger.log(`Got 401 error for user ${userId}, attempting token refresh`);
+        
+        // Try to refresh the token
+        const newToken = await this.githubIntegrationService.getValidTokenForApiCall(userId);
+        
+        if (newToken) {
+          this.logger.log(`Token refreshed for user ${userId}, retrying teams sync`);
+          // Retry with the new token
+          return await this.githubService.getUserTeams(newToken);
+        } else {
+          this.logger.warn(`Failed to refresh token for user ${userId}, sync cannot continue`);
+          throw new Error('GitHub token expired and refresh failed - user needs to re-authenticate');
+        }
+      }
+      
+      // Re-throw non-401 errors
       throw error;
     }
   }

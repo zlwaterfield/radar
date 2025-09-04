@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { UsersService } from './services/users.service';
 import { UsersController } from './controllers/users.controller';
@@ -11,9 +11,10 @@ import { UserRepositoriesController } from './controllers/user-repositories.cont
 import { UserTeamsController } from './controllers/user-teams.controller';
 import { RadarAuthModule } from '../auth/auth.module';
 import { GitHubModule } from '../github/github.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
-  imports: [ConfigModule, RadarAuthModule, GitHubModule],
+  imports: [ConfigModule, RadarAuthModule, GitHubModule, forwardRef(() => IntegrationsModule)],
   controllers: [
     UsersController,
     UserSettingsController,

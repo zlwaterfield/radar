@@ -1,6 +1,7 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { GitHubService } from '../../github/services/github.service';
+import { GitHubIntegrationService } from '../../integrations/services/github-integration.service';
 import { getPaginationSkip } from '../../common/utils/pagination.util';
 import type { UserRepository } from '@prisma/client';
 
@@ -11,6 +12,8 @@ export class UserRepositoriesService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly githubService: GitHubService,
+    @Inject(forwardRef(() => GitHubIntegrationService))
+    private readonly githubIntegrationService: GitHubIntegrationService,
   ) {}
 
   /**
@@ -177,27 +180,7 @@ export class UserRepositoriesService {
     total: number;
   }> {
     try {
-      // Get GitHub App installations for the user
-      const installations =
-        await this.githubService.getUserInstallations(githubAccessToken);
-
-      const githubRepos: any[] = [];
-
-      // Get repositories from all installations (only repos user granted access to)
-      for (const installation of installations) {
-        try {
-          const installationRepos =
-            await this.githubService.getInstallationRepositories(
-              installation.id,
-            );
-          githubRepos.push(...installationRepos);
-        } catch (error) {
-          this.logger.warn(
-            `Failed to get repositories for installation ${installation.id}:`,
-            error,
-          );
-        }
-      }
+      const githubRepos = await this.getRepositoriesWithRetry(userId, githubAccessToken);
 
       let added = 0;
       let updated = 0;
@@ -259,6 +242,60 @@ export class UserRepositoriesService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Get repositories with automatic token refresh on 401 errors
+   */
+  private async getRepositoriesWithRetry(userId: string, initialToken: string): Promise<any[]> {
+    try {
+      // Try with provided token first
+      return await this.fetchUserRepositories(initialToken);
+    } catch (error: any) {
+      // Check if it's a 401 Unauthorized error
+      if (error?.status === 401 || error?.response?.status === 401) {
+        this.logger.log(`Got 401 error for user ${userId}, attempting token refresh`);
+        
+        // Try to refresh the token
+        const newToken = await this.githubIntegrationService.getValidTokenForApiCall(userId);
+        
+        if (newToken) {
+          this.logger.log(`Token refreshed for user ${userId}, retrying repository sync`);
+          // Retry with the new token
+          return await this.fetchUserRepositories(newToken);
+        } else {
+          this.logger.warn(`Failed to refresh token for user ${userId}, sync cannot continue`);
+          throw new Error('GitHub token expired and refresh failed - user needs to re-authenticate');
+        }
+      }
+      
+      // Re-throw non-401 errors
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch user repositories from GitHub API
+   */
+  private async fetchUserRepositories(accessToken: string): Promise<any[]> {
+    // Get GitHub App installations for the user
+    const installations = await this.githubService.getUserInstallations(accessToken);
+    const githubRepos: any[] = [];
+
+    // Get repositories from all installations (only repos user granted access to)
+    for (const installation of installations) {
+      try {
+        const installationRepos = await this.githubService.getInstallationRepositories(installation.id);
+        githubRepos.push(...installationRepos);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to get repositories for installation ${installation.id}:`,
+          error,
+        );
+      }
+    }
+
+    return githubRepos;
   }
 
   /**

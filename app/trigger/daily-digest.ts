@@ -36,9 +36,16 @@ console.log(`- GitHub app ID: ${configService.get('github.appId') ? 'present' : 
 const databaseService = new DatabaseService();
 const githubService = new GitHubService(configService, databaseService);
 const digestConfigService = new DigestConfigService(databaseService);
-const userRepositoriesService = new UserRepositoriesService(databaseService, githubService);
-const userTeamsSyncService = new UserTeamsSyncService(databaseService, githubService, userRepositoriesService);
-const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, userTeamsSyncService);
+
+// Create GitHub integration service first (it will be passed to other services)
+// Note: We'll create it with null for userTeamsSyncService initially to avoid circular dependency
+const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, null as any);
+
+const userRepositoriesService = new UserRepositoriesService(databaseService, githubService, githubIntegrationService);
+const userTeamsSyncService = new UserTeamsSyncService(databaseService, githubService, githubIntegrationService, userRepositoriesService);
+
+// Now set the userTeamsSyncService on the githubIntegrationService to complete the circular dependency
+(githubIntegrationService as any).userTeamsSyncService = userTeamsSyncService;
 
 
 export const dailyDigest = schedules.task({

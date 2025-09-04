@@ -31,13 +31,31 @@ export class GitHubIntegrationController {
   @Get('connect')
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Initiate GitHub integration' })
-  @ApiResponse({ status: 302, description: 'Redirect to GitHub OAuth' })
+  @ApiResponse({ status: 302, description: 'Redirect to GitHub OAuth or success page' })
   async connectGitHub(
     @CurrentUser() user: any,
     @Query('reconnect') reconnect: boolean,
     @Res() res: Response,
   ) {
     try {
+      // If this is a reconnect attempt, try to refresh the token first
+      if (reconnect) {
+        const validToken = await this.githubIntegrationService.ensureValidToken(
+          user.id,
+          res,
+          reconnect,
+        );
+        
+        if (validToken) {
+          // Token refresh succeeded, redirect to success page instead of GitHub
+          const frontendUrl = `${this.configService.get('app.frontendUrl')}/settings/github?refreshed=true`;
+          return res.redirect(frontendUrl);
+        }
+        // If validToken is null, the ensureValidToken method has already redirected to GitHub
+        return;
+      }
+
+      // For initial connections, go straight to GitHub
       const authUrl = this.githubIntegrationService.generateAuthUrl(
         user.id,
         reconnect,
