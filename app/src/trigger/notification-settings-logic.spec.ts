@@ -8,13 +8,19 @@ describe('Notification Settings Logic', () => {
   function getNotificationPreferenceKey(
     eventType: string,
     action: string,
+    payload?: any,
   ): string | null {
     if (eventType === 'pull_request') {
       switch (action) {
         case 'opened':
           return 'pull_request_opened';
         case 'closed':
-          return 'pull_request_closed';
+          // Check if the PR was merged to use the correct preference key
+          if (payload?.pull_request?.merged) {
+            return 'pull_request_merged';
+          } else {
+            return 'pull_request_closed';
+          }
         case 'reopened':
           return 'pull_request_reopened';
         default:
@@ -107,6 +113,16 @@ describe('Notification Settings Logic', () => {
       expect(getNotificationPreferenceKey('pull_request', 'closed')).toBe(
         'pull_request_closed',
       );
+      expect(
+        getNotificationPreferenceKey('pull_request', 'closed', {
+          pull_request: { merged: true },
+        }),
+      ).toBe('pull_request_merged');
+      expect(
+        getNotificationPreferenceKey('pull_request', 'closed', {
+          pull_request: { merged: false },
+        }),
+      ).toBe('pull_request_closed');
       expect(getNotificationPreferenceKey('pull_request', 'reopened')).toBe(
         'pull_request_reopened',
       );

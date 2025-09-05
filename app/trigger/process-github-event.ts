@@ -234,7 +234,7 @@ async function shouldNotifyUser(user: any, eventType: string, action: string, pa
     const preferences = settings.notificationPreferences || {};
     
     // Map event types to preference keys
-    const eventKey = getNotificationPreferenceKey(eventType, action);
+    const eventKey = getNotificationPreferenceKey(eventType, action, payload);
     if (eventKey && preferences[eventKey] === false) {
       return false;
     }
@@ -929,13 +929,18 @@ function truncateText(text: string, maxLength: number): string {
 /**
  * Get notification preference key based on event type and action
  */
-function getNotificationPreferenceKey(eventType: string, action: string): string | null {
+function getNotificationPreferenceKey(eventType: string, action: string, payload?: any): string | null {
   if (eventType === 'pull_request') {
     switch (action) {
       case 'opened':
         return 'pull_request_opened';
       case 'closed':
-        return 'pull_request_closed';
+        // Check if the PR was merged to use the correct preference key
+        if (payload?.pull_request?.merged) {
+          return 'pull_request_merged';
+        } else {
+          return 'pull_request_closed';
+        }
       case 'reopened':
         return 'pull_request_reopened';
       default:
@@ -978,7 +983,12 @@ function generateNotificationTitle(eventType: string, action: string, payload: a
     return `Issue #${issueNumber}: ${payload.issue?.title || 'Issue'}`;
   } else if (eventType === 'issue_comment') {
     const issueNumber = payload.issue?.number;
-    return `Issue #${issueNumber}: ${payload.issue?.title || 'Issue'}`;
+    // Check if this is a comment on a pull request
+    if (payload.issue?.pull_request) {
+      return `PR #${issueNumber}: ${payload.issue?.title || 'Pull request'}`;
+    } else {
+      return `Issue #${issueNumber}: ${payload.issue?.title || 'Issue'}`;
+    }
   } else if (eventType === 'pull_request_review') {
     const prNumber = payload.pull_request?.number;
     return `PR #${prNumber}: ${payload.pull_request?.title || 'Pull request'}`;

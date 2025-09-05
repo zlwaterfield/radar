@@ -78,6 +78,7 @@ export class NotificationService {
         }
       }
 
+
       // Determine primary profile (highest priority match)
       const primaryProfile =
         matchedProfiles.length > 0 ? matchedProfiles[0] : undefined;
@@ -151,7 +152,7 @@ export class NotificationService {
       }
 
       // Check watching reasons
-      const data = this.extractDataFromPayload(payload, eventType);
+      const data = await this.extractDataFromPayload(payload, eventType, userId);
       const watchingReasons = await this.determineWatchingReasons(userId, data);
 
       if (watchingReasons.size === 0) {
@@ -214,6 +215,7 @@ export class NotificationService {
         };
       }
 
+
       return {
         shouldMatch: false,
         matchedKeywords: [],
@@ -259,6 +261,7 @@ export class NotificationService {
       if (!githubUsername) {
         return watchingReasons;
       }
+
 
       // Determine if this is a PR or an issue
       let isPR = false;
@@ -408,12 +411,42 @@ export class NotificationService {
   /**
    * Helper to extract data object for watching reasons from payload
    */
-  private extractDataFromPayload(payload: any, eventType: string): any {
+  private async extractDataFromPayload(payload: any, eventType: string, userId?: string): Promise<any> {
     switch (eventType) {
       case 'pull_request':
         return payload.pull_request || {};
       case 'issue':
+        // Regular issue, not a PR
+        return payload.issue || {};
       case 'issue_comment':
+        // Check if this is a comment on a pull request
+        if (payload.issue?.pull_request) {
+          try {
+            // This is a comment on a PR, fetch full PR data
+            const repoFullName = payload.repository?.full_name;
+            const prNumber = payload.issue.number;
+            
+            if (repoFullName && prNumber) {
+              const [owner, repo] = repoFullName.split('/');
+              
+              // Try to get user's GitHub token first, fall back to app client
+              let accessToken: string | undefined;
+              if (userId) {
+                const user = await this.databaseService.user.findUnique({
+                  where: { id: userId },
+                  select: { githubAccessToken: true },
+                });
+                accessToken = user?.githubAccessToken || undefined;
+              }
+              
+              const fullPRData = await this.githubService.getPullRequest(owner, repo, prNumber, accessToken);
+              return fullPRData;
+            }
+          } catch (error) {
+            this.logger.warn('Failed to fetch full PR data for issue comment, falling back to issue object:', error);
+          }
+        }
+        // Fall back to issue object for regular issues or if PR fetch failed
         return payload.issue || {};
       case 'pull_request_review':
       case 'pull_request_review_comment':
