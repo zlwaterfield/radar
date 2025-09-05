@@ -1,5 +1,6 @@
 import { defineConfig } from "@trigger.dev/sdk";
 import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
+import { emitDecoratorMetadata } from "@trigger.dev/build/extensions/typescript";
 
 export default defineConfig({
   project: process.env.TRIGGER_PROJECT_REF!,
@@ -19,6 +20,7 @@ export default defineConfig({
       prismaExtension({
         schema: "prisma/schema.prisma",
       }),
+      emitDecoratorMetadata(),
     ],
   },
   maxDuration: 3600,
