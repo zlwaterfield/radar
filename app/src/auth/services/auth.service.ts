@@ -248,7 +248,7 @@ export class AuthService {
           operation: 'user_authentication',
           providerId,
           category: 'auth_critical',
-        }
+        },
       );
       throw error;
     }
@@ -334,7 +334,7 @@ export class AuthService {
         {
           operation: 'session_validation',
           category: 'auth_critical',
-        }
+        },
       );
       return null;
     }

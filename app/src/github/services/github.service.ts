@@ -86,7 +86,7 @@ export class GitHubService {
           operation: 'github_installation_auth',
           installationId: installationId.toString(),
           category: 'github_critical',
-        }
+        },
       );
       throw error;
     }
@@ -162,10 +162,11 @@ export class GitHubService {
     userIdOrAccessToken: string,
     includePrivate = true,
   ): Promise<GitHubRepository[]> {
+    let userId: string | null = null;
+
     try {
       let accessToken: string;
       let logContext: string;
-      let userId: string | null = null;
 
       // Check if the parameter is a user ID or access token
       if (
@@ -226,7 +227,7 @@ export class GitHubService {
           operation: 'github_fetch_repositories',
           userId: userId || undefined,
           category: 'github_critical',
-        }
+        },
       );
       throw error;
     }

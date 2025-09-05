@@ -92,7 +92,7 @@ export class WebhooksService {
           eventType,
           repositoryName: payload.repository?.full_name,
           category: 'webhook_critical',
-        }
+        },
       );
       return null;
     }
@@ -268,7 +268,7 @@ export class WebhooksService {
           teamName: payload.team?.name,
           organization: payload.organization?.login,
           category: 'webhook_critical',
-        }
+        },
       );
       throw error;
     }
@@ -320,7 +320,7 @@ export class WebhooksService {
           action: payload.action,
           senderId: payload.sender?.id?.toString(),
           category: 'webhook_critical',
-        }
+        },
       );
       throw error;
     }

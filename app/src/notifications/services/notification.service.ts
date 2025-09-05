@@ -125,7 +125,7 @@ export class NotificationService {
           eventId,
           eventType,
           category: 'notification_critical',
-        }
+        },
       );
       return {
         shouldNotify: false,
@@ -403,7 +403,7 @@ export class NotificationService {
         {
           operation: 'watching_reasons_determination',
           category: 'notification_critical',
-        }
+        },
       );
       return watchingReasons;
     }

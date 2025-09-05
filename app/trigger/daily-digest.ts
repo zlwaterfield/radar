@@ -9,6 +9,7 @@ import { GitHubIntegrationService } from "../src/integrations/services/github-in
 import { UserTeamsSyncService } from "../src/users/services/user-teams-sync.service";
 import { UserRepositoriesService } from "../src/users/services/user-repositories.service";
 import { ConfigService } from "@nestjs/config";
+import { AnalyticsService } from "../src/analytics/analytics.service";
 import appConfig from "../src/config/app.config";
 import slackConfig from "../src/config/slack.config";
 import githubConfig from "../src/config/github.config";
@@ -33,12 +34,13 @@ console.log(`- Slack signing secret: ${configService.get('slack.signingSecret') 
 console.log(`- Slack bot token: ${configService.get('slack.botToken') ? 'present' : 'missing'}`);
 console.log(`- GitHub app ID: ${configService.get('github.appId') ? 'present' : 'missing'}`);
 
+const analyticsService = new AnalyticsService(configService);
 const databaseService = new DatabaseService();
 
 // Create GitHub integration service first (it will be passed to other services)
 // Note: We'll create it with null for userTeamsSyncService initially to avoid circular dependency
 const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, null as any);
-const githubService = new GitHubService(configService, databaseService, githubIntegrationService);
+const githubService = new GitHubService(configService, databaseService, analyticsService, githubIntegrationService);
 const digestConfigService = new DigestConfigService(databaseService);
 
 const userRepositoriesService = new UserRepositoriesService(databaseService, githubService, githubIntegrationService);

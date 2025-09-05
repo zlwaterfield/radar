@@ -16,8 +16,8 @@ import { IntegrationsModule } from '../integrations/integrations.module';
 @Module({
   imports: [
     ConfigModule,
-    RadarAuthModule,
-    GitHubModule,
+    forwardRef(() => RadarAuthModule),
+    forwardRef(() => GitHubModule),
     forwardRef(() => IntegrationsModule),
   ],
   controllers: [

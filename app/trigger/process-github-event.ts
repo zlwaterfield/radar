@@ -15,12 +15,12 @@ const prisma = new PrismaClient();
 
 // Initialize services
 const configService = new ConfigService();
+const analyticsService = new AnalyticsService(configService);
 const databaseService = new DatabaseService();
 // Create GitHub integration service first (it will be passed to other services)
 const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, null as any);
-const githubService = new GitHubService(configService, databaseService, githubIntegrationService);
+const githubService = new GitHubService(configService, databaseService, analyticsService, githubIntegrationService);
 const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
-const analyticsService = new AnalyticsService(configService);
 // Initialize all services properly
 const notificationProfileService = new NotificationProfileService(databaseService);
 const notificationService = new NotificationService(databaseService, githubService, llmAnalyzerService, notificationProfileService, analyticsService);

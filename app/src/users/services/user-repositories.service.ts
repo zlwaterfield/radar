@@ -17,6 +17,7 @@ export class UserRepositoriesService {
 
   constructor(
     private readonly databaseService: DatabaseService,
+    @Inject(forwardRef(() => GitHubService))
     private readonly githubService: GitHubService,
     @Inject(forwardRef(() => GitHubIntegrationService))
     private readonly githubIntegrationService: GitHubIntegrationService,
