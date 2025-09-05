@@ -15,7 +15,7 @@ export class AnalyticsService {
   private initializePostHog() {
     try {
       const apiKey = this.configService.get<string>('POSTHOG_API_KEY');
-      const host = this.configService.get<string>('POSTHOG_HOST') || 'https://app.posthog.com';
+      const host = 'https://us.posthog.com';
 
       if (!apiKey) {
         this.logger.warn('PostHog API key not configured, analytics disabled');
@@ -24,8 +24,7 @@ export class AnalyticsService {
 
       this.posthog = new PostHog(apiKey, {
         host: host,
-        flushAt: 1, // Ensure events are sent immediately for serverless environments
-        flushInterval: 0, // Disable auto-flush interval
+        enableExceptionAutocapture: true,
       });
 
       this.isEnabled = true;
@@ -69,32 +68,6 @@ export class AnalyticsService {
       this.posthog.captureException(error, distinctId, context);
     } catch (err) {
       this.logger.error('Failed to track error:', err);
-    }
-  }
-
-  /**
-   * Track critical errors that need immediate capture (for serverless environments)
-   */
-  async trackCriticalError(distinctId: string, error: Error, context: Record<string, any> = {}) {
-    if (!this.isEnabled || !this.posthog) {
-      return;
-    }
-
-    try {
-      // Use captureImmediate for critical errors
-      await this.posthog.captureImmediate({
-        distinctId,
-        event: 'critical_error',
-        properties: {
-          error_name: error.name,
-          error_message: error.message,
-          error_stack: error.stack,
-          ...context,
-          timestamp: new Date(),
-        },
-      });
-    } catch (err) {
-      this.logger.error('Failed to track critical error:', err);
     }
   }
 
