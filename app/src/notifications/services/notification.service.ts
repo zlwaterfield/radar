@@ -3,6 +3,7 @@ import { DatabaseService } from '../../database/database.service';
 import { GitHubService } from '../../github/services/github.service';
 import { LLMAnalyzerService } from './llm-analyzer.service';
 import { NotificationProfileService } from './notification-profile.service';
+import { AnalyticsService } from '../../analytics/analytics.service';
 import {
   WatchingReason,
   NotificationTrigger,
@@ -23,6 +24,7 @@ export class NotificationService {
     private readonly githubService: GitHubService,
     private readonly llmAnalyzerService: LLMAnalyzerService,
     private readonly notificationProfileService: NotificationProfileService,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
   /**
@@ -100,6 +102,18 @@ export class NotificationService {
       this.logger.log(
         `Notification decision for user ${userId}: ${decision.shouldNotify ? 'NOTIFY' : 'SKIP'} - Reason: ${decision.reason}, Profiles matched: ${matchedProfiles.length}/${profiles.length}`,
       );
+
+      // Track notification decision
+      this.analyticsService.track(userId, 'notification_decision', {
+        eventType,
+        eventId,
+        shouldNotify: decision.shouldNotify,
+        reason: decision.reason,
+        profilesChecked: profiles.length,
+        matchedProfilesCount: matchedProfiles.length,
+        primaryProfileName: primaryProfile?.profile.name,
+        primaryProfileId: primaryProfile?.profile.id,
+      });
 
       return decision;
     } catch (error) {

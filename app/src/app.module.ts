@@ -20,10 +20,12 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DigestModule } from './digest/digest.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { ErrorTrackingInterceptor } from './common/interceptors/error-tracking.interceptor';
 
 @Module({
   imports: [
@@ -56,6 +58,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     IntegrationsModule,
     NotificationsModule,
     DigestModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -67,6 +70,10 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ErrorTrackingInterceptor,
     },
   ],
 })

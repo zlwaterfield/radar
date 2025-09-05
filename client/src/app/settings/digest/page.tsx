@@ -541,12 +541,23 @@ export default function DigestSettings() {
                     Delivery Time
                   </label>
                   <div className="flex gap-3">
-                    <input
-                      type="time"
+                    <select
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
                       value={formData.digestTime}
                       onChange={(e) => setFormData({...formData, digestTime: e.target.value})}
-                    />
+                    >
+                      {Array.from({ length: 96 }, (_, i) => {
+                        const hours = Math.floor(i / 4);
+                        const minutes = (i % 4) * 15;
+                        const timeValue = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                        const displayTime = format(new Date().setHours(hours, minutes), 'h:mm a');
+                        return (
+                          <option key={timeValue} value={timeValue}>
+                            {displayTime}
+                          </option>
+                        );
+                      })}
+                    </select>
                     <select
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
                       value={formData.timezone}

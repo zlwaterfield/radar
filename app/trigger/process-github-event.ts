@@ -6,6 +6,7 @@ import { NotificationProfileService } from "../src/notifications/services/notifi
 import { LLMAnalyzerService } from "../src/notifications/services/llm-analyzer.service";
 import { DatabaseService } from "../src/database/database.service";
 import { GitHubService } from "../src/github/services/github.service";
+import { AnalyticsService } from "../src/analytics/analytics.service";
 import { ConfigService } from "@nestjs/config";
 
 // Initialize Prisma client for the task
@@ -16,9 +17,10 @@ const configService = new ConfigService();
 const databaseService = new DatabaseService();
 const githubService = new GitHubService(configService, databaseService);
 const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
+const analyticsService = new AnalyticsService(configService);
 // Initialize all services properly
 const notificationProfileService = new NotificationProfileService(databaseService);
-const notificationService = new NotificationService(databaseService, githubService, llmAnalyzerService, notificationProfileService);
+const notificationService = new NotificationService(databaseService, githubService, llmAnalyzerService, notificationProfileService, analyticsService);
 
 // Event processing task payload
 interface GitHubEventPayload {
@@ -94,6 +96,13 @@ async function processEventNotifications(event: any): Promise<boolean> {
     console.log(`Processing notifications for event ${event.id} (${event.eventType})`);
     
     const { eventType, action, payload, repositoryName } = event;
+    
+    // Track webhook event
+    analyticsService.trackWebhook(payload.repository?.id?.toString() || 'unknown', eventType, {
+      action,
+      repositoryName,
+      eventId: event.id,
+    });
     
     // Get users who should receive this notification
     const relevantUsers = await getRelevantUsers(repositoryName, payload);
