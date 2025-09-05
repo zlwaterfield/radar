@@ -84,21 +84,38 @@ export class DigestService {
   }
 
   /**
-   * Calculate the next digest time for a user
+   * Check if current time matches user's digest time (within 15-minute window)
    */
-  calculateUserDigestTime(digestTime: string): Date {
-    const now = new Date();
+  isDigestTimeMatched(digestTime: string, now: Date = new Date()): boolean {
     const [hours, minutes] = digestTime.split(':').map(Number);
+    
+    // Round minutes to nearest 15-minute interval
+    const roundedMinutes = Math.floor(minutes / 15) * 15;
+    
+    return now.getHours() === hours && now.getMinutes() === roundedMinutes;
+  }
 
-    const nextDigest = new Date();
-    nextDigest.setHours(hours, minutes, 0, 0);
+  /**
+   * Check if digest was already sent today for this config
+   */
+  async wasDigestSentToday(configId: string): Promise<boolean> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // If the time has already passed today, schedule for tomorrow
-    if (nextDigest <= now) {
-      nextDigest.setDate(nextDigest.getDate() + 1);
-    }
+    const existingDigest = await this.databaseService.userDigest.findFirst({
+      where: {
+        digestConfigId: configId,
+        sentAt: {
+          gte: today,
+          lt: tomorrow,
+        },
+      },
+    });
 
-    return nextDigest;
+    return !!existingDigest;
   }
 
   // NEW METHODS FOR MULTIPLE DIGEST CONFIGURATIONS

@@ -373,13 +373,20 @@ export class DigestConfigService {
   }
 
   /**
-   * Validate digest time format (HH:MM)
+   * Validate digest time format (HH:MM) and 15-minute increments
    */
   private validateDigestTime(digestTime: string): void {
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(digestTime)) {
       throw new BadRequestException(
         'Invalid digest time format. Use HH:MM format.',
+      );
+    }
+
+    const [, minutes] = digestTime.split(':').map(Number);
+    if (minutes % 15 !== 0) {
+      throw new BadRequestException(
+        'Digest time minutes must be in 15-minute increments (00, 15, 30, 45).',
       );
     }
   }

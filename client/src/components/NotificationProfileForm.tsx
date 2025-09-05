@@ -179,7 +179,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {profile ? 'Edit' : 'Create'} Notification Profile
+            {profile ? 'Edit' : 'Create'} notification profile
           </h3>
         </div>
 
@@ -192,8 +192,6 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
 
           {/* Basic Settings */}
           <div className="space-y-4">
-            <h4 className="font-medium text-gray-900 dark:text-white">Basic Settings</h4>
-            
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Name *
@@ -228,7 +226,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
             
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Activity Scope
+                Activity scope
               </label>
               <div className="space-y-2">
                 <label className="flex items-center">
@@ -455,12 +453,12 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
 
           {/* Notification Preferences */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Event Preferences</h3>
+            <h3 className="text-lg font-medium">Event preferences</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* PR Events */}
               <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">Pull Requests</h4>
+                <h4 className="font-medium text-gray-900">Pull requests</h4>
                 {[
                   ['pull_request_opened', 'PR opened'],
                   ['pull_request_closed', 'PR closed/merged'],
@@ -540,7 +538,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
             disabled={loading || !formData.name.trim()}
             className="px-4 py-2 bg-marian-blue-600 text-white rounded-md hover:bg-marian-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Saving...' : (profile ? 'Update' : 'Create') + ' Profile'}
+            {loading ? 'Saving...' : (profile ? 'Update' : 'Create')}
           </button>
         </div>
       </div>

@@ -50,8 +50,8 @@ const userTeamsSyncService = new UserTeamsSyncService(databaseService, githubSer
 
 export const dailyDigest = schedules.task({
   id: "daily-digest",
-  // Run every day at midnight UTC
-  cron: "0 0 * * *",
+  // Run every 15 minutes
+  cron: "*/15 * * * *",
   retry: {
     maxAttempts: 3,
     factor: 2,
@@ -92,21 +92,23 @@ export const dailyDigest = schedules.task({
             try {
               console.log(`Processing digest config "${config.name}" (${config.id}) for user ${userData.userId}`);
 
-              // Calculate when to send this digest
-              const digestTime = digestService.calculateUserDigestTime(config.digestTime);
+              // Check if it's time to send this digest
               const now = new Date();
-
-              console.log(`Config ${config.id} digest scheduled for ${digestTime.toISOString()}`);
-
-              // Wait until the configured time
-              if (digestTime > now) {
-                console.log(`Waiting until ${digestTime.toISOString()} for config ${config.id}`);
-                await wait.until({ 
-                  date: digestTime,
-                  idempotencyKey: `digest-config-${config.id}-${digestTime.toDateString()}`,
-                  idempotencyKeyTTL: "1d"
-                });
+              if (!digestService.isDigestTimeMatched(config.digestTime, now)) {
+                console.log(`Config ${config.id} scheduled for ${config.digestTime}, current time ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}, skipping`);
+                successCount++; // Count as success since it's not time yet
+                continue;
               }
+
+              // Check if digest was already sent today for this config
+              const alreadySent = await digestService.wasDigestSentToday(config.id);
+              if (alreadySent) {
+                console.log(`Digest already sent today for config ${config.id}, skipping`);
+                successCount++; // Count as success since already sent
+                continue;
+              }
+
+              console.log(`Time matches for config ${config.id}, processing digest`);
 
               // Get execution data for this config
               const executionData = await digestConfigService.getDigestExecutionData(config.id);

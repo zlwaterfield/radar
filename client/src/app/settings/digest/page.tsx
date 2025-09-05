@@ -501,15 +501,13 @@ export default function DigestSettings() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {editingConfig ? 'Edit' : 'Create'} Digest Configuration
+                {editingConfig ? 'Edit' : 'Create'} digest configuration
               </h3>
             </div>
 
             <div className="p-6 space-y-6">
               {/* Basic Settings */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 dark:text-white">Basic Settings</h4>
-                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Name *
@@ -538,8 +536,11 @@ export default function DigestSettings() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Delivery Time
+                    Delivery time
                   </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    Digests are sent in 15-minute intervals
+                  </p>
                   <div className="flex gap-3">
                     <select
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
@@ -564,10 +565,72 @@ export default function DigestSettings() {
                       onChange={(e) => setFormData({...formData, timezone: e.target.value})}
                     >
                       <option value="UTC">UTC</option>
-                      <option value="America/New_York">Eastern Time</option>
-                      <option value="America/Chicago">Central Time</option>
-                      <option value="America/Denver">Mountain Time</option>
-                      <option value="America/Los_Angeles">Pacific Time</option>
+                      
+                      <optgroup label="North America">
+                        <option value="America/New_York">Eastern Time (ET)</option>
+                        <option value="America/Chicago">Central Time (CT)</option>
+                        <option value="America/Denver">Mountain Time (MT)</option>
+                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                        <option value="America/Phoenix">Arizona (MST)</option>
+                        <option value="America/Anchorage">Alaska Time (AKST)</option>
+                        <option value="Pacific/Honolulu">Hawaii Time (HST)</option>
+                        <option value="America/Toronto">Toronto (ET)</option>
+                        <option value="America/Vancouver">Vancouver (PT)</option>
+                      </optgroup>
+                      
+                      <optgroup label="Europe">
+                        <option value="Europe/London">London (GMT)</option>
+                        <option value="Europe/Paris">Paris (CET)</option>
+                        <option value="Europe/Berlin">Berlin (CET)</option>
+                        <option value="Europe/Madrid">Madrid (CET)</option>
+                        <option value="Europe/Rome">Rome (CET)</option>
+                        <option value="Europe/Amsterdam">Amsterdam (CET)</option>
+                        <option value="Europe/Stockholm">Stockholm (CET)</option>
+                        <option value="Europe/Zurich">Zurich (CET)</option>
+                        <option value="Europe/Vienna">Vienna (CET)</option>
+                        <option value="Europe/Prague">Prague (CET)</option>
+                        <option value="Europe/Warsaw">Warsaw (CET)</option>
+                        <option value="Europe/Helsinki">Helsinki (EET)</option>
+                        <option value="Europe/Athens">Athens (EET)</option>
+                        <option value="Europe/Istanbul">Istanbul (TRT)</option>
+                        <option value="Europe/Moscow">Moscow (MSK)</option>
+                      </optgroup>
+                      
+                      <optgroup label="Asia Pacific">
+                        <option value="Asia/Tokyo">Tokyo (JST)</option>
+                        <option value="Asia/Seoul">Seoul (KST)</option>
+                        <option value="Asia/Shanghai">Shanghai (CST)</option>
+                        <option value="Asia/Hong_Kong">Hong Kong (HKT)</option>
+                        <option value="Asia/Singapore">Singapore (SGT)</option>
+                        <option value="Asia/Bangkok">Bangkok (ICT)</option>
+                        <option value="Asia/Jakarta">Jakarta (WIB)</option>
+                        <option value="Asia/Manila">Manila (PHT)</option>
+                        <option value="Asia/Kolkata">Mumbai/Delhi (IST)</option>
+                        <option value="Asia/Dubai">Dubai (GST)</option>
+                        <option value="Asia/Karachi">Karachi (PKT)</option>
+                        <option value="Asia/Dhaka">Dhaka (BST)</option>
+                        <option value="Australia/Sydney">Sydney (AEDT)</option>
+                        <option value="Australia/Melbourne">Melbourne (AEDT)</option>
+                        <option value="Australia/Perth">Perth (AWST)</option>
+                        <option value="Pacific/Auckland">Auckland (NZDT)</option>
+                      </optgroup>
+                      
+                      <optgroup label="South America">
+                        <option value="America/Sao_Paulo">São Paulo (BRT)</option>
+                        <option value="America/Argentina/Buenos_Aires">Buenos Aires (ART)</option>
+                        <option value="America/Santiago">Santiago (CLT)</option>
+                        <option value="America/Lima">Lima (PET)</option>
+                        <option value="America/Bogota">Bogotá (COT)</option>
+                        <option value="America/Caracas">Caracas (VET)</option>
+                      </optgroup>
+                      
+                      <optgroup label="Africa">
+                        <option value="Africa/Cairo">Cairo (EET)</option>
+                        <option value="Africa/Lagos">Lagos (WAT)</option>
+                        <option value="Africa/Johannesburg">Johannesburg (SAST)</option>
+                        <option value="Africa/Nairobi">Nairobi (EAT)</option>
+                        <option value="Africa/Casablanca">Casablanca (WET)</option>
+                      </optgroup>
                     </select>
                   </div>
                 </div>
@@ -579,7 +642,7 @@ export default function DigestSettings() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Activity Scope
+                    Activity scope
                   </label>
                   <div className="space-y-2">
                     <label className="flex items-center">
@@ -759,7 +822,7 @@ export default function DigestSettings() {
                 disabled={isSaving || !formData.name.trim()}
                 loading={isSaving}
               >
-                {editingConfig ? 'Update' : 'Create'} Configuration
+                {editingConfig ? 'Update' : 'Create'}
               </Button>
             </div>
           </div>
