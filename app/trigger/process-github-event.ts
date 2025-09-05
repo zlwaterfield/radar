@@ -93,14 +93,6 @@ async function processEventNotifications(event: any): Promise<boolean> {
   try {
     console.log(`Processing notifications for event ${event.id} (${event.eventType})`);
     
-    // Here we would:
-    // 1. Get relevant users for this repository
-    // 2. Check their notification preferences 
-    // 3. Create and send notifications via Slack
-    // 4. Store notification records
-    
-    // Process notifications for this event
-    
     const { eventType, action, payload, repositoryName } = event;
     
     // Get users who should receive this notification
@@ -415,12 +407,14 @@ function createSlackMessage(data: any) {
  */
 function createPRSlackMessage(data: any) {
   const { action, repositoryName, title, url, payload } = data;
-  const color = EVENT_COLORS[action] || EVENT_COLORS.default;
+  // Determine actual action for merged PRs
+  const actualAction = (action === "closed" && payload.pull_request?.merged) ? "merged" : action;
+  const color = EVENT_COLORS[actualAction] || EVENT_COLORS.default;
   
   // Create icon based on action
   let icon = "🔄";  // Default icon
   if (action === "opened") icon = "🆕";
-  else if (action === "closed") icon = "🚫";
+  else if (action === "closed") icon = payload.pull_request?.merged ? "🔀" : "🚫";
   else if (action === "reopened") icon = "🔄";
   else if (action === "merged") icon = "🔀";
   else if (action === "review_requested") icon = "👀";
@@ -435,7 +429,11 @@ function createPRSlackMessage(data: any) {
   if (action === "opened") {
     contextText = `${githubUserLink} opened this pull request in *${repositoryName}*`;
   } else if (action === "closed") {
-    contextText = `${githubUserLink} closed this pull request in *${repositoryName}*`;
+    if (payload.pull_request?.merged) {
+      contextText = `${githubUserLink} merged this pull request in *${repositoryName}*`;
+    } else {
+      contextText = `${githubUserLink} closed this pull request in *${repositoryName}*`;
+    }
   } else if (action === "merged") {
     contextText = `${githubUserLink} merged this pull request in *${repositoryName}*`;
   } else if (action === "reopened") {
@@ -443,7 +441,7 @@ function createPRSlackMessage(data: any) {
   } else if (action === "assigned") {
     contextText = `${githubUserLink} assigned someone to this pull request in *${repositoryName}*`;
   } else if (action === "review_requested") {
-    contextText = `${githubUserLink}request a review for this pull request in *${repositoryName}*`;
+    contextText = `${githubUserLink} request a review for this pull request in *${repositoryName}*`;
   } else {
     contextText = `${githubUserLink} ${action} this pull request in *${repositoryName}*`;
   }
