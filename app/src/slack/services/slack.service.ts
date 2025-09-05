@@ -308,10 +308,17 @@ export class SlackService {
       const client = this.createUserClient(accessToken);
 
       // Send message to channel
-      const messageResponse = await client.chat.postMessage({
+      const messageData: any = {
         channel: channelId,
         ...message,
-      });
+      };
+      
+      // Remove undefined attachments to satisfy TypeScript
+      if (messageData.attachments === undefined) {
+        delete messageData.attachments;
+      }
+      
+      const messageResponse = await client.chat.postMessage(messageData);
 
       if (messageResponse.ok) {
         this.logger.log(`Channel message sent to channel ${channelId}`);
