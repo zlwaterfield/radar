@@ -393,7 +393,7 @@ const EVENT_COLORS: Record<string, string> = {
  * Create Slack message structure with proper formatting
  */
 function createSlackMessage(data: any) {
-  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const { eventType } = data;
   
   if (eventType === 'pull_request') {
     return createPRSlackMessage(data);
@@ -402,11 +402,11 @@ function createSlackMessage(data: any) {
   } else if (eventType === 'pull_request_review') {
     return createPRReviewSlackMessage(data);
   } else if (eventType === 'pull_request_review_comment') {
-    return createPRCommentSlackMessage(data);
+    return createPRReviewCommentSlackMessage(data);
   } else if (eventType === 'issue_comment') {
     return createIssueCommentSlackMessage(data);
   } else {
-    return createGenericSlackMessage(data);
+    throw new Error(`Unknown event type: ${eventType}`);
   }
 }
 
@@ -414,7 +414,7 @@ function createSlackMessage(data: any) {
  * Create Slack message for pull request notifications
  */
 function createPRSlackMessage(data: any) {
-  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const { action, repositoryName, title, url, payload } = data;
   const color = EVENT_COLORS[action] || EVENT_COLORS.default;
   
   // Create icon based on action
@@ -426,9 +426,6 @@ function createPRSlackMessage(data: any) {
   else if (action === "review_requested") icon = "👀";
   else if (action === "assigned") icon = "👤";
   
-  // Format action text
-  const actionText = action.replace("_", " ").charAt(0).toUpperCase() + action.replace("_", " ").slice(1);
-  
   // Create GitHub user link
   const user = payload.pull_request?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
@@ -436,34 +433,20 @@ function createPRSlackMessage(data: any) {
   // Create contextual text based on action
   let contextText;
   if (action === "opened") {
-    contextText = `${githubUserLink} opened this pull request in \`${repositoryName}\``;
+    contextText = `${githubUserLink} opened this pull request in *${repositoryName}*`;
   } else if (action === "closed") {
-    contextText = `${githubUserLink} closed this pull request in \`${repositoryName}\``;
+    contextText = `${githubUserLink} closed this pull request in *${repositoryName}*`;
   } else if (action === "merged") {
-    contextText = `${githubUserLink} merged this pull request in \`${repositoryName}\``;
+    contextText = `${githubUserLink} merged this pull request in *${repositoryName}*`;
   } else if (action === "reopened") {
-    contextText = `${githubUserLink} reopened this pull request in \`${repositoryName}\``;
+    contextText = `${githubUserLink} reopened this pull request in *${repositoryName}*`;
   } else if (action === "assigned") {
-    contextText = `${githubUserLink} assigned someone to this pull request in \`${repositoryName}\``;
+    contextText = `${githubUserLink} assigned someone to this pull request in *${repositoryName}*`;
   } else if (action === "review_requested") {
-    contextText = `Review requested from ${githubUserLink} for this pull request in \`${repositoryName}\``;
+    contextText = `${githubUserLink}request a review for this pull request in *${repositoryName}*`;
   } else {
-    contextText = `${githubUserLink} ${action} this pull request in \`${repositoryName}\``;
+    contextText = `${githubUserLink} ${action} this pull request in *${repositoryName}*`;
   }
-
-  // Get user-friendly action text
-  const getFriendlyActionText = (action: string): string => {
-    switch (action) {
-      case 'opened': return 'opened';
-      case 'closed': return payload.pull_request?.merged ? 'merged' : 'closed';
-      case 'reopened': return 'reopened';
-      case 'review_requested': return 'requested review for';
-      case 'assigned': return 'assigned';
-      default: return action.replace('_', ' ');
-    }
-  };
-
-  const friendlyAction = getFriendlyActionText(action);
   
   // Create blocks with attachment styling, putting PR title in main message
   const blocks = [
@@ -471,7 +454,14 @@ function createPRSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${icon} *<${url}|${title}>*`
+        text: `${icon} ${contextText}`
+      }
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*<${url}|${title}>*`
       },
       accessory: {
         type: 'button',
@@ -484,16 +474,27 @@ function createPRSlackMessage(data: any) {
         action_id: 'view_pr'
       }
     },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `\`${repositoryName}\``
-        }
-      ]
-    } as any
   ];
+
+  if (action in ["opened", "review_requested"]) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: data.body,
+      }
+    });
+  }
+
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `${repositoryName}`
+      }
+    ]
+  } as any);
 
   return {
     blocks: [],
@@ -510,7 +511,7 @@ function createPRSlackMessage(data: any) {
  * Create Slack message for issue notifications
  */
 function createIssueSlackMessage(data: any) {
-  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const { action, repositoryName, title, url, payload } = data;
   
   // Map issue action to color
   const actionColorKey = `issue_${action}`;
@@ -523,28 +524,22 @@ function createIssueSlackMessage(data: any) {
   else if (action === "reopened") icon = "🔄";
   else if (action === "assigned") icon = "👤";
   
-  // Format action text
-  const actionText = action.replace("_", " ").charAt(0).toUpperCase() + action.replace("_", " ").slice(1);
-  
   // Create GitHub user link
   const user = payload.issue?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
   
-  // Check if this is a pull request by examining the URL
-  const isPullRequest = url.includes('/pull/');
-  
-  // Set the appropriate title and context based on whether it's a PR or issue
-  let titleText, contextText, itemPrefix, viewText;
-  if (isPullRequest) {
-    titleText = `${icon} *Pull Request ${actionText}* by ${githubUserLink}`;
-    contextText = `${githubUserLink} ${action} this pull request in \`${repositoryName}\``;
-    itemPrefix = "PR";
-    viewText = "View PR";
+  // Create contextual text based on action
+  let contextText;
+  if (action === "opened") {
+    contextText = `${githubUserLink} opened this issue in *${repositoryName}*`;
+  } else if (action === "closed") {
+    contextText = `${githubUserLink} closed this issue in *${repositoryName}*`;
+  } else if (action === "reopened") {
+    contextText = `${githubUserLink} reopened this issue in *${repositoryName}*`;
+  } else if (action === "assigned") {
+    contextText = `${githubUserLink} assigned someone to this issue in *${repositoryName}*`;
   } else {
-    titleText = `${icon} *GitHub Issue ${actionText}* by ${githubUserLink}`;
-    contextText = `${githubUserLink} ${action} this issue in \`${repositoryName}\``;
-    itemPrefix = "Issue";
-    viewText = "View Issue";
+    contextText = `${githubUserLink} ${action} this issue in *${repositoryName}*`;
   }
 
   // Create blocks with issue/PR title prominently displayed
@@ -553,29 +548,47 @@ function createIssueSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${icon} *<${url}|${title}>*`
+        text: `${icon} ${contextText}`
+      }
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*<${url}|${title}>*`
       },
       accessory: {
         type: 'button',
         text: {
           type: 'plain_text',
-          text: viewText,
+          text: 'View Issue',
           emoji: true
         },
         url: url,
         action_id: 'view_issue'
       }
     },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `\`${repositoryName}\``
-        }
-      ]
-    } as any
   ];
+
+  if (action in ["opened"]) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: data.body,
+      }
+    });
+  }
+
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `${repositoryName}`
+      }
+    ]
+  } as any);
 
   return {
     blocks: [],
@@ -592,7 +605,7 @@ function createIssueSlackMessage(data: any) {
  * Create Slack message for pull request review notifications
  */
 function createPRReviewSlackMessage(data: any) {
-  const { eventType, action, repositoryName, title, message, url, payload } = data;
+  const { action, repositoryName, title, message, url, payload } = data;
   
   // Map review state to color
   const reviewState = payload.review?.state || action;
@@ -605,12 +618,12 @@ function createPRReviewSlackMessage(data: any) {
   else if (reviewState === "commented") icon = "💬";
   else if (reviewState === "dismissed") icon = "🚫";
   
-  // Format state text
-  const stateText = reviewState.replace("_", " ").charAt(0).toUpperCase() + reviewState.replace("_", " ").slice(1);
-  
   // Create GitHub user link
   const user = payload.review?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
+
+  let reviewStateText = reviewState;
+  if (reviewState === "changes_requested") reviewStateText = "requested changes";
   
   // Create blocks with PR title prominently displayed
   const blocks = [
@@ -618,7 +631,14 @@ function createPRReviewSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${icon} *<${url}|${title}>*`
+        text: `${icon} ${githubUserLink} ${reviewStateText} this pull request in *${repositoryName}*`
+      }
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*<${url}|${title}>*`
       },
       accessory: {
         type: 'button',
@@ -631,15 +651,6 @@ function createPRReviewSlackMessage(data: any) {
         action_id: 'view_pr'
       }
     },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `\`${repositoryName}\``
-        }
-      ]
-    } as any
   ];
   
   // Add review comment if present
@@ -648,10 +659,20 @@ function createPRReviewSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*Comment:*\n${processMarkdownForSlack(payload.review.body, 300)}`
+        text: `${processMarkdownForSlack(payload.review.body, 300)}`
       }
     });
   }
+
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `${repositoryName}`
+      }
+    ]
+  } as any);
 
   return {
     blocks: [],
@@ -667,8 +688,8 @@ function createPRReviewSlackMessage(data: any) {
 /**
  * Create Slack message for pull request comment notifications
  */
-function createPRCommentSlackMessage(data: any) {
-  const { eventType, action, repositoryName, title, message, url, payload } = data;
+function createPRReviewCommentSlackMessage(data: any) {
+  const { repositoryName, title, message, url, payload } = data;
   const color = EVENT_COLORS.commented;
   
   // Create GitHub user link
@@ -681,7 +702,14 @@ function createPRCommentSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `💬 *<${url}|${title}>*`
+        text: `💬 ${githubUserLink} commented on this pull request in *${repositoryName}`
+      }
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*<${url}|${title}>*`
       },
       accessory: {
         type: 'button',
@@ -695,24 +723,21 @@ function createPRCommentSlackMessage(data: any) {
       }
     },
     {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: processMarkdownForSlack(payload.comment?.body || message, 1000)
+      }
+    },
+    {
       type: 'context',
       elements: [
         {
           type: 'mrkdwn',
-          text: `\`${repositoryName}\``
+          text: `${repositoryName}`
         }
       ]
-    } as any,
-    {
-      type: 'divider'
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: processMarkdownForSlack(payload.comment?.body || message, 300)
-      }
-    }
+    } as any
   ];
 
   return {
@@ -741,16 +766,12 @@ function createIssueCommentSlackMessage(data: any) {
   const isPullRequest = url.includes('/pull/');
   
   // Set the appropriate title and context based on whether it's a PR or issue
-  let titleText, contextText, itemPrefix, viewText;
+  let contextText, viewText;
   if (isPullRequest) {
-    titleText = `💬 *Pull Request Comment* by ${githubUserLink}`;
-    contextText = `${githubUserLink} commented on this pull request in \`${repositoryName}\``;
-    itemPrefix = "PR";
+    contextText = `${githubUserLink} commented on this pull request in *${repositoryName}*`;
     viewText = "View PR";
   } else {
-    titleText = `💬 *Issue Comment* by ${githubUserLink}`;
-    contextText = `${githubUserLink} commented on this issue in \`${repositoryName}\``;
-    itemPrefix = "Issue";
+    contextText = `${githubUserLink} commented on this issue in *${repositoryName}*`;
     viewText = "View Issue";
   }
   
@@ -760,21 +781,26 @@ function createIssueCommentSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `💬 *<${url}|${title}>*`
+        text: `💬 ${contextText}`
       }
     },
     {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `\`${repositoryName}\``
-        }
-      ]
-    } as any,
-    {
-      type: 'divider'
-    }
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*<${url}|${title}>*`
+      },
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: viewText,
+          emoji: true
+        },
+        url: url,
+        action_id: 'view_issue'
+      }
+    },
   ];
   
   // Add comment content if available
@@ -787,88 +813,13 @@ function createIssueCommentSlackMessage(data: any) {
       }
     });
   }
-  
-  // Add action button to the first section instead
-  blocks[0].accessory = {
-    type: 'button',
-    text: {
-      type: 'plain_text',
-      text: viewText,
-      emoji: true
-    },
-    url: url,
-    action_id: 'view_issue'
-  };
 
-  return {
-    blocks: [],
-    attachments: [
-      {
-        color,
-        blocks
-      }
-    ]
-  };
-}
-
-/**
- * Create generic Slack message for other notification types
- */
-function createGenericSlackMessage(data: any) {
-  const { eventType, repositoryName, title, message, url, payload } = data;
-  const color = EVENT_COLORS.default;
-  
-  // Create GitHub user link
-  const user = payload.sender?.login;
-  const githubUserLink = user ? `<https://github.com/${user}|${user}>` : 'Someone';
-  
-  // Create blocks with attachment styling
-  const blocks = [
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `🔄 *GitHub Activity* by ${githubUserLink}`
-      }
-    },
-    {
-      type: 'divider'
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `<${url}|*${title}*>`
-      },
-      accessory: {
-        type: 'button',
-        text: {
-          type: 'plain_text',
-          text: 'View on GitHub',
-          emoji: true
-        },
-        url: url,
-        action_id: 'view_github'
-      }
-    }
-  ];
-  
-  if (message && message !== title) {
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: processMarkdownForSlack(message, 300)
-      }
-    });
-  }
-  
   blocks.push({
     type: 'context',
     elements: [
       {
         type: 'mrkdwn',
-        text: `${githubUserLink} performed ${eventType} action in \`${repositoryName}\``
+        text: `${repositoryName}`
       }
     ]
   } as any);
@@ -916,14 +867,6 @@ function processMarkdownForSlack(text: string, maxLength: number = 300): string 
   }
   
   return processed;
-}
-
-/**
- * Truncate text to specified length
- */
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength - 3) + '...';
 }
 
 /**
