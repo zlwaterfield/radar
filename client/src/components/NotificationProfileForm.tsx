@@ -31,7 +31,6 @@ interface NotificationProfileFormProps {
 }
 
 export function NotificationProfileForm({ profile, onClose, createProfile, updateProfile }: NotificationProfileFormProps) {
-  console.log('NotificationProfileForm rendered with profile:', profile);
   // Using passed-in functions instead of hook to avoid multiple hook instances
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,18 +153,14 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
   };
 
   const handleToggleEnabled = async (enabled: boolean) => {
-    console.log('handleToggleEnabled called:', { enabled, profile: !!profile, profileId: profile?.id });
     if (!profile) {
-      console.log('No profile, skipping toggle');
       return;
     }
     
     setFormData(prev => ({ ...prev, isEnabled: enabled }));
     
     try {
-      console.log('Making update request with:', { isEnabled: enabled });
       const result = await updateProfile(profile.id!, { isEnabled: enabled });
-      console.log('Update successful:', result);
     } catch (err) {
       console.error('Update failed:', err);
       // Revert the toggle if the update fails

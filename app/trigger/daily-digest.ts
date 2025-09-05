@@ -29,12 +29,6 @@ const configService = new ConfigService({
   monitoring: monitoringConfig(),
 });
 
-// Log configuration status for debugging
-console.log('ConfigService initialized with configs:');
-console.log(`- Slack signing secret: ${configService.get('slack.signingSecret') ? 'present' : 'missing'}`);
-console.log(`- Slack bot token: ${configService.get('slack.botToken') ? 'present' : 'missing'}`);
-console.log(`- GitHub app ID: ${configService.get('github.appId') ? 'present' : 'missing'}`);
-
 const analyticsService = new AnalyticsService(configService);
 const databaseService = new DatabaseService();
 
@@ -60,10 +54,7 @@ export const dailyDigest = schedules.task({
     maxTimeoutInMs: 30000,
   },
   run: async (payload, { ctx }) => {
-    console.log('Initializing SlackService in dailyDigest task...');
     const slackService = new SlackService(configService, databaseService);
-    console.log('SlackService initialized successfully in dailyDigest task');
-    
     const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService);
     
     try {
@@ -206,55 +197,6 @@ export const testDigestConfig = task({
 
     } catch (error) {
       console.error("Error in test digest config:", error);
-      throw error;
-    } finally {
-      await prisma.$disconnect();
-    }
-  },
-});
-
-// Legacy task for testing individual user digests (for backward compatibility)
-export const testUserDigest = task({
-  id: "test-user-digest", 
-  run: async (payload: { userId: string }) => {
-    console.log('Initializing SlackService in testUserDigest task...');
-    const slackService = new SlackService(configService, databaseService);
-    console.log('SlackService initialized successfully in testUserDigest task');
-    
-    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService);
-    
-    try {
-      const { userId } = payload;
-      
-      // Get user data - use new multiple digest system
-      const users = await digestConfigService.getUsersWithEnabledDigests();
-      const userData = users.find(u => u.userId === userId);
-      
-      if (!userData || userData.digestConfigs.length === 0) {
-        throw new Error(`User ${userId} not found or no digest configurations enabled`);
-      }
-
-      // Test the first enabled digest config
-      const config = userData.digestConfigs[0];
-      const executionData = await digestConfigService.getDigestExecutionData(config.id);
-
-      // Generate and send digest immediately (no waiting)
-      const digest = await digestService.generateDigestForConfig(executionData);
-      const sent = await digestService.sendDigestForConfig(executionData, digest);
-
-      return {
-        success: sent,
-        message: sent ? "Test digest sent successfully" : "Failed to send test digest",
-        configName: config.name,
-        digest: {
-          waitingOnUser: digest.waitingOnUser.length,
-          approvedReadyToMerge: digest.approvedReadyToMerge.length,
-          userOpenPRs: digest.userOpenPRs.length
-        }
-      };
-
-    } catch (error) {
-      console.error("Error in test user digest:", error);
       throw error;
     } finally {
       await prisma.$disconnect();

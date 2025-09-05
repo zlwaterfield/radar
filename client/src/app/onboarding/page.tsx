@@ -47,9 +47,6 @@ function OnboardingContent() {
       const slackStatus = await slackResponse.json();
       const githubStatus = await githubResponse.json();
 
-      console.log('slackStatus', slackStatus);
-      console.log('githubStatus', githubStatus);
-
       setIntegrationStatus({
         slack: slackStatus,
         github: githubStatus,

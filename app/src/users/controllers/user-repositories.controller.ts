@@ -131,7 +131,6 @@ export class UserRepositoriesController {
 
     // Check if user has GitHub access token
     const fullUser = await this.usersService.getUserById(user.id);
-    console.log('fullUser', fullUser);
     if (!fullUser || !fullUser.githubAccessToken) {
       throw new BadRequestException(
         'GitHub account not connected. Please connect your GitHub account first.',
