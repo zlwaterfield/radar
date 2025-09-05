@@ -11,15 +11,9 @@ import { UserRepositoriesController } from './controllers/user-repositories.cont
 import { UserTeamsController } from './controllers/user-teams.controller';
 import { RadarAuthModule } from '../auth/auth.module';
 import { GitHubModule } from '../github/github.module';
-import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    forwardRef(() => RadarAuthModule),
-    forwardRef(() => GitHubModule),
-    forwardRef(() => IntegrationsModule),
-  ],
+  imports: [ConfigModule, forwardRef(() => RadarAuthModule), GitHubModule],
   controllers: [
     UsersController,
     UserSettingsController,

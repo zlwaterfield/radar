@@ -6,6 +6,7 @@ import { NotificationProfileService } from "../src/notifications/services/notifi
 import { LLMAnalyzerService } from "../src/notifications/services/llm-analyzer.service";
 import { DatabaseService } from "../src/database/database.service";
 import { GitHubService } from "../src/github/services/github.service";
+import { GitHubTokenService } from "../src/github/services/github-token.service";
 import { GitHubIntegrationService } from "../src/integrations/services/github-integration.service";
 import { AnalyticsService } from "../src/analytics/analytics.service";
 import { ConfigService } from "@nestjs/config";
@@ -17,9 +18,9 @@ const prisma = new PrismaClient();
 const configService = new ConfigService();
 const analyticsService = new AnalyticsService(configService);
 const databaseService = new DatabaseService();
-// Create GitHub integration service first (it will be passed to other services)
-const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, null as any);
-const githubService = new GitHubService(configService, databaseService, analyticsService, githubIntegrationService);
+// Create GitHub token service first (no circular dependencies)
+const githubTokenService = new GitHubTokenService(configService, databaseService);
+const githubService = new GitHubService(configService, databaseService, analyticsService, githubTokenService);
 const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
 // Initialize all services properly
 const notificationProfileService = new NotificationProfileService(databaseService);

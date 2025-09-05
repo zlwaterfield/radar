@@ -4,6 +4,7 @@ import { DigestService } from "../src/digest/digest.service";
 import { DigestConfigService } from "../src/digest/digest-config.service";
 import { DatabaseService } from "../src/database/database.service";
 import { GitHubService } from "../src/github/services/github.service";
+import { GitHubTokenService } from "../src/github/services/github-token.service";
 import { SlackService } from "../src/slack/services/slack.service";
 import { GitHubIntegrationService } from "../src/integrations/services/github-integration.service";
 import { UserTeamsSyncService } from "../src/users/services/user-teams-sync.service";
@@ -37,17 +38,15 @@ console.log(`- GitHub app ID: ${configService.get('github.appId') ? 'present' : 
 const analyticsService = new AnalyticsService(configService);
 const databaseService = new DatabaseService();
 
-// Create GitHub integration service first (it will be passed to other services)
-// Note: We'll create it with null for userTeamsSyncService initially to avoid circular dependency
-const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, null as any);
-const githubService = new GitHubService(configService, databaseService, analyticsService, githubIntegrationService);
+// Create GitHub token service first (no circular dependencies)
+const githubTokenService = new GitHubTokenService(configService, databaseService);
+const githubService = new GitHubService(configService, databaseService, analyticsService, githubTokenService);
 const digestConfigService = new DigestConfigService(databaseService);
 
-const userRepositoriesService = new UserRepositoriesService(databaseService, githubService, githubIntegrationService);
-const userTeamsSyncService = new UserTeamsSyncService(databaseService, githubService, githubIntegrationService, userRepositoriesService);
+const userRepositoriesService = new UserRepositoriesService(databaseService, githubService, githubTokenService);
+const userTeamsSyncService = new UserTeamsSyncService(databaseService, githubService, githubTokenService, userRepositoriesService);
+const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, githubTokenService, userTeamsSyncService);
 
-// Now set the userTeamsSyncService on the githubIntegrationService to complete the circular dependency
-(githubIntegrationService as any).userTeamsSyncService = userTeamsSyncService;
 
 
 export const dailyDigest = schedules.task({

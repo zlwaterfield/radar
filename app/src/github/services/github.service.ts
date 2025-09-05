@@ -1,14 +1,9 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Octokit } from '@octokit/rest';
 import { DatabaseService } from '../../database/database.service';
 import { AnalyticsService } from '../../analytics/analytics.service';
+import { GitHubTokenService } from './github-token.service';
 import type {
   GitHubRepository,
   GitHubPullRequest,
@@ -19,7 +14,6 @@ import type {
 } from '@/common/types/github.types';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
-import { GitHubIntegrationService } from '../../integrations/services/github-integration.service';
 
 @Injectable()
 export class GitHubService {
@@ -29,8 +23,7 @@ export class GitHubService {
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
     private readonly analyticsService: AnalyticsService,
-    @Inject(forwardRef(() => GitHubIntegrationService))
-    private readonly githubIntegrationService: GitHubIntegrationService,
+    private readonly githubTokenService: GitHubTokenService,
   ) {}
 
   /**
@@ -124,7 +117,7 @@ export class GitHubService {
 
         // Try to refresh the token
         const newToken =
-          await this.githubIntegrationService.getValidTokenForApiCall(userId);
+          await this.githubTokenService.getValidTokenForApiCall(userId);
 
         if (newToken) {
           this.logger.log(

@@ -1,13 +1,7 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { GitHubService } from '../../github/services/github.service';
-import { GitHubIntegrationService } from '../../integrations/services/github-integration.service';
+import { GitHubTokenService } from '../../github/services/github-token.service';
 import { getPaginationSkip } from '../../common/utils/pagination.util';
 import type { UserRepository } from '@prisma/client';
 
@@ -17,10 +11,8 @@ export class UserRepositoriesService {
 
   constructor(
     private readonly databaseService: DatabaseService,
-    @Inject(forwardRef(() => GitHubService))
     private readonly githubService: GitHubService,
-    @Inject(forwardRef(() => GitHubIntegrationService))
-    private readonly githubIntegrationService: GitHubIntegrationService,
+    private readonly githubTokenService: GitHubTokenService,
   ) {}
 
   /**
@@ -273,7 +265,7 @@ export class UserRepositoriesService {
 
         // Try to refresh the token
         const newToken =
-          await this.githubIntegrationService.getValidTokenForApiCall(userId);
+          await this.githubTokenService.getValidTokenForApiCall(userId);
 
         if (newToken) {
           this.logger.log(

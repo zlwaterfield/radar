@@ -178,7 +178,7 @@ export class DigestService {
               );
 
               const newAccessToken =
-                await this.githubIntegrationService.refreshAccessToken(
+                await this.githubIntegrationService.getValidTokenForApiCall(
                   executionData.userId,
                 );
 

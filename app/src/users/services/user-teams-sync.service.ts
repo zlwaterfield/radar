@@ -1,7 +1,7 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { GitHubService } from '../../github/services/github.service';
-import { GitHubIntegrationService } from '../../integrations/services/github-integration.service';
+import { GitHubTokenService } from '../../github/services/github-token.service';
 import { UserRepositoriesService } from './user-repositories.service';
 import type { GitHubTeam } from '../../common/types/github.types';
 
@@ -11,11 +11,8 @@ export class UserTeamsSyncService {
 
   constructor(
     private readonly databaseService: DatabaseService,
-    @Inject(forwardRef(() => GitHubService))
     private readonly githubService: GitHubService,
-    @Inject(forwardRef(() => GitHubIntegrationService))
-    private readonly githubIntegrationService: GitHubIntegrationService,
-    @Inject(forwardRef(() => UserRepositoriesService))
+    private readonly githubTokenService: GitHubTokenService,
     private readonly userRepositoriesService: UserRepositoriesService,
   ) {}
 
@@ -116,7 +113,7 @@ export class UserTeamsSyncService {
 
         // Try to refresh the token
         const newToken =
-          await this.githubIntegrationService.getValidTokenForApiCall(userId);
+          await this.githubTokenService.getValidTokenForApiCall(userId);
 
         if (newToken) {
           this.logger.log(
