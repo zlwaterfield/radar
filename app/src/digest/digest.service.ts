@@ -74,8 +74,10 @@ export class DigestService {
         .filter((review) => review.user?.login !== userLogin)
         .filter((review) => review.state === 'APPROVED');
 
-      this.logger.debug(`PR #${pr.number} has ${otherApprovals.length} approvals from others`);
-      
+      this.logger.debug(
+        `PR #${pr.number} has ${otherApprovals.length} approvals from others`,
+      );
+
       return otherApprovals.length > 0;
     } catch (error) {
       this.logger.warn(`Error checking PR approval status: ${error}`);
@@ -88,10 +90,10 @@ export class DigestService {
    */
   isDigestTimeMatched(digestTime: string, now: Date = new Date()): boolean {
     const [hours, minutes] = digestTime.split(':').map(Number);
-    
+
     // Round minutes to nearest 15-minute interval
     const roundedMinutes = Math.floor(minutes / 15) * 15;
-    
+
     return now.getHours() === hours && now.getMinutes() === roundedMinutes;
   }
 
@@ -101,7 +103,7 @@ export class DigestService {
   async wasDigestSentToday(configId: string): Promise<boolean> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -545,8 +547,10 @@ export class DigestService {
 
       // Check if this is the user's own PR first
       if (pr.user.login === executionData.userGithubLogin) {
-        this.logger.debug(`Processing user's own PR #${pr.number}: ${pr.title}`);
-        
+        this.logger.debug(
+          `Processing user's own PR #${pr.number}: ${pr.title}`,
+        );
+
         // Category 2: User's PRs approved by others and ready to merge
         const isApprovedAndReady = await this.isPRApprovedByOthersAndReady(
           pr,
@@ -555,9 +559,11 @@ export class DigestService {
           executionData.userGithubLogin,
           accessToken,
         );
-        
+
         if (isApprovedAndReady) {
-          this.logger.debug(`PR #${pr.number} categorized as approvedReadyToMerge`);
+          this.logger.debug(
+            `PR #${pr.number} categorized as approvedReadyToMerge`,
+          );
           digest.approvedReadyToMerge.push(pr);
         }
         // Category 3 & 4: User's own PRs (separate draft from not-yet-approved)

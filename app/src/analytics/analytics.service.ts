@@ -37,7 +37,11 @@ export class AnalyticsService {
   /**
    * Track an event
    */
-  track(distinctId: string, event: string, properties: Record<string, any> = {}) {
+  track(
+    distinctId: string,
+    event: string,
+    properties: Record<string, any> = {},
+  ) {
     if (!this.isEnabled || !this.posthog) {
       return;
     }
@@ -59,7 +63,11 @@ export class AnalyticsService {
   /**
    * Track an error using PostHog's exception tracking
    */
-  trackError(distinctId: string, error: Error, context: Record<string, any> = {}) {
+  trackError(
+    distinctId: string,
+    error: Error,
+    context: Record<string, any> = {},
+  ) {
     if (!this.isEnabled || !this.posthog) {
       return;
     }
@@ -92,7 +100,11 @@ export class AnalyticsService {
   /**
    * Track notification events
    */
-  trackNotification(userId: string, event: 'sent' | 'failed' | 'skipped', properties: Record<string, any> = {}) {
+  trackNotification(
+    userId: string,
+    event: 'sent' | 'failed' | 'skipped',
+    properties: Record<string, any> = {},
+  ) {
     this.track(userId, `notification_${event}`, {
       category: 'notification',
       ...properties,
@@ -102,7 +114,11 @@ export class AnalyticsService {
   /**
    * Track GitHub webhook events
    */
-  trackWebhook(repositoryId: string, event: string, properties: Record<string, any> = {}) {
+  trackWebhook(
+    repositoryId: string,
+    event: string,
+    properties: Record<string, any> = {},
+  ) {
     this.track(`repo_${repositoryId}`, `webhook_${event}`, {
       category: 'webhook',
       ...properties,
@@ -112,7 +128,11 @@ export class AnalyticsService {
   /**
    * Track user actions
    */
-  trackUserAction(userId: string, action: string, properties: Record<string, any> = {}) {
+  trackUserAction(
+    userId: string,
+    action: string,
+    properties: Record<string, any> = {},
+  ) {
     this.track(userId, `user_${action}`, {
       category: 'user_action',
       ...properties,

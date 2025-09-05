@@ -312,12 +312,12 @@ export class SlackService {
         channel: channelId,
         ...message,
       };
-      
+
       // Remove undefined attachments to satisfy TypeScript
       if (messageData.attachments === undefined) {
         delete messageData.attachments;
       }
-      
+
       const messageResponse = await client.chat.postMessage(messageData);
 
       if (messageResponse.ok) {

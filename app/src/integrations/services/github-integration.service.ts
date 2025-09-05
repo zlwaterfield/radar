@@ -245,7 +245,7 @@ export class GitHubIntegrationService {
   /**
    * Ensures the user has a valid GitHub access token.
    * First attempts to refresh the token in the background, then falls back to user authentication.
-   * 
+   *
    * @param userId - The user ID
    * @param response - Express response object for redirects
    * @param reconnect - Whether this is a reconnect attempt
@@ -260,14 +260,16 @@ export class GitHubIntegrationService {
       // Get current user with access token
       const user = await this.databaseService.user.findUnique({
         where: { id: userId },
-        select: { 
+        select: {
           githubAccessToken: true,
           githubRefreshToken: true,
         },
       });
 
       if (!user?.githubAccessToken) {
-        this.logger.log(`No GitHub access token found for user ${userId}, redirecting to auth`);
+        this.logger.log(
+          `No GitHub access token found for user ${userId}, redirecting to auth`,
+        );
         const authUrl = this.generateAuthUrl(userId, reconnect);
         response.redirect(authUrl);
         return null;
@@ -288,25 +290,31 @@ export class GitHubIntegrationService {
           return user.githubAccessToken;
         }
       } catch (testError) {
-        this.logger.debug(`Current token test failed for user ${userId}, attempting refresh`);
+        this.logger.debug(
+          `Current token test failed for user ${userId}, attempting refresh`,
+        );
       }
 
       // Current token failed, try to refresh
       const newAccessToken = await this.refreshAccessToken(userId);
-      
+
       if (newAccessToken) {
         this.logger.log(`Successfully refreshed token for user ${userId}`);
         return newAccessToken;
       }
 
       // Refresh failed, redirect to GitHub for re-authentication
-      this.logger.log(`Token refresh failed for user ${userId}, redirecting to GitHub auth`);
+      this.logger.log(
+        `Token refresh failed for user ${userId}, redirecting to GitHub auth`,
+      );
       const authUrl = this.generateAuthUrl(userId, true);
       response.redirect(authUrl);
       return null;
-
     } catch (error) {
-      this.logger.error(`Error ensuring valid token for user ${userId}:`, error);
+      this.logger.error(
+        `Error ensuring valid token for user ${userId}:`,
+        error,
+      );
       const authUrl = this.generateAuthUrl(userId, reconnect);
       response.redirect(authUrl);
       return null;
@@ -316,7 +324,7 @@ export class GitHubIntegrationService {
   /**
    * Gets a valid GitHub access token for API calls without HTTP redirects.
    * This is useful for background jobs and services that don't have access to HTTP response objects.
-   * 
+   *
    * @param userId - The user ID
    * @returns The valid access token, or null if user needs to re-authenticate
    */
@@ -325,7 +333,7 @@ export class GitHubIntegrationService {
       // Get current user with access token
       const user = await this.databaseService.user.findUnique({
         where: { id: userId },
-        select: { 
+        select: {
           githubAccessToken: true,
           githubRefreshToken: true,
         },
@@ -351,21 +359,24 @@ export class GitHubIntegrationService {
           return user.githubAccessToken;
         }
       } catch (testError) {
-        this.logger.debug(`Current token test failed for user ${userId}, attempting refresh`);
+        this.logger.debug(
+          `Current token test failed for user ${userId}, attempting refresh`,
+        );
       }
 
       // Current token failed, try to refresh
       const newAccessToken = await this.refreshAccessToken(userId);
-      
+
       if (newAccessToken) {
         this.logger.log(`Successfully refreshed token for user ${userId}`);
         return newAccessToken;
       }
 
       // Refresh failed, user needs to re-authenticate
-      this.logger.warn(`Token refresh failed for user ${userId}, user needs to re-authenticate`);
+      this.logger.warn(
+        `Token refresh failed for user ${userId}, user needs to re-authenticate`,
+      );
       return null;
-
     } catch (error) {
       this.logger.error(`Error getting valid token for user ${userId}:`, error);
       return null;

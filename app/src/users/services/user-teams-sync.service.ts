@@ -109,21 +109,30 @@ export class UserTeamsSyncService {
     } catch (error: any) {
       // Check if it's a 401 Unauthorized error
       if (error?.status === 401 || error?.response?.status === 401) {
-        this.logger.log(`Got 401 error for user ${userId}, attempting token refresh`);
-        
+        this.logger.log(
+          `Got 401 error for user ${userId}, attempting token refresh`,
+        );
+
         // Try to refresh the token
-        const newToken = await this.githubIntegrationService.getValidTokenForApiCall(userId);
-        
+        const newToken =
+          await this.githubIntegrationService.getValidTokenForApiCall(userId);
+
         if (newToken) {
-          this.logger.log(`Token refreshed for user ${userId}, retrying teams sync`);
+          this.logger.log(
+            `Token refreshed for user ${userId}, retrying teams sync`,
+          );
           // Retry with the new token
           return await this.githubService.getUserTeams(newToken);
         } else {
-          this.logger.warn(`Failed to refresh token for user ${userId}, sync cannot continue`);
-          throw new Error('GitHub token expired and refresh failed - user needs to re-authenticate');
+          this.logger.warn(
+            `Failed to refresh token for user ${userId}, sync cannot continue`,
+          );
+          throw new Error(
+            'GitHub token expired and refresh failed - user needs to re-authenticate',
+          );
         }
       }
-      
+
       // Re-throw non-401 errors
       throw error;
     }

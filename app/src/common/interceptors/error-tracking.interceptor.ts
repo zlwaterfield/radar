@@ -16,7 +16,7 @@ export class ErrorTrackingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const userId = this.extractUserId(request);
-    
+
     return next.handle().pipe(
       catchError((error) => {
         this.analyticsService.trackError(userId || 'anonymous', error, {
@@ -38,7 +38,7 @@ export class ErrorTrackingInterceptor implements NestInterceptor {
     if (request.user?.id) {
       return request.user.id;
     }
-    
+
     if (request.headers['x-user-id']) {
       return request.headers['x-user-id'];
     }

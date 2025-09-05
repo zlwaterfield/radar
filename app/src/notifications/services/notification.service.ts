@@ -80,7 +80,6 @@ export class NotificationService {
         }
       }
 
-
       // Determine primary profile (highest priority match)
       const primaryProfile =
         matchedProfiles.length > 0 ? matchedProfiles[0] : undefined;
@@ -166,7 +165,11 @@ export class NotificationService {
       }
 
       // Check watching reasons
-      const data = await this.extractDataFromPayload(payload, eventType, userId);
+      const data = await this.extractDataFromPayload(
+        payload,
+        eventType,
+        userId,
+      );
       const watchingReasons = await this.determineWatchingReasons(userId, data);
 
       if (watchingReasons.size === 0) {
@@ -229,7 +232,6 @@ export class NotificationService {
         };
       }
 
-
       return {
         shouldMatch: false,
         matchedKeywords: [],
@@ -275,7 +277,6 @@ export class NotificationService {
       if (!githubUsername) {
         return watchingReasons;
       }
-
 
       // Determine if this is a PR or an issue
       let isPR = false;
@@ -425,7 +426,11 @@ export class NotificationService {
   /**
    * Helper to extract data object for watching reasons from payload
    */
-  private async extractDataFromPayload(payload: any, eventType: string, userId?: string): Promise<any> {
+  private async extractDataFromPayload(
+    payload: any,
+    eventType: string,
+    userId?: string,
+  ): Promise<any> {
     switch (eventType) {
       case 'pull_request':
         return payload.pull_request || {};
@@ -439,10 +444,10 @@ export class NotificationService {
             // This is a comment on a PR, fetch full PR data
             const repoFullName = payload.repository?.full_name;
             const prNumber = payload.issue.number;
-            
+
             if (repoFullName && prNumber) {
               const [owner, repo] = repoFullName.split('/');
-              
+
               // Try to get user's GitHub token first, fall back to app client
               let accessToken: string | undefined;
               if (userId) {
@@ -452,12 +457,20 @@ export class NotificationService {
                 });
                 accessToken = user?.githubAccessToken || undefined;
               }
-              
-              const fullPRData = await this.githubService.getPullRequest(owner, repo, prNumber, accessToken);
+
+              const fullPRData = await this.githubService.getPullRequest(
+                owner,
+                repo,
+                prNumber,
+                accessToken,
+              );
               return fullPRData;
             }
           } catch (error) {
-            this.logger.warn('Failed to fetch full PR data for issue comment, falling back to issue object:', error);
+            this.logger.warn(
+              'Failed to fetch full PR data for issue comment, falling back to issue object:',
+              error,
+            );
           }
         }
         // Fall back to issue object for regular issues or if PR fetch failed

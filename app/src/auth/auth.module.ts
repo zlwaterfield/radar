@@ -7,7 +7,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { auth } from './auth.config';
 
 @Module({
-  imports: [BetterAuthModule.forRoot(auth), forwardRef(() => NotificationsModule)],
+  imports: [
+    BetterAuthModule.forRoot(auth),
+    forwardRef(() => NotificationsModule),
+  ],
   controllers: [AuthController],
   providers: [AuthService, AuthGuard],
   exports: [AuthService, AuthGuard],

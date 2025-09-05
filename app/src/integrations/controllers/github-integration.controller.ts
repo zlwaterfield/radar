@@ -31,7 +31,10 @@ export class GitHubIntegrationController {
   @Get('connect')
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Initiate GitHub integration' })
-  @ApiResponse({ status: 302, description: 'Redirect to GitHub OAuth or success page' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirect to GitHub OAuth or success page',
+  })
   async connectGitHub(
     @CurrentUser() user: any,
     @Query('reconnect') reconnect: boolean,
@@ -45,7 +48,7 @@ export class GitHubIntegrationController {
           res,
           reconnect,
         );
-        
+
         if (validToken) {
           // Token refresh succeeded, redirect to success page instead of GitHub
           const frontendUrl = `${this.configService.get('app.frontendUrl')}/settings/github?refreshed=true`;
