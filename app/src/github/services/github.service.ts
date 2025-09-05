@@ -1,4 +1,10 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Octokit } from '@octokit/rest';
 import { DatabaseService } from '../../database/database.service';
@@ -12,6 +18,7 @@ import type {
 } from '@/common/types/github.types';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
+import { GitHubIntegrationService } from '../../integrations/services/github-integration.service';
 
 @Injectable()
 export class GitHubService {
@@ -20,6 +27,8 @@ export class GitHubService {
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
+    @Inject(forwardRef(() => GitHubIntegrationService))
+    private readonly githubIntegrationService: GitHubIntegrationService,
   ) {}
 
   /**
@@ -73,6 +82,61 @@ export class GitHubService {
   }
 
   /**
+   * Wrapper method to execute GitHub API calls with automatic token refresh on 401 errors
+   * @param userId - The user ID for token refresh
+   * @param apiCall - Function that takes a valid access token and returns a Promise
+   * @returns Promise with the API call result
+   */
+  async withTokenRefresh<T>(
+    userId: string,
+    apiCall: (accessToken: string) => Promise<T>,
+  ): Promise<T> {
+    // Get current user token
+    const user = await this.databaseService.user.findUnique({
+      where: { id: userId },
+      select: { githubAccessToken: true },
+    });
+
+    if (!user?.githubAccessToken) {
+      throw new BadRequestException('User not connected to GitHub');
+    }
+
+    try {
+      // Try with current token first
+      return await apiCall(user.githubAccessToken);
+    } catch (error: any) {
+      // Check if it's a 401 Unauthorized error
+      if (error?.status === 401 || error?.response?.status === 401) {
+        this.logger.log(
+          `Got 401 error for user ${userId}, attempting token refresh`,
+        );
+
+        // Try to refresh the token
+        const newToken =
+          await this.githubIntegrationService.getValidTokenForApiCall(userId);
+
+        if (newToken) {
+          this.logger.log(
+            `Token refreshed for user ${userId}, retrying API call`,
+          );
+          // Retry with the new token
+          return await apiCall(newToken);
+        } else {
+          this.logger.warn(
+            `Failed to refresh token for user ${userId}, API call cannot continue`,
+          );
+          throw new BadRequestException(
+            'GitHub token expired and refresh failed - user needs to re-authenticate',
+          );
+        }
+      }
+
+      // Re-throw non-401 errors
+      throw error;
+    }
+  }
+
+  /**
    * Get user repositories from GitHub API using access token
    */
   async getUserRepositories(
@@ -90,6 +154,7 @@ export class GitHubService {
     try {
       let accessToken: string;
       let logContext: string;
+      let userId: string | null = null;
 
       // Check if the parameter is a user ID or access token
       if (
@@ -98,38 +163,49 @@ export class GitHubService {
         userIdOrAccessToken.startsWith('ghu_') ||
         userIdOrAccessToken.length > 50
       ) {
-        // It's likely an access token
+        // It's likely an access token - use it directly without token refresh
         accessToken = userIdOrAccessToken;
         logContext = 'direct token';
+
+        // For now, assume tokens are stored in plain text
+        // TODO: Implement proper token encryption/decryption
+        const octokit = this.createUserClient(accessToken);
+
+        const { data: repositories } =
+          await octokit.repos.listForAuthenticatedUser({
+            sort: 'updated',
+            per_page: 100,
+            type: includePrivate ? 'all' : 'public',
+          });
+
+        this.logger.log(
+          `Retrieved ${repositories.length} repositories for ${logContext}`,
+        );
+        return repositories as any[];
       } else {
-        // It's a user ID, fetch the user's token
-        const user = await this.databaseService.user.findUnique({
-          where: { id: userIdOrAccessToken },
-        });
+        // It's a user ID - use token refresh wrapper
+        userId = userIdOrAccessToken;
+        logContext = `user ${userId}`;
 
-        if (!user?.githubAccessToken) {
-          throw new BadRequestException('User not connected to GitHub');
-        }
+        return await this.withTokenRefresh(
+          userId,
+          async (accessToken: string) => {
+            const octokit = this.createUserClient(accessToken);
 
-        accessToken = user.githubAccessToken;
-        logContext = `user ${userIdOrAccessToken}`;
+            const { data: repositories } =
+              await octokit.repos.listForAuthenticatedUser({
+                sort: 'updated',
+                per_page: 100,
+                type: includePrivate ? 'all' : 'public',
+              });
+
+            this.logger.log(
+              `Retrieved ${repositories.length} repositories for ${logContext}`,
+            );
+            return repositories as any[];
+          },
+        );
       }
-
-      // For now, assume tokens are stored in plain text
-      // TODO: Implement proper token encryption/decryption
-      const octokit = this.createUserClient(accessToken);
-
-      const { data: repositories } =
-        await octokit.repos.listForAuthenticatedUser({
-          sort: 'updated',
-          per_page: 100,
-          type: includePrivate ? 'all' : 'public',
-        });
-
-      this.logger.log(
-        `Retrieved ${repositories.length} repositories for ${logContext}`,
-      );
-      return repositories as any[];
     } catch (error) {
       this.logger.error(`Error fetching repositories:`, error);
       throw error;
@@ -260,17 +336,44 @@ export class GitHubService {
   }
 
   /**
-   * Get authenticated user info
+   * Get authenticated user info using access token
    */
-  async getAuthenticatedUser(accessToken: string): Promise<GitHubUser> {
-    try {
-      const octokit = this.createUserClient(accessToken);
-      const { data: user } = await octokit.users.getAuthenticated();
+  async getAuthenticatedUser(accessToken: string): Promise<GitHubUser>;
+  /**
+   * Get authenticated user info using user ID (with auto token refresh)
+   */
+  async getAuthenticatedUser(userId: string): Promise<GitHubUser>;
+  async getAuthenticatedUser(userIdOrAccessToken: string): Promise<GitHubUser> {
+    // Check if the parameter is a user ID or access token
+    if (
+      userIdOrAccessToken.startsWith('gho_') ||
+      userIdOrAccessToken.startsWith('ghp_') ||
+      userIdOrAccessToken.startsWith('ghu_') ||
+      userIdOrAccessToken.length > 50
+    ) {
+      // It's likely an access token - use it directly without token refresh
+      try {
+        const octokit = this.createUserClient(userIdOrAccessToken);
+        const { data: user } = await octokit.users.getAuthenticated();
 
-      return user as any;
-    } catch (error) {
-      this.logger.error('Error fetching authenticated user:', error);
-      throw error;
+        return user as any;
+      } catch (error) {
+        this.logger.error('Error fetching authenticated user:', error);
+        throw error;
+      }
+    } else {
+      // It's a user ID - use token refresh wrapper
+      const userId = userIdOrAccessToken;
+
+      return await this.withTokenRefresh(
+        userId,
+        async (accessToken: string) => {
+          const octokit = this.createUserClient(accessToken);
+          const { data: user } = await octokit.users.getAuthenticated();
+
+          return user as any;
+        },
+      );
     }
   }
 
@@ -371,45 +474,83 @@ export class GitHubService {
   }
 
   /**
-   * Get user's team memberships from GitHub API
+   * Get user's team memberships from GitHub API using access token
    */
-  async getUserTeams(accessToken: string): Promise<GitHubTeam[]> {
-    try {
-      const octokit = this.createUserClient(accessToken);
+  async getUserTeams(accessToken: string): Promise<GitHubTeam[]>;
+  /**
+   * Get user's team memberships from GitHub API using user ID (with auto token refresh)
+   */
+  async getUserTeams(userId: string): Promise<GitHubTeam[]>;
+  async getUserTeams(userIdOrAccessToken: string): Promise<GitHubTeam[]> {
+    // Check if the parameter is a user ID or access token
+    if (
+      userIdOrAccessToken.startsWith('gho_') ||
+      userIdOrAccessToken.startsWith('ghp_') ||
+      userIdOrAccessToken.startsWith('ghu_') ||
+      userIdOrAccessToken.length > 50
+    ) {
+      // It's likely an access token - use it directly without token refresh
+      try {
+        const octokit = this.createUserClient(userIdOrAccessToken);
 
-      const { data: teams } = await octokit.rest.teams.listForAuthenticatedUser(
-        {
-          per_page: 100,
+        const { data: teams } =
+          await octokit.rest.teams.listForAuthenticatedUser({
+            per_page: 100,
+          });
+
+        this.logger.log(`Retrieved ${teams.length} teams for user`);
+        return this.mapTeamsResponse(teams);
+      } catch (error) {
+        this.logger.error('Error fetching user teams:', error);
+        throw error;
+      }
+    } else {
+      // It's a user ID - use token refresh wrapper
+      const userId = userIdOrAccessToken;
+
+      return await this.withTokenRefresh(
+        userId,
+        async (accessToken: string) => {
+          const octokit = this.createUserClient(accessToken);
+
+          const { data: teams } =
+            await octokit.rest.teams.listForAuthenticatedUser({
+              per_page: 100,
+            });
+
+          this.logger.log(`Retrieved ${teams.length} teams for user ${userId}`);
+          return this.mapTeamsResponse(teams);
         },
       );
-
-      this.logger.log(`Retrieved ${teams.length} teams for user`);
-      return teams.map((team) => ({
-        id: team.id,
-        slug: team.slug,
-        name: team.name,
-        description: team.description,
-        permission: team.permission as
-          | 'pull'
-          | 'triage'
-          | 'push'
-          | 'maintain'
-          | 'admin',
-        privacy: (team.privacy as 'secret' | 'closed') || 'closed',
-        organization: (team as any).organization || {
-          login: '',
-          id: 0,
-          avatar_url: '',
-        },
-        members_count: (team as any).members_count,
-        repos_count: (team as any).repos_count,
-        created_at: (team as any).created_at || new Date().toISOString(),
-        updated_at: (team as any).updated_at || new Date().toISOString(),
-      })) as GitHubTeam[];
-    } catch (error) {
-      this.logger.error('Error fetching user teams:', error);
-      throw error;
     }
+  }
+
+  /**
+   * Helper method to map GitHub API teams response to GitHubTeam type
+   */
+  private mapTeamsResponse(teams: any[]): GitHubTeam[] {
+    return teams.map((team) => ({
+      id: team.id,
+      slug: team.slug,
+      name: team.name,
+      description: team.description,
+      permission: team.permission as
+        | 'pull'
+        | 'triage'
+        | 'push'
+        | 'maintain'
+        | 'admin',
+      privacy: (team.privacy as 'secret' | 'closed') || 'closed',
+      organization: team.organization || {
+        login: '',
+        id: 0,
+        avatar_url: '',
+      },
+      members_count: team.members_count,
+      repos_count: team.repos_count,
+      created_at: team.created_at || new Date().toISOString(),
+      updated_at: team.updated_at || new Date().toISOString(),
+    })) as GitHubTeam[];
   }
 
   /**

@@ -34,12 +34,12 @@ console.log(`- Slack bot token: ${configService.get('slack.botToken') ? 'present
 console.log(`- GitHub app ID: ${configService.get('github.appId') ? 'present' : 'missing'}`);
 
 const databaseService = new DatabaseService();
-const githubService = new GitHubService(configService, databaseService);
-const digestConfigService = new DigestConfigService(databaseService);
 
 // Create GitHub integration service first (it will be passed to other services)
 // Note: We'll create it with null for userTeamsSyncService initially to avoid circular dependency
 const githubIntegrationService = new GitHubIntegrationService(configService, databaseService, null as any);
+const githubService = new GitHubService(configService, databaseService, githubIntegrationService);
+const digestConfigService = new DigestConfigService(databaseService);
 
 const userRepositoriesService = new UserRepositoriesService(databaseService, githubService, githubIntegrationService);
 const userTeamsSyncService = new UserTeamsSyncService(databaseService, githubService, githubIntegrationService, userRepositoriesService);
