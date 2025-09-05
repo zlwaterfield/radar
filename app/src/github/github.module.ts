@@ -4,12 +4,14 @@ import { GitHubService } from './services/github.service';
 import { GitHubController } from './controllers/github.controller';
 import { RadarAuthModule } from '../auth/auth.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
   imports: [
     ConfigModule,
     forwardRef(() => RadarAuthModule),
     forwardRef(() => IntegrationsModule),
+    AnalyticsModule,
   ],
   controllers: [GitHubController],
   providers: [GitHubService],

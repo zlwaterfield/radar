@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Octokit } from '@octokit/rest';
 import { DatabaseService } from '../../database/database.service';
+import { AnalyticsService } from '../../analytics/analytics.service';
 import type {
   GitHubRepository,
   GitHubPullRequest,
@@ -27,6 +28,7 @@ export class GitHubService {
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
+    private readonly analyticsService: AnalyticsService,
     @Inject(forwardRef(() => GitHubIntegrationService))
     private readonly githubIntegrationService: GitHubIntegrationService,
   ) {}
@@ -77,6 +79,15 @@ export class GitHubService {
       });
     } catch (error) {
       this.logger.error(`Failed to create installation client: ${error}`);
+      this.analyticsService.trackError(
+        `installation_${installationId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'github_installation_auth',
+          installationId: installationId.toString(),
+          category: 'github_critical',
+        }
+      );
       throw error;
     }
   }
@@ -208,6 +219,15 @@ export class GitHubService {
       }
     } catch (error) {
       this.logger.error(`Error fetching repositories:`, error);
+      this.analyticsService.trackError(
+        userId || 'direct_token',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'github_fetch_repositories',
+          userId: userId || undefined,
+          category: 'github_critical',
+        }
+      );
       throw error;
     }
   }

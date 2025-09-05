@@ -4,12 +4,14 @@ import { AuthService } from './services/auth.service';
 import { AuthController } from './controllers/auth.controller';
 import { AuthGuard } from './guards/auth.guard';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { auth } from './auth.config';
 
 @Module({
   imports: [
     BetterAuthModule.forRoot(auth),
     forwardRef(() => NotificationsModule),
+    AnalyticsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthGuard],

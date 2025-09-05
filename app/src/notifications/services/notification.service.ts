@@ -117,6 +117,16 @@ export class NotificationService {
       return decision;
     } catch (error) {
       this.logger.error(`Error processing event with profiles: ${error}`);
+      this.analyticsService.trackError(
+        userId,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'notification_decision_processing',
+          eventId,
+          eventType,
+          category: 'notification_critical',
+        }
+      );
       return {
         shouldNotify: false,
         matchedProfiles: [],
@@ -387,6 +397,14 @@ export class NotificationService {
       return watchingReasons;
     } catch (error) {
       this.logger.error(`Error determining watching reasons: ${error}`);
+      this.analyticsService.trackError(
+        userId,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'watching_reasons_determination',
+          category: 'notification_critical',
+        }
+      );
       return watchingReasons;
     }
   }

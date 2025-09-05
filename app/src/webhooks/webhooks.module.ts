@@ -5,9 +5,10 @@ import { TriggerQueueService } from './services/trigger-queue.service';
 import { WebhooksController } from './controllers/webhooks.controller';
 import { RadarAuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
-  imports: [ConfigModule, RadarAuthModule, UsersModule],
+  imports: [ConfigModule, RadarAuthModule, UsersModule, AnalyticsModule],
   controllers: [WebhooksController],
   providers: [WebhooksService, TriggerQueueService],
   exports: [WebhooksService, TriggerQueueService],

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { NotificationProfileService } from '../../notifications/services/notification-profile.service';
+import { AnalyticsService } from '../../analytics/analytics.service';
 import { auth } from '../auth.config';
 import * as crypto from 'crypto-js';
 
@@ -13,6 +14,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
     private readonly notificationProfileService: NotificationProfileService,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
   /**
@@ -239,6 +241,15 @@ export class AuthService {
         `Error creating/updating user from ${providerId}:`,
         error,
       );
+      this.analyticsService.trackError(
+        accountId || 'unknown',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'user_authentication',
+          providerId,
+          category: 'auth_critical',
+        }
+      );
       throw error;
     }
   }
@@ -317,6 +328,14 @@ export class AuthService {
       return session;
     } catch (error) {
       this.logger.error('Error validating session:', error);
+      this.analyticsService.trackError(
+        sessionId || 'unknown',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'session_validation',
+          category: 'auth_critical',
+        }
+      );
       return null;
     }
   }

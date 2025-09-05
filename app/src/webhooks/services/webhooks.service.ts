@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service';
+import { AnalyticsService } from '../../analytics/analytics.service';
 import { UserTeamsSyncService } from '../../users/services/user-teams-sync.service';
 import type {
   GitHubWebhookPayload,
@@ -15,6 +16,7 @@ export class WebhooksService {
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
+    private readonly analyticsService: AnalyticsService,
     private readonly userTeamsSyncService: UserTeamsSyncService,
   ) {}
 
@@ -81,6 +83,16 @@ export class WebhooksService {
       this.logger.error(
         `Error processing GitHub webhook (${eventType}):`,
         error,
+      );
+      this.analyticsService.trackError(
+        `repo_${payload.repository?.id || 'unknown'}`,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'webhook_processing',
+          eventType,
+          repositoryName: payload.repository?.full_name,
+          category: 'webhook_critical',
+        }
       );
       return null;
     }
@@ -247,6 +259,17 @@ export class WebhooksService {
       }
     } catch (error) {
       this.logger.error('Error processing team membership event:', error);
+      this.analyticsService.trackError(
+        `team_${payload.team?.id || 'unknown'}`,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'team_membership_sync',
+          action: payload.action,
+          teamName: payload.team?.name,
+          organization: payload.organization?.login,
+          category: 'webhook_critical',
+        }
+      );
       throw error;
     }
   }
@@ -289,6 +312,16 @@ export class WebhooksService {
       }
     } catch (error) {
       this.logger.error('Error processing installation event:', error);
+      this.analyticsService.trackError(
+        `installation_${payload.installation?.id || 'unknown'}`,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'github_app_installation',
+          action: payload.action,
+          senderId: payload.sender?.id?.toString(),
+          category: 'webhook_critical',
+        }
+      );
       throw error;
     }
   }
