@@ -33,5 +33,10 @@
       "@/webhooks/*": ["src/webhooks/*"],
       "@/notifications/*": ["src/notifications/*"]
     }
-  }
+  },
+  "include": [
+    "src/**/*",
+    "trigger/**/*",
+    "trigger.config.ts"
+  ]
 }
