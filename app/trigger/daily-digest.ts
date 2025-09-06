@@ -86,14 +86,14 @@ export const dailyDigest = schedules.task({
 
               // Check if it's time to send this digest
               const now = new Date();
-              if (!digestService.isDigestTimeMatched(config.digestTime, now)) {
-                console.log(`Config ${config.id} scheduled for ${config.digestTime}, current time ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}, skipping`);
+              if (!digestService.isDigestTimeMatched(config.digestTime, config.timezone, now)) {
+                console.log(`Config ${config.id} scheduled for ${config.digestTime} (${config.timezone}), current time ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}, skipping`);
                 successCount++; // Count as success since it's not time yet
                 continue;
               }
 
               // Check if digest was already sent today for this config
-              const alreadySent = await digestService.wasDigestSentToday(config.id);
+              const alreadySent = await digestService.wasDigestSentToday(config.id, config.timezone);
               if (alreadySent) {
                 console.log(`Digest already sent today for config ${config.id}, skipping`);
                 successCount++; // Count as success since already sent
