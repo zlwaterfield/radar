@@ -66,7 +66,7 @@ export class AnalyticsService {
   /**
    * Track an error using PostHog's exception tracking
    */
-  trackError(
+  async trackError(
     distinctId: string,
     error: Error,
     context: Record<string, any> = {},
@@ -77,6 +77,8 @@ export class AnalyticsService {
 
     try {
       this.posthog.captureException(error, distinctId, context);
+      // Flush immediately to ensure error tracking is sent
+      await this.posthog.flush();
     } catch (err) {
       this.logger.error('Failed to track error:', err);
     }

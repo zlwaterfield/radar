@@ -19,12 +19,16 @@ export class ErrorTrackingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       catchError((error) => {
-        await this.analyticsService.trackError(userId || 'anonymous', error, {
+        // Track error without awaiting to avoid blocking the error response
+        this.analyticsService.trackError(userId || 'anonymous', error, {
           method: request.method,
           url: request.url,
           userAgent: request.headers['user-agent'],
           ip: request.ip,
           timestamp: new Date().toISOString(),
+        }).catch((trackingError) => {
+          // Log tracking errors but don't let them affect the main error flow
+          console.error('Failed to track error:', trackingError);
         });
 
         // Re-throw the error to maintain normal error handling flow
