@@ -241,7 +241,7 @@ export class AuthService {
         `Error creating/updating user from ${providerId}:`,
         error,
       );
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         accountId || 'unknown',
         error instanceof Error ? error : new Error(String(error)),
         {
@@ -328,7 +328,7 @@ export class AuthService {
       return session;
     } catch (error) {
       this.logger.error('Error validating session:', error);
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         sessionId || 'unknown',
         error instanceof Error ? error : new Error(String(error)),
         {

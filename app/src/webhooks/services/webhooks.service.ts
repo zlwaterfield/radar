@@ -84,7 +84,7 @@ export class WebhooksService {
         `Error processing GitHub webhook (${eventType}):`,
         error,
       );
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         `repo_${payload.repository?.id || 'unknown'}`,
         error instanceof Error ? error : new Error(String(error)),
         {
@@ -259,7 +259,7 @@ export class WebhooksService {
       }
     } catch (error) {
       this.logger.error('Error processing team membership event:', error);
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         `team_${payload.team?.id || 'unknown'}`,
         error instanceof Error ? error : new Error(String(error)),
         {
@@ -312,7 +312,7 @@ export class WebhooksService {
       }
     } catch (error) {
       this.logger.error('Error processing installation event:', error);
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         `installation_${payload.installation?.id || 'unknown'}`,
         error instanceof Error ? error : new Error(String(error)),
         {

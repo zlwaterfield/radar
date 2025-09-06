@@ -15,7 +15,7 @@ export class AnalyticsService {
   private initializePostHog() {
     try {
       const apiKey = this.configService.get<string>('POSTHOG_API_KEY');
-      const host = 'https://us.posthog.com';
+      const host = 'https://us.i.posthog.com';
 
       if (!apiKey) {
         this.logger.warn('PostHog API key not configured, analytics disabled');
@@ -37,7 +37,7 @@ export class AnalyticsService {
   /**
    * Track an event
    */
-  track(
+  async track(
     distinctId: string,
     event: string,
     properties: Record<string, any> = {},
@@ -55,6 +55,9 @@ export class AnalyticsService {
           timestamp: new Date(),
         },
       });
+      
+      // Immediately flush the event to ensure it's sent
+      await this.posthog.flush();
     } catch (error) {
       this.logger.error('Failed to track event:', error);
     }
@@ -100,12 +103,12 @@ export class AnalyticsService {
   /**
    * Track notification events
    */
-  trackNotification(
+  async trackNotification(
     userId: string,
     event: 'sent' | 'failed' | 'skipped',
     properties: Record<string, any> = {},
   ) {
-    this.track(userId, `notification_${event}`, {
+    await this.track(userId, `notification_${event}`, {
       category: 'notification',
       ...properties,
     });
@@ -114,12 +117,12 @@ export class AnalyticsService {
   /**
    * Track GitHub webhook events
    */
-  trackWebhook(
+  async trackWebhook(
     repositoryId: string,
     event: string,
     properties: Record<string, any> = {},
   ) {
-    this.track(`repo_${repositoryId}`, `webhook_${event}`, {
+    await this.track(`repo_${repositoryId}`, `webhook_${event}`, {
       category: 'webhook',
       ...properties,
     });
@@ -128,12 +131,12 @@ export class AnalyticsService {
   /**
    * Track user actions
    */
-  trackUserAction(
+  async trackUserAction(
     userId: string,
     action: string,
     properties: Record<string, any> = {},
   ) {
-    this.track(userId, `user_${action}`, {
+    await this.track(userId, `user_${action}`, {
       category: 'user_action',
       ...properties,
     });

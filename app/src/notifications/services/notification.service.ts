@@ -105,7 +105,7 @@ export class NotificationService {
       );
 
       // Track notification decision
-      this.analyticsService.track(userId, 'notification_decision', {
+      await this.analyticsService.track(userId, 'notification_decision', {
         eventType,
         eventId,
         shouldNotify: decision.shouldNotify,
@@ -119,7 +119,7 @@ export class NotificationService {
       return decision;
     } catch (error) {
       this.logger.error(`Error processing event with profiles: ${error}`);
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         userId,
         error instanceof Error ? error : new Error(String(error)),
         {
@@ -399,7 +399,7 @@ export class NotificationService {
       return watchingReasons;
     } catch (error) {
       this.logger.error(`Error determining watching reasons: ${error}`);
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         userId,
         error instanceof Error ? error : new Error(String(error)),
         {

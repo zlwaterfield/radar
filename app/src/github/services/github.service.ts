@@ -72,7 +72,7 @@ export class GitHubService {
       });
     } catch (error) {
       this.logger.error(`Failed to create installation client: ${error}`);
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         `installation_${installationId}`,
         error instanceof Error ? error : new Error(String(error)),
         {
@@ -213,7 +213,7 @@ export class GitHubService {
       }
     } catch (error) {
       this.logger.error(`Error fetching repositories:`, error);
-      this.analyticsService.trackError(
+      await this.analyticsService.trackError(
         userId || 'direct_token',
         error instanceof Error ? error : new Error(String(error)),
         {

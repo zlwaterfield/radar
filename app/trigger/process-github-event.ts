@@ -102,7 +102,7 @@ async function processEventNotifications(event: any): Promise<boolean> {
     const { eventType, action, payload, repositoryName } = event;
     
     // Track webhook event
-    analyticsService.trackWebhook(payload.repository?.id?.toString() || 'unknown', eventType, {
+    await analyticsService.trackWebhook(payload.repository?.id?.toString() || 'unknown', eventType, {
       action,
       repositoryName,
       eventId: event.id,

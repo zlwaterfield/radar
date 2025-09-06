@@ -19,7 +19,7 @@ export class ErrorTrackingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       catchError((error) => {
-        this.analyticsService.trackError(userId || 'anonymous', error, {
+        await this.analyticsService.trackError(userId || 'anonymous', error, {
           method: request.method,
           url: request.url,
           userAgent: request.headers['user-agent'],
