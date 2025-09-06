@@ -440,23 +440,23 @@ function createPRSlackMessage(data: any) {
   // Create contextual text based on action
   let contextText;
   if (action === "opened") {
-    contextText = `${githubUserLink} opened this pull request in *${repositoryName}*`;
+    contextText = `${githubUserLink} opened a PR in *${repositoryName}*`;
   } else if (action === "closed") {
     if (payload.pull_request?.merged) {
-      contextText = `${githubUserLink} merged this pull request in *${repositoryName}*`;
+      contextText = `${githubUserLink} merged a PR in *${repositoryName}*`;
     } else {
-      contextText = `${githubUserLink} closed this pull request in *${repositoryName}*`;
+      contextText = `${githubUserLink} closed a PR in *${repositoryName}*`;
     }
   } else if (action === "merged") {
-    contextText = `${githubUserLink} merged this pull request in *${repositoryName}*`;
+    contextText = `${githubUserLink} merged a PR in *${repositoryName}*`;
   } else if (action === "reopened") {
-    contextText = `${githubUserLink} reopened this pull request in *${repositoryName}*`;
+    contextText = `${githubUserLink} reopened a PR in *${repositoryName}*`;
   } else if (action === "assigned") {
-    contextText = `${githubUserLink} assigned someone to this pull request in *${repositoryName}*`;
+    contextText = `${githubUserLink} assigned you to a PR in *${repositoryName}*`;
   } else if (action === "review_requested") {
-    contextText = `${githubUserLink} request a review for this pull request in *${repositoryName}*`;
+    contextText = `${githubUserLink} requested a review for a PR in *${repositoryName}*`;
   } else {
-    contextText = `${githubUserLink} ${action} this pull request in *${repositoryName}*`;
+    contextText = `${githubUserLink} ${action} a PR in *${repositoryName}*`;
   }
   
   // Create blocks with attachment styling, putting PR title in main message
@@ -542,15 +542,15 @@ function createIssueSlackMessage(data: any) {
   // Create contextual text based on action
   let contextText;
   if (action === "opened") {
-    contextText = `${githubUserLink} opened this issue in *${repositoryName}*`;
+    contextText = `${githubUserLink} opened an issue in *${repositoryName}*`;
   } else if (action === "closed") {
-    contextText = `${githubUserLink} closed this issue in *${repositoryName}*`;
+    contextText = `${githubUserLink} closed an issue in *${repositoryName}*`;
   } else if (action === "reopened") {
-    contextText = `${githubUserLink} reopened this issue in *${repositoryName}*`;
+    contextText = `${githubUserLink} reopened an issue in *${repositoryName}*`;
   } else if (action === "assigned") {
-    contextText = `${githubUserLink} assigned someone to this issue in *${repositoryName}*`;
+    contextText = `${githubUserLink} assigned an issue in *${repositoryName}*`;
   } else {
-    contextText = `${githubUserLink} ${action} this issue in *${repositoryName}*`;
+    contextText = `${githubUserLink} ${action} an issue in *${repositoryName}*`;
   }
 
   // Create blocks with issue/PR title prominently displayed
@@ -642,7 +642,7 @@ function createPRReviewSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${icon} ${githubUserLink} ${reviewStateText} this pull request in *${repositoryName}*`
+        text: `${icon} ${githubUserLink} ${reviewStateText} a PR in *${repositoryName}*`
       }
     },
     {
@@ -713,7 +713,7 @@ function createPRReviewCommentSlackMessage(data: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `💬 ${githubUserLink} commented on this pull request in *${repositoryName}`
+        text: `💬 ${githubUserLink} commented on a PR in *${repositoryName}`
       }
     },
     {
@@ -779,10 +779,10 @@ function createIssueCommentSlackMessage(data: any) {
   // Set the appropriate title and context based on whether it's a PR or issue
   let contextText, viewText;
   if (isPullRequest) {
-    contextText = `${githubUserLink} commented on this pull request in *${repositoryName}*`;
+    contextText = `${githubUserLink} commented on a PR in *${repositoryName}*`;
     viewText = "View PR";
   } else {
-    contextText = `${githubUserLink} commented on this issue in *${repositoryName}*`;
+    contextText = `${githubUserLink} commented on an issue in *${repositoryName}*`;
     viewText = "View Issue";
   }
   
