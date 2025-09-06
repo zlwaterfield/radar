@@ -10,6 +10,7 @@ import type {
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '../types/notification-profile';
 import type { DigestScopeType, DigestDeliveryType, RepositoryFilter } from '../types/digest';
 import axios from '@/lib/axios';
+import Button from './Button';
 
 interface Team {
   teamId: string;
@@ -521,20 +522,23 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
         </div>
 
         <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-          <button
+          <Button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md transition-colors"
+            variant="secondary"
+            size="md"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={loading || !formData.name.trim()}
-            className="px-4 py-2 bg-marian-blue-600 text-white rounded-md hover:bg-marian-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="primary"
+            size="md"
+            loading={loading}
           >
-            {loading ? 'Saving...' : (profile ? 'Update' : 'Create')}
-          </button>
+            {profile ? 'Update' : 'Create'}
+          </Button>
         </div>
       </div>
     </div>
