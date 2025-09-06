@@ -8,29 +8,32 @@ A Slack application that connects GitHub activity to your team's Slack workspace
 - **Intelligent Notifications**: Smart routing based on user roles (author, reviewer, assignee)
 - **Real-time Delivery**: Near-instantaneous notifications from GitHub webhooks to Slack
 - **Comprehensive Event Support**: PRs, issues, reviews, comments, discussions, and more
-- **Keyword-Based Notifications**: AI-powered OpenAI integration for smart keyword matching
-- **Digest Notifications (coming soon)**: Configurable daily/weekly summaries of repository activity
+- **Keyword-Based Notifications**: Smart keyword matching (using AI 👀)
+- **Digest Notifications (coming soon)**: Configurable daily summaries of pull requests activity
 
 ## 🛠 Tech Stack
 
+### Frontend
+- [**Next.js**](https://nextjs.org)
+
 ### Backend
-- **NestJS**: Progressive Node.js framework for building efficient server-side applications
-- **Better Auth**: Modern authentication library for TypeScript
-- **Trigger.dev**: Background job processing and workflow automation
-- **PostHog**: Product analytics and error tracking
-- **OpenAI**: Intelligent keyword matching and analysis
+- [**NestJS**](https://nestjs.com)
+- [**Better Auth**](https://betterauth.io)
+- [**Trigger.dev**](https://trigger.dev)
+- [**PostHog**](https://posthog.com)
+- [**OpenAI**](https://openai.com)
 
 ### Integrations
-- **Slack API**: Rich message formatting and user interactions
-- **GitHub API**: Repository access and webhook event processing
-- **GitHub Webhooks**: Real-time event delivery with signature verification
+- [**Slack API**](https://api.slack.com)
+- [**GitHub API**](https://docs.github.com/rest)
+- [**GitHub Webhooks**](https://docs.github.com/webhooks)
 
 ## Setup and Installation
 
 ### Prerequisites
 
 - Node.js 18+
-- npm or yarn package manager
+- npm package manager
 - Slack workspace with admin privileges
 - GitHub account with access to repositories you want to track
 - Docker and Docker Compose (optional, for containerized deployment)
@@ -38,25 +41,98 @@ A Slack application that connects GitHub activity to your team's Slack workspace
 ### Local Installation
 
 1. Clone the repository:
-   ```
+   ```bash
    git clone https://github.com/zlwaterfield/radar.git
    cd radar
    ```
 
-2. Install dependencies:
-   ```
+2. Install dependencies for both backend and frontend:
+   ```bash
+   # Install backend dependencies
+   cd app
+   npm install
+   
+   # Install frontend dependencies
+   cd ../client
    npm install
    ```
 
-4. Copy the example environment file and update with your settings:
+3. Set up environment variables:
+   
+   **Backend (app directory):**
+   ```bash
+   cd app
+   # Create .env file with your configuration
+   # See Configuration section below for required variables
    ```
-   cp .env.example .env
-   # Edit .env with your configuration
+   
+   **Frontend (client directory):**
+   ```bash
+   cd client
+   # Create .env.local file with your configuration
+   # See Configuration section below for required variables
    ```
 
-5. Run the application:
+4. Set up the database:
+   ```bash
+   cd app
+   # Generate Prisma client
+   npx prisma generate
+   
+   # Run database migrations
+   npx prisma migrate dev
    ```
+
+5. Run the applications:
+   
+   **Start the backend (NestJS API):**
+   ```bash
+   cd app
    npm run start:dev
+   ```
+   The API will be available at `http://localhost:3000`
+   
+   **Start the frontend (Next.js app):**
+   ```bash
+   cd client
+   npm run dev
+   ```
+   The frontend will be available at `http://localhost:3001`
+
+5. Set up Trigger.dev:
+
+You'll need a Trigger account and to configure your environment variables.
+
+   ```bash
+   # Login to Trigger.dev
+   npx trigger login
+   
+   # Make sure to set TRIGGER_SECRET_KEY and TRIGGER_SECRET_KEY in your app/.env file
+   # You can find this in your Trigger.dev dashboard
+   ```
+
+6. Set up a tunnel for webhooks (recommended):
+
+For local development, you'll need a public URL for GitHub webhooks and Slack events. We recommend using ngrok:
+
+   ```bash
+   # Install ngrok (if not already installed)
+   # Visit https://ngrok.com/download for installation instructions
+   
+   # Start ngrok tunnel on port 3003 (where your app will receive webhooks)
+   ngrok http 3003
+   ```
+
+   Copy the HTTPS URL provided by ngrok (e.g., `https://abc123.ngrok.io`) and use it for:
+   - GitHub webhook URLs
+   - Slack event subscriptions
+   - Update your environment variables accordingly
+
+7. Run Trigger.dev:
+
+   ```bash
+   cd app
+   npx trigger.dev@latest dev
    ```
 
 ## Configuration
@@ -68,12 +144,13 @@ See the [documentation](./docs/README.md) for detailed setup instructions includ
 
 ### Environment Variables
 
-The application requires several environment variables to be set. See `.env.example` for a complete list with descriptions.
+The application requires several environment variables to be set. See the two `.env.example` for a complete list with descriptions.
 
 Key environment variables include:
 - Slack API credentials
 - GitHub API credentials
 - Application settings
+- Trigger credentials
 
 ## 🤝 Contributing
 
