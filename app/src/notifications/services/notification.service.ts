@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { GitHubService } from '../../github/services/github.service';
+import { GitHubTokenService } from '../../github/services/github-token.service';
 import { LLMAnalyzerService } from './llm-analyzer.service';
 import { NotificationProfileService } from './notification-profile.service';
 import { AnalyticsService } from '../../analytics/analytics.service';
@@ -22,6 +23,7 @@ export class NotificationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly githubService: GitHubService,
+    private readonly githubTokenService: GitHubTokenService,
     private readonly llmAnalyzerService: LLMAnalyzerService,
     private readonly notificationProfileService: NotificationProfileService,
     private readonly analyticsService: AnalyticsService,
@@ -466,14 +468,10 @@ export class NotificationService {
             if (repoFullName && prNumber) {
               const [owner, repo] = repoFullName.split('/');
 
-              // Try to get user's GitHub token first, fall back to app client
+              // Try to get user's valid GitHub token first, fall back to app client
               let accessToken: string | undefined;
               if (userId) {
-                const user = await this.databaseService.user.findUnique({
-                  where: { id: userId },
-                  select: { githubAccessToken: true },
-                });
-                accessToken = user?.githubAccessToken || undefined;
+                accessToken = await this.githubTokenService.getValidTokenForApiCall(userId) || undefined;
               }
 
               const fullPRData = await this.githubService.getPullRequest(

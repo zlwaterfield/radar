@@ -106,18 +106,17 @@ export class GitHubTokenService {
 
       // First, try to use the existing token
       try {
-        // Test if current token is valid by making a simple API call
-        const testResponse = await fetch('https://api.github.com/user', {
-          headers: {
-            Authorization: `Bearer ${user.githubAccessToken}`,
-            Accept: 'application/vnd.github.v3+json',
-          },
+        // Test if current token is valid by creating an Octokit client and making a simple API call
+        // This uses the same authentication method as the rest of the application
+        const { Octokit } = await import('@octokit/rest');
+        const testClient = new Octokit({
+          auth: user.githubAccessToken,
         });
-
-        if (testResponse.ok) {
-          // Current token is valid
-          return user.githubAccessToken;
-        }
+        
+        await testClient.users.getAuthenticated();
+        
+        // Current token is valid
+        return user.githubAccessToken;
       } catch (testError) {
         this.logger.debug(
           `Current token test failed for user ${userId}, attempting refresh`,
@@ -175,18 +174,17 @@ export class GitHubTokenService {
 
       // First, try to use the existing token
       try {
-        // Test if current token is valid by making a simple API call
-        const testResponse = await fetch('https://api.github.com/user', {
-          headers: {
-            Authorization: `Bearer ${user.githubAccessToken}`,
-            Accept: 'application/vnd.github.v3+json',
-          },
+        // Test if current token is valid by creating an Octokit client and making a simple API call
+        // This uses the same authentication method as the rest of the application
+        const { Octokit } = await import('@octokit/rest');
+        const testClient = new Octokit({
+          auth: user.githubAccessToken,
         });
-
-        if (testResponse.ok) {
-          // Current token is valid
-          return user.githubAccessToken;
-        }
+        
+        await testClient.users.getAuthenticated();
+        
+        // Current token is valid
+        return user.githubAccessToken;
       } catch (testError) {
         this.logger.debug(
           `Current token test failed for user ${userId}, attempting refresh`,
