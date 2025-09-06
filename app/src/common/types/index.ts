@@ -13,9 +13,6 @@ export type {
 // Export specific types from user.types to avoid conflicts with notification.types
 export type {
   UserProfile,
-  UserWithSettings,
-  UserSettings,
   UserRepository,
   NotificationPreferences as UserNotificationPreferences,
-  NotificationSchedule as UserNotificationSchedule,
 } from './user.types';

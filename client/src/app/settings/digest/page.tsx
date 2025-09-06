@@ -13,12 +13,8 @@ import { format } from 'date-fns';
 import { 
   DigestConfig, 
   CreateDigestConfig, 
-  DigestPreview, 
   DigestHistory,
   Repository,
-  Team,
-  DigestScopeType,
-  DigestDeliveryType 
 } from '@/types/digest';
 
 export default function DigestSettings() {
@@ -29,7 +25,7 @@ export default function DigestSettings() {
   const [digestConfigs, setDigestConfigs] = useState<DigestConfig[]>([]);
   const [history, setHistory] = useState<DigestHistory[]>([]);
   const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  // const [teams, setTeams] = useState<Team[]>([]);
   
   // UI state
   const [activeTab, setActiveTab] = useState<'configs' | 'history'>('configs');
@@ -59,7 +55,7 @@ export default function DigestSettings() {
         loadDigestConfigs(),
         loadDigestHistory(),
         loadRepositories(),
-        loadTeams(),
+        // loadTeams(),
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -113,16 +109,16 @@ export default function DigestSettings() {
     }
   };
 
-  const loadTeams = async () => {
-    try {
-      const response = await axios.get('/api/users/me/teams');
-      if (response.data && response.data.data) {
-        setTeams(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error loading teams:', error);
-    }
-  };
+  // const loadTeams = async () => {
+  //   try {
+  //     const response = await axios.get('/api/users/me/teams');
+  //     if (response.data && response.data.data) {
+  //       setTeams(response.data.data);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error loading teams:', error);
+  //   }
+  // };
 
   const handleCreateConfig = () => {
     setEditingConfig(null);
@@ -261,14 +257,14 @@ export default function DigestSettings() {
     }
   };
 
-  const getScopeDisplay = (config: DigestConfig) => {
-    if (config.scopeType === 'user') {
-      return 'Your activity';
-    } else {
-      const team = teams.find(t => t.teamId === config.scopeValue);
-      return `Team: ${team ? team.teamName : 'Unknown team'}`;
-    }
-  };
+  // const getScopeDisplay = (config: DigestConfig) => {
+  //   if (config.scopeType === 'user') {
+  //     return 'Your activity';
+  //   } else {
+  //     const team = teams.find(t => t.teamId === config.scopeValue);
+  //     return `Team: ${team ? team.teamName : 'Unknown team'}`;
+  //   }
+  // };
 
   const getRepositoryDisplay = (config: DigestConfig) => {
     if (config.repositoryFilter.type === 'all') {
@@ -504,7 +500,7 @@ export default function DigestSettings() {
         formData={formData}
         setFormData={setFormData}
         repositories={repositories}
-        teams={teams}
+        // teams={teams}
         isSaving={isSaving}
       />
     </div>

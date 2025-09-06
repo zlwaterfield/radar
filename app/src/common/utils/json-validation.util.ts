@@ -1,16 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import type { JsonValue } from '@prisma/client/runtime/library';
-import {
-  NotificationPreferencesDto,
-  NotificationScheduleDto,
-} from '../dtos/update-user-settings.dto';
+import type { NotificationPreferences } from '../types/user.types';
 
 /**
- * Safely validates and parses JSON value to NotificationPreferencesDto
+ * Safely validates and parses JSON value to NotificationPreferences
  */
 export function validateNotificationPreferences(
   jsonValue: JsonValue,
-): NotificationPreferencesDto {
+): NotificationPreferences {
   if (!jsonValue || typeof jsonValue !== 'object' || Array.isArray(jsonValue)) {
     // Return default preferences for invalid/empty input
     return createDefaultNotificationPreferences();
@@ -35,7 +32,7 @@ export function validateNotificationPreferences(
     'issue_assigned',
   ];
 
-  const result: NotificationPreferencesDto = { ...defaults };
+  const result: NotificationPreferences = { ...defaults };
 
   // Only validate and update fields that are present
   for (const field of booleanFields) {
@@ -51,19 +48,25 @@ export function validateNotificationPreferences(
 
   // Handle additional fields that might not be in the DTO (like those from frontend)
   const additionalFields = [
-    'pr_comments',
-    'pr_reviews',
-    'pr_status_changes',
-    'pr_assignments',
-    'pr_opened',
-    'issue_comments',
-    'issue_status_changes',
-    'issue_assignments',
+    'pull_request_opened',
+    'pull_request_closed',
+    'pull_request_merged',
+    'pull_request_reviewed',
+    'pull_request_commented',
+    'pull_request_assigned',
+    'pull_request_review_requested',
+    'issue_opened',
+    'issue_closed',
+    'issue_commented',
+    'issue_assigned',
     'check_failures',
     'check_successes',
+    'mention_in_comment',
+    'mention_in_pull_request',
+    'mention_in_issue',
     'mute_own_activity',
     'mute_bot_comments',
-    'mute_draft_prs',
+    'mute_draft_pull_requests',
   ];
 
   for (const field of additionalFields) {
@@ -86,84 +89,6 @@ export function validateNotificationPreferences(
   return result;
 }
 
-/**
- * Safely validates and parses JSON value to NotificationScheduleDto
- */
-export function validateNotificationSchedule(
-  jsonValue: JsonValue,
-): NotificationScheduleDto {
-  if (!jsonValue || typeof jsonValue !== 'object' || Array.isArray(jsonValue)) {
-    // Return default schedule for invalid/empty input
-    return createDefaultNotificationSchedule();
-  }
-
-  const obj = jsonValue as Record<string, unknown>;
-
-  // Get defaults and merge with provided values
-  const defaults = createDefaultNotificationSchedule();
-  const result: NotificationScheduleDto = { ...defaults };
-
-  // Only validate and update fields that are present
-  if (obj.real_time !== undefined) {
-    if (typeof obj.real_time !== 'boolean') {
-      throw new BadRequestException(
-        'Invalid real_time value: expected boolean',
-      );
-    }
-    result.real_time = obj.real_time;
-  }
-
-  if (obj.digest_time !== undefined) {
-    if (typeof obj.digest_time !== 'string') {
-      throw new BadRequestException(
-        'Invalid digest_time value: expected string',
-      );
-    }
-    result.digest_time = obj.digest_time;
-  }
-
-  if (obj.digest_enabled !== undefined) {
-    if (typeof obj.digest_enabled !== 'boolean') {
-      throw new BadRequestException(
-        'Invalid digest_enabled value: expected boolean',
-      );
-    }
-    result.digest_enabled = obj.digest_enabled;
-  }
-
-  if (obj.digest_days !== undefined) {
-    if (
-      !Array.isArray(obj.digest_days) ||
-      !obj.digest_days.every((day) => typeof day === 'string')
-    ) {
-      throw new BadRequestException(
-        'Invalid digest_days value: expected string array',
-      );
-    }
-    result.digest_days = obj.digest_days;
-  }
-
-  // Handle optional fields
-  if (obj.second_digest_time !== undefined) {
-    if (typeof obj.second_digest_time !== 'string') {
-      throw new BadRequestException(
-        'Invalid second_digest_time value: expected string',
-      );
-    }
-    result.second_digest_time = obj.second_digest_time;
-  }
-
-  if (obj.second_digest_enabled !== undefined) {
-    if (typeof obj.second_digest_enabled !== 'boolean') {
-      throw new BadRequestException(
-        'Invalid second_digest_enabled value: expected boolean',
-      );
-    }
-    result.second_digest_enabled = obj.second_digest_enabled;
-  }
-
-  return result;
-}
 
 /**
  * Safely converts null to undefined for optional fields
@@ -175,31 +100,36 @@ export function nullToUndefined<T>(value: T | null): T | undefined {
 /**
  * Creates default notification preferences
  */
-export function createDefaultNotificationPreferences(): NotificationPreferencesDto {
+export function createDefaultNotificationPreferences(): NotificationPreferences {
   return {
+    // PR Activity
     pull_request_opened: true,
     pull_request_closed: true,
     pull_request_merged: true,
     pull_request_reviewed: true,
-    pull_request_commented: false,
+    pull_request_commented: true,
     pull_request_assigned: true,
+    pull_request_review_requested: true,
+
+    // Issue Activity
     issue_opened: true,
-    issue_closed: false,
-    issue_commented: false,
+    issue_closed: true,
+    issue_commented: true,
     issue_assigned: true,
+
+    // CI/CD
+    check_failures: false,
+    check_successes: false,
+
+    // Mentions
+    mention_in_comment: true,
+    mention_in_pull_request: true,
+    mention_in_issue: true,
+
+    // Noise Control
+    mute_own_activity: true,
+    mute_bot_comments: true,
+    mute_draft_pull_requests: true,
   };
 }
 
-/**
- * Creates default notification schedule
- */
-export function createDefaultNotificationSchedule(): NotificationScheduleDto {
-  return {
-    real_time: true,
-    digest_time: '09:00',
-    digest_enabled: true,
-    digest_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    second_digest_time: '16:00',
-    second_digest_enabled: false,
-  };
-}

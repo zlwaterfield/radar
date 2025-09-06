@@ -13,20 +13,6 @@ export interface UserProfile {
   updatedAt: Date;
 }
 
-export interface UserWithSettings extends UserProfile {
-  settings?: UserSettings;
-}
-
-export interface UserSettings {
-  id: string;
-  userId: string;
-  notificationPreferences: NotificationPreferences;
-  notificationSchedule: NotificationSchedule;
-  statsTimeWindow: number;
-  keywords: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface NotificationPreferences {
   // PR & Issue Activity
@@ -63,14 +49,6 @@ export interface NotificationPreferences {
   mute_draft_pull_requests?: boolean; // Ignore draft PR activity
 }
 
-export interface NotificationSchedule {
-  real_time: boolean;
-  digest_enabled: boolean;
-  digest_time: string; // HH:mm format
-  digest_days: string[];
-  second_digest_enabled: boolean;
-  second_digest_time?: string;
-}
 
 export interface UserRepository {
   id: string;

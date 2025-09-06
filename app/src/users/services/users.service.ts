@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { CreateUserDto, UpdateUserDto } from '../dto/users.dto';
-import type { User, UserSettings } from '@prisma/client';
+import type { User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {

@@ -8,7 +8,6 @@ import {
   CreateDigestConfig, 
   Repository,
   Team,
-  DigestScopeType,
   DigestDeliveryType 
 } from '@/types/digest';
 
@@ -20,7 +19,7 @@ interface DigestConfigModalProps {
   formData: CreateDigestConfig;
   setFormData: (data: CreateDigestConfig) => void;
   repositories: Repository[];
-  teams: Team[];
+  // teams: Team[];
   isSaving: boolean;
 }
 
@@ -32,7 +31,7 @@ export default function DigestConfigModal({
   formData,
   setFormData,
   repositories,
-  teams,
+  // teams,
   isSaving
 }: DigestConfigModalProps) {
   if (!isOpen) return null;

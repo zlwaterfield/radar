@@ -138,39 +138,6 @@ export class AuthService {
           },
         });
 
-        // Create default user settings
-        await this.databaseService.userSettings.create({
-          data: {
-            userId: user.id,
-            notificationPreferences: {
-              pull_request_opened: true,
-              pull_request_closed: true,
-              pull_request_merged: true,
-              pull_request_reviewed: true,
-              pull_request_commented: true,
-              pull_request_assigned: true,
-              issue_opened: true,
-              issue_closed: true,
-              issue_commented: true,
-              issue_assigned: true,
-            },
-            notificationSchedule: {
-              real_time: true,
-              digest_time: '09:00',
-              digest_enabled: true,
-              digest_days: [
-                'Monday',
-                'Tuesday',
-                'Wednesday',
-                'Thursday',
-                'Friday',
-              ],
-              second_digest_time: null,
-              second_digest_enabled: false,
-            },
-          },
-        });
-
         // Create default notification profile
         try {
           await this.notificationProfileService.createNotificationProfile(

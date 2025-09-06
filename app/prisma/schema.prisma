@@ -39,7 +39,6 @@ model User {
   teamsLastSyncedAt   DateTime? @map("teams_last_synced_at")
 
   // Relations
-  settings            UserSettings?
   repositories        UserRepository[]
   notifications       Notification[]
   digestConfigs       DigestConfig[]
@@ -53,28 +52,6 @@ model User {
   @@map("user")
 }
 
-// User settings and preferences
-
-model UserSettings {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  userId String @unique @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Notification preferences (JSON)
-  notificationPreferences Json @default("{}") @map("notification_preferences")
-  // Notification schedule (JSON)
-  notificationSchedule    Json @default("{}") @map("notification_schedule")
-  // Stats configuration
-  statsTimeWindow         Int  @default(14) @map("stats_time_window")
-
-  // Keyword preferences for filtering (JSON object)
-  keywordPreferences Json @default("{\"enabled\": false, \"keywords\": [], \"threshold\": 0.7}") @map("keyword_preferences")
-
-  @@map("user_setting")
-}
 
 // User repository relationships
 

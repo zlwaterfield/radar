@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
-import { useNotificationProfiles } from '../hooks/useNotificationProfiles';
+import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import type { 
   NotificationProfile, 
   CreateNotificationProfileRequest,
@@ -8,7 +7,7 @@ import type {
   NotificationPreferences,
 } from '../types/notification-profile';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '../types/notification-profile';
-import type { DigestScopeType, DigestDeliveryType, RepositoryFilter } from '../types/digest';
+import type { DigestDeliveryType, RepositoryFilter } from '../types/digest';
 import axios from '@/lib/axios';
 import Button from './Button';
 
@@ -42,8 +41,8 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
     name: '',
     description: '',
     isEnabled: true,
-    // scopeType: 'user' as DigestScopeType,
-    // scopeValue: '',
+    scopeType: 'user' as DigestScopeType,
+    scopeValue: '',
     repositoryFilter: { type: 'all', repoIds: [] } as RepositoryFilter,
     deliveryType: 'dm' as DigestDeliveryType,
     deliveryTarget: '',
@@ -65,8 +64,8 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
         name: profile.name,
         description: profile.description || '',
         isEnabled: profile.isEnabled,
-        // scopeType: profile.scopeType,
-        // scopeValue: profile.scopeValue || '',
+        scopeType: profile.scopeType,
+        scopeValue: profile.scopeValue || '',
         repositoryFilter: profile.repositoryFilter,
         deliveryType: profile.deliveryType,
         deliveryTarget: profile.deliveryTarget || '',
@@ -108,7 +107,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
       const data = {
         ...formData,
         description: formData.description || undefined,
-        // scopeValue: formData.scopeType === 'user' ? undefined : formData.scopeValue,
+        scopeValue: formData.scopeType === 'user' ? undefined : formData.scopeValue,
         deliveryTarget: formData.deliveryType === 'dm' ? undefined : formData.deliveryTarget,
       };
 
