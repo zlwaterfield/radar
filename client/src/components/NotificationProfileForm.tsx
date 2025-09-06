@@ -42,8 +42,8 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
     name: '',
     description: '',
     isEnabled: true,
-    scopeType: 'user' as DigestScopeType,
-    scopeValue: '',
+    // scopeType: 'user' as DigestScopeType,
+    // scopeValue: '',
     repositoryFilter: { type: 'all', repoIds: [] } as RepositoryFilter,
     deliveryType: 'dm' as DigestDeliveryType,
     deliveryTarget: '',
@@ -65,8 +65,8 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
         name: profile.name,
         description: profile.description || '',
         isEnabled: profile.isEnabled,
-        scopeType: profile.scopeType,
-        scopeValue: profile.scopeValue || '',
+        // scopeType: profile.scopeType,
+        // scopeValue: profile.scopeValue || '',
         repositoryFilter: profile.repositoryFilter,
         deliveryType: profile.deliveryType,
         deliveryTarget: profile.deliveryTarget || '',
@@ -108,7 +108,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
       const data = {
         ...formData,
         description: formData.description || undefined,
-        scopeValue: formData.scopeType === 'user' ? undefined : formData.scopeValue,
+        // scopeValue: formData.scopeType === 'user' ? undefined : formData.scopeValue,
         deliveryTarget: formData.deliveryType === 'dm' ? undefined : formData.deliveryTarget,
       };
 
@@ -217,7 +217,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
           </div>
 
           {/* Scope Settings */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h4 className="font-medium text-gray-900 dark:text-white">Scope</h4>
             
             <div>
@@ -270,7 +270,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Repository Settings */}
           <div className="space-y-4">

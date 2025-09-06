@@ -90,14 +90,20 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     }
   };
 
-  const getScopeIcon = (scopeType: string) => {
-    switch (scopeType) {
-      case 'user':
-        return <FiTarget className="h-4 w-4" />;
-      case 'team':
-        return <FiTarget className="h-4 w-4" />;
-      default:
-        return <FiTarget className="h-4 w-4" />;
+  const getRepositoryDisplay = (profile: NotificationProfile) => {
+    if (profile.repositoryFilter.type === 'all') {
+      return 'All repositories';
+    } else {
+      const count = profile.repositoryFilter.repoIds?.length || 0;
+      return `${count} selected repositories`;
+    }
+  };
+
+  const getDeliveryDisplay = (profile: NotificationProfile) => {
+    if (profile.deliveryType === 'dm') {
+      return 'Direct message';
+    } else {
+      return `Channel: ${profile.deliveryTarget || 'Not specified'}`;
     }
   };
 
@@ -161,25 +167,24 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                       <p className="text-sm text-gray-600 mb-3">{profile.description}</p>
                     )}
                     
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        {getScopeIcon(profile.scopeType)}
-                        <span>
-                          {profile.scopeType === 'user' ? 'Personal' : 'Team'} notifications
+                    <div className="flex flex-col gap-2 text-sm">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">📤 Delivery:</span>
+                        <span className="ml-1 text-gray-900 dark:text-white">
+                          {getDeliveryDisplay(profile)}
                         </span>
                       </div>
                       
-                      <div className="flex items-center gap-1">
-                        {getDeliveryIcon(profile.deliveryType)}
-                        <span>
-                          {profile.deliveryType === 'dm' ? 'Direct messages' : 'Channel'}
-                          {profile.deliveryTarget && ` (${profile.deliveryTarget})`}
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">📁 Repos:</span>
+                        <span className="ml-1 text-gray-900 dark:text-white">
+                          {getRepositoryDisplay(profile)}
                         </span>
                       </div>
                       
-                      <div className="flex items-center gap-1">
-                        <span>🎪</span>
-                        <span>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">🎪 Keywords:</span>
+                        <span className="ml-1 text-gray-900 dark:text-white">
                           {profile.keywords.length > 0 
                             ? `${profile.keywords.length} keyword${profile.keywords.length !== 1 ? 's' : ''}`
                             : 'No keywords'
