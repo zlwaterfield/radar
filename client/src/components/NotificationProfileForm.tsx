@@ -7,7 +7,7 @@ import type {
   NotificationPreferences,
 } from '../types/notification-profile';
 import { DEFAULT_NOTIFICATION_PREFERENCES, NOTIFICATION_UI_GROUPS } from '../constants/notification-preferences.constants';
-import type { DigestDeliveryType, RepositoryFilter } from '../types/digest';
+import type { DigestDeliveryType, DigestScopeType, RepositoryFilter } from '../types/digest';
 import axios from '@/lib/axios';
 import Button from './Button';
 
@@ -69,7 +69,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
         repositoryFilter: profile.repositoryFilter,
         deliveryType: profile.deliveryType,
         deliveryTarget: profile.deliveryTarget || '',
-        notificationPreferences: profile.notificationPreferences,
+        notificationPreferences: { ...DEFAULT_NOTIFICATION_PREFERENCES, ...profile.notificationPreferences },
         keywords: [...profile.keywords],
         keywordLLMEnabled: profile.keywordLLMEnabled,
       });

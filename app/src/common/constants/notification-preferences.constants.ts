@@ -75,7 +75,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
   mute_own_activity: true,
   mute_bot_comments: true,
   mute_draft_pull_requests: true,
-} as const;
+};
 
 /**
  * UI field configuration for forms
