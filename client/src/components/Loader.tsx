@@ -25,13 +25,9 @@ const Loader: React.FC<LoaderProps> = ({
     <div className={`${containerClasses} ${className}`}>
       <div className="relative">
         {/* Outer ring */}
-        <div className={`${sizeClasses[size]} rounded-full border-2 border-gray-200 dark:border-gray-700`}></div>
+        <div className={`${sizeClasses[size]} rounded-full border-4 border-gray-200 dark:border-gray-700`}></div>
         {/* Spinning ring */}
-        <div className={`absolute top-0 left-0 ${sizeClasses[size]} rounded-full border-2 border-primary-600 border-t-transparent animate-spin`}></div>
-        {/* Inner pulse dot */}
-        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${
-          size === 'small' ? 'h-1 w-1' : size === 'medium' ? 'h-2 w-2' : 'h-3 w-3'
-        } bg-primary-600 rounded-full animate-pulse`}></div>
+        <div className={`absolute top-0 left-0 ${sizeClasses[size]} rounded-full border-4 border-blue-400 border-t-transparent animate-spin [animation-duration:1s]`}></div>
       </div>
     </div>
   );

@@ -4,17 +4,12 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import Loader from '@/components/Loader';
 import Button from '@/components/Button';
 import { FiArrowRight, FiGithub } from 'react-icons/fi';
 
 export default function Home() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
-
-  // if (loading) {
-  //   return <Loader fullScreen size="large" />;
-  // }
 
   return (
     <>
