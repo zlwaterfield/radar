@@ -13,6 +13,7 @@ import type {
   NotificationProfileData,
   NotificationProfileWithMeta,
 } from '../../common/types/notification-profile.types';
+import { DEFAULT_NOTIFICATION_PREFERENCES } from '../../common/constants/notification-preferences.constants';
 import type { RepositoryFilter } from '../../common/types/digest.types';
 import type { NotificationPreferences } from '../../common/types/user.types';
 
@@ -318,38 +319,4 @@ export class NotificationProfileService {
     }
   }
 
-  /**
-   * Get default notification preferences
-   */
-  private getDefaultNotificationPreferences(): NotificationPreferences {
-    return {
-      // PR Activity
-      pull_request_opened: true,
-      pull_request_closed: true,
-      pull_request_merged: true,
-      pull_request_reviewed: true,
-      pull_request_commented: true,
-      pull_request_assigned: true,
-
-      // Issue Activity
-      issue_opened: true,
-      issue_closed: true,
-      issue_commented: true,
-      issue_assigned: true,
-
-      // CI/CD
-      check_failures: false,
-      check_successes: false,
-
-      // Mentions
-      mention_in_comment: true,
-      mention_in_pull_request: true,
-      mention_in_issue: true,
-
-      // Noise Control
-      mute_own_activity: true,
-      mute_bot_comments: true,
-      mute_draft_pull_requests: true,
-    };
-  }
 }

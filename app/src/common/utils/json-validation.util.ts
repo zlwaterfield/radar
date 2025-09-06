@@ -1,6 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import type { JsonValue } from '@prisma/client/runtime/library';
 import type { NotificationPreferences } from '../types/user.types';
+import { 
+  ALL_NOTIFICATION_PREFERENCE_FIELDS,
+  DEFAULT_NOTIFICATION_PREFERENCES 
+} from '../constants/notification-preferences.constants';
 
 /**
  * Safely validates and parses JSON value to NotificationPreferences
@@ -10,27 +14,16 @@ export function validateNotificationPreferences(
 ): NotificationPreferences {
   if (!jsonValue || typeof jsonValue !== 'object' || Array.isArray(jsonValue)) {
     // Return default preferences for invalid/empty input
-    return createDefaultNotificationPreferences();
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES };
   }
 
   const obj = jsonValue as Record<string, unknown>;
 
   // Get defaults and merge with provided values
-  const defaults = createDefaultNotificationPreferences();
+  const defaults = { ...DEFAULT_NOTIFICATION_PREFERENCES };
 
-  // Validate only provided boolean fields
-  const booleanFields = [
-    'pull_request_opened',
-    'pull_request_closed',
-    'pull_request_merged',
-    'pull_request_reviewed',
-    'pull_request_commented',
-    'pull_request_assigned',
-    'issue_opened',
-    'issue_closed',
-    'issue_commented',
-    'issue_assigned',
-  ];
+  // Use all notification preference fields for validation
+  const booleanFields = [...ALL_NOTIFICATION_PREFERENCE_FIELDS];
 
   const result: NotificationPreferences = { ...defaults };
 
@@ -99,37 +92,9 @@ export function nullToUndefined<T>(value: T | null): T | undefined {
 
 /**
  * Creates default notification preferences
+ * @deprecated Use DEFAULT_NOTIFICATION_PREFERENCES constant directly
  */
 export function createDefaultNotificationPreferences(): NotificationPreferences {
-  return {
-    // PR Activity
-    pull_request_opened: true,
-    pull_request_closed: true,
-    pull_request_merged: true,
-    pull_request_reviewed: true,
-    pull_request_commented: true,
-    pull_request_assigned: true,
-    pull_request_review_requested: true,
-
-    // Issue Activity
-    issue_opened: true,
-    issue_closed: true,
-    issue_commented: true,
-    issue_assigned: true,
-
-    // CI/CD
-    check_failures: false,
-    check_successes: false,
-
-    // Mentions
-    mention_in_comment: true,
-    mention_in_pull_request: true,
-    mention_in_issue: true,
-
-    // Noise Control
-    mute_own_activity: true,
-    mute_bot_comments: true,
-    mute_draft_pull_requests: true,
-  };
+  return { ...DEFAULT_NOTIFICATION_PREFERENCES };
 }
 

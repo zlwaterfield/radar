@@ -6,7 +6,7 @@ import type {
   UpdateNotificationProfileRequest,
   NotificationPreferences,
 } from '../types/notification-profile';
-import { DEFAULT_NOTIFICATION_PREFERENCES } from '../types/notification-profile';
+import { DEFAULT_NOTIFICATION_PREFERENCES, NOTIFICATION_UI_GROUPS } from '../constants/notification-preferences.constants';
 import type { DigestDeliveryType, RepositoryFilter } from '../types/digest';
 import axios from '@/lib/axios';
 import Button from './Button';
@@ -453,15 +453,8 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* PR Events */}
               <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">Pull requests</h4>
-                {[
-                  ['pull_request_opened', 'PR opened'],
-                  ['pull_request_closed', 'PR closed/merged'],
-                  ['pull_request_reviewed', 'PR reviewed'],
-                  ['pull_request_commented', 'PR commented'],
-                  ['pull_request_assigned', 'PR assigned'],
-                  ['pull_request_review_requested', 'PR review requested'],
-                ].map(([key, label]) => (
+                <h4 className="font-medium text-gray-900">{NOTIFICATION_UI_GROUPS.PR_EVENTS.title}</h4>
+                {NOTIFICATION_UI_GROUPS.PR_EVENTS.fields.map(([key, label]) => (
                   <label key={key} className="flex items-center text-sm">
                     <input
                       type="checkbox"
@@ -476,13 +469,8 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
               
               {/* Issue Events */}
               <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">Issues</h4>
-                {[
-                  ['issue_opened', 'Issue opened'],
-                  ['issue_closed', 'Issue closed'],
-                  ['issue_commented', 'Issue commented'],
-                  ['issue_assigned', 'Issue assigned'],
-                ].map(([key, label]) => (
+                <h4 className="font-medium text-gray-900">{NOTIFICATION_UI_GROUPS.ISSUE_EVENTS.title}</h4>
+                {NOTIFICATION_UI_GROUPS.ISSUE_EVENTS.fields.map(([key, label]) => (
                   <label key={key} className="flex items-center text-sm">
                     <input
                       type="checkbox"
@@ -497,14 +485,8 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
               
               {/* Other Events */}
               <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">Other</h4>
-                {[
-                  ['mention_in_comment', 'Mentioned in comments'],
-                  ['mention_in_pull_request', 'Mentioned in pull requests'],
-                  ['mention_in_issue', 'Mentioned in issues'],
-                  // ['check_failures', 'CI failures'],
-                  // ['check_successes', 'CI successes'],
-                ].map(([key, label]) => (
+                <h4 className="font-medium text-gray-900">{NOTIFICATION_UI_GROUPS.OTHER.title}</h4>
+                {NOTIFICATION_UI_GROUPS.OTHER.fields.map(([key, label]) => (
                   <label key={key} className="flex items-center text-sm">
                     <input
                       type="checkbox"

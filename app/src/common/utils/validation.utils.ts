@@ -147,33 +147,15 @@ export function parseRepositoryFullName(
 /**
  * Validate JSON structure for notification preferences
  */
+import { ALL_NOTIFICATION_PREFERENCE_FIELDS } from '../constants/notification-preferences.constants';
+
 export function validateNotificationPreferences(preferences: any): boolean {
   if (!preferences || typeof preferences !== 'object') {
     return false;
   }
 
-  // Check that all values are boolean if they exist
-  const validKeys = [
-    'pull_request_opened',
-    'pull_request_closed',
-    'pull_request_merged',
-    'pull_request_reviewed',
-    'pull_request_commented',
-    'pull_request_assigned',
-    'pull_request_review_requested',
-    'issue_opened',
-    'issue_closed',
-    'issue_commented',
-    'issue_assigned',
-    'check_failures',
-    'check_successes',
-    'mention_in_comment',
-    'mention_in_pull_request',
-    'mention_in_issue',
-    'mute_own_activity',
-    'mute_bot_comments',
-    'mute_draft_pull_requests',
-  ];
+  // Use shared constants for validation
+  const validKeys = [...ALL_NOTIFICATION_PREFERENCE_FIELDS] as string[];
 
   for (const [key, value] of Object.entries(preferences)) {
     if (
