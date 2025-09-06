@@ -461,6 +461,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                   ['pull_request_reviewed', 'PR reviewed'],
                   ['pull_request_commented', 'PR commented'],
                   ['pull_request_assigned', 'PR assigned'],
+                  ['pull_request_review_requested', 'PR review requested'],
                 ].map(([key, label]) => (
                   <label key={key} className="flex items-center text-sm">
                     <input
@@ -499,11 +500,11 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900">Other</h4>
                 {[
-                  ['mentioned_in_comments', 'Mentions'],
-                  ['team_mentions', 'Team mentions'],
-                  ['team_assignments', 'Team assignments'],
-                  ['check_failures', 'CI failures'],
-                  ['check_successes', 'CI successes'],
+                  ['mention_in_comment', 'Mentioned in comments'],
+                  ['mention_in_pull_request', 'Mentioned in pull requests'],
+                  ['mention_in_issue', 'Mentioned in issues'],
+                  // ['check_failures', 'CI failures'],
+                  // ['check_successes', 'CI successes'],
                 ].map(([key, label]) => (
                   <label key={key} className="flex items-center text-sm">
                     <input

@@ -111,11 +111,6 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 - `mention_in_pull_request` - @mentions in PR descriptions
 - `mention_in_issue` - @mentions in issue descriptions
 
-### Team Settings
-- `team_assignments` - Team assigned to PRs/issues
-- `team_mentions` - Team mentioned in PRs/issues
-- `team_review_requests` - Team requested for review
-
 ### CI/CD Settings
 - `check_failures` - Failed status checks
 - `check_successes` - Successful status checks

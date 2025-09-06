@@ -36,19 +36,12 @@ export interface NotificationPreferences {
   pull_request_reviewed?: boolean;
   pull_request_commented?: boolean;
   pull_request_assigned?: boolean;
-
-  // More granular PR notifications
-  // pull_request_status_changes?: boolean;  // PR merged, closed, reopened
-  // pull_request_assignments?: boolean;     // Assigned to PR, review requested
+  pull_request_review_requested?: boolean;
 
   issue_opened?: boolean;
   issue_closed?: boolean;
   issue_commented?: boolean;
   issue_assigned?: boolean;
-
-  // More granular issue notifications
-  // issue_status_changes?: boolean;  // Issue opened, closed, reopened
-  // issue_assignments?: boolean;     // Assigned to issue
 
   // Discussions
   // discussion_created?: boolean;
@@ -59,12 +52,6 @@ export interface NotificationPreferences {
   mention_in_comment?: boolean;
   mention_in_pull_request?: boolean;
   mention_in_issue?: boolean;
-  mentioned_in_comments?: boolean; // Someone mentions you in a comment
-
-  // Team notifications
-  team_assignments?: boolean; // When your team is assigned
-  team_mentions?: boolean; // When your team is mentioned
-  team_review_requests?: boolean; // When your team is requested for review
 
   // CI/CD
   check_failures?: boolean; // CI checks fail

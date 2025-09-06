@@ -8,6 +8,7 @@ export interface NotificationPreferences {
   pull_request_reviewed?: boolean;
   pull_request_commented?: boolean;
   pull_request_assigned?: boolean;
+  pull_request_review_requested?: boolean;
 
   // Issue Activity
   issue_opened?: boolean;
@@ -23,12 +24,6 @@ export interface NotificationPreferences {
   mention_in_comment?: boolean;
   mention_in_pull_request?: boolean;
   mention_in_issue?: boolean;
-  mentioned_in_comments?: boolean;
-
-  // Team notifications
-  team_assignments?: boolean;
-  team_mentions?: boolean;
-  team_review_requests?: boolean;
 
   // Noise Control
   mute_own_activity?: boolean;
@@ -94,6 +89,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   pull_request_reviewed: true,
   pull_request_commented: true,
   pull_request_assigned: true,
+  pull_request_review_requested: true,
 
   // Issue Activity
   issue_opened: true,
@@ -102,19 +98,13 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   issue_assigned: true,
 
   // CI/CD
-  check_failures: true,
+  check_failures: false,
   check_successes: false,
 
   // Mentions
   mention_in_comment: true,
   mention_in_pull_request: true,
   mention_in_issue: true,
-  mentioned_in_comments: true,
-
-  // Team notifications
-  team_assignments: true,
-  team_mentions: true,
-  team_review_requests: true,
 
   // Noise Control
   mute_own_activity: true,

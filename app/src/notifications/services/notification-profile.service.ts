@@ -392,19 +392,13 @@ export class NotificationProfileService {
       issue_assigned: true,
 
       // CI/CD
-      check_failures: true,
+      check_failures: false,
       check_successes: false,
 
       // Mentions
       mention_in_comment: true,
       mention_in_pull_request: true,
       mention_in_issue: true,
-      mentioned_in_comments: true,
-
-      // Team notifications
-      team_assignments: true,
-      team_mentions: true,
-      team_review_requests: true,
 
       // Noise Control
       mute_own_activity: true,

@@ -207,10 +207,6 @@ export class UserSettingsService {
       issue_closed: true,
       issue_commented: true,
       issue_assigned: true,
-      // Team notification defaults
-      team_assignments: true,
-      team_mentions: true,
-      team_review_requests: true,
     };
   }
 
