@@ -88,7 +88,7 @@ export class DigestService {
   /**
    * Check if current time matches user's digest time (within 15-minute window)
    */
-  isDigestTimeMatched(digestTime: string, timezone: string = 'UTC', now: Date = new Date()): boolean {
+  isDigestTimeMatched(digestTime: string, timezone: string, now: Date = new Date()): boolean {
     const [hours, minutes] = digestTime.split(':').map(Number);
 
     // Round minutes to nearest 15-minute interval
@@ -103,25 +103,25 @@ export class DigestService {
   /**
    * Check if digest was already sent today for this config
    */
-  async wasDigestSentToday(configId: string, timezone: string = 'UTC'): Promise<boolean> {
-    // Get the current date in the user's timezone
+  async wasDigestSentToday(configId: string, timezone: string): Promise<boolean> {
+    // Get current time in user's timezone
     const now = new Date();
-    const userTimeString = now.toLocaleDateString('en-CA', { timeZone: timezone }); // YYYY-MM-DD format
-    const userToday = new Date(userTimeString);
+    const userTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
     
-    // Start of day in user timezone
-    const startOfDay = new Date(userToday.getTime());
-    
-    // End of day in user timezone
-    const endOfDay = new Date(userToday.getTime());
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    // Create start of day (00:00:00) in user's timezone
+    const today = new Date(userTime);
+    today.setHours(0, 0, 0, 0);
+
+    // Create start of next day in user's timezone  
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
     const existingDigest = await this.databaseService.userDigest.findFirst({
       where: {
         digestConfigId: configId,
         sentAt: {
-          gte: startOfDay,
-          lt: endOfDay,
+          gte: today,
+          lt: tomorrow,
         },
       },
     });
