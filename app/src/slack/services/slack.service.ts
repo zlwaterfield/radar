@@ -479,7 +479,6 @@ export class SlackService {
       // Check if user exists in our database
       const user = await this.databaseService.user.findUnique({
         where: { slackId: userId },
-        include: { settings: true },
       });
 
       const blocks = user

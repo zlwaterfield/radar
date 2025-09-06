@@ -118,12 +118,6 @@ GitHub team integration with:
 - `app/src/users/controllers/user-teams.controller.ts`: Team API endpoints
 - `client/src/app/settings/teams/`: Team management UI
 
-### Migration & Backward Compatibility
-- **Legacy Support**: Old `notificationSchedule` in UserSettings maintained for compatibility
-- **Migration Helper**: `createDefaultProfileFromSettings()` for smooth transitions
-- **Gradual Migration**: Users can migrate to new system at their own pace
-- **API Versioning**: New endpoints alongside existing ones
-
 ## 🔧 Development Guidelines
 You are an expert developer who writes full-stack apps in NestJS, Next.js, and Tailwind developer. 
 

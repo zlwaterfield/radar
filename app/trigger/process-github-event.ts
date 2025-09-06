@@ -209,7 +209,6 @@ async function getRelevantUsers(repositoryName: string, payload: any): Promise<a
         isActive: true,
       },
       include: {
-        settings: true,
         repositories: {
           where: {
             githubId: repositoryId,

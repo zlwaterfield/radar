@@ -278,60 +278,6 @@ export class NotificationProfileService {
   }
 
   /**
-   * Create a default notification profile from existing user settings
-   */
-  async createDefaultProfileFromSettings(
-    userId: string,
-  ): Promise<NotificationProfileWithMeta | null> {
-    try {
-      // Check if user already has profiles
-      const existingProfiles = await this.getUserNotificationProfiles(userId);
-      if (existingProfiles.length > 0) {
-        return null; // User already has profiles
-      }
-
-      // Get existing user settings
-      const settings = await this.databaseService.userSettings.findUnique({
-        where: { userId },
-      });
-
-      if (!settings) {
-        return null; // No settings to migrate
-      }
-
-      const notificationPreferences =
-        settings.notificationPreferences as NotificationPreferences;
-      const keywordPrefs = (settings.keywordPreferences as any) || {};
-
-      // Create default profile
-      const defaultProfile = await this.createNotificationProfile(userId, {
-        name: 'Default Notifications',
-        description: 'Migrated from your previous notification settings',
-        isEnabled: true,
-        scopeType: 'user',
-        repositoryFilter: { type: 'all' },
-        deliveryType: 'dm',
-        notificationPreferences:
-          notificationPreferences || this.getDefaultNotificationPreferences(),
-        keywords: keywordPrefs.keywords || [],
-        keywordLLMEnabled: keywordPrefs.enabled || false,
-        priority: 0,
-      });
-
-      this.logger.log(
-        `Created default notification profile for user ${userId}`,
-      );
-      return defaultProfile;
-    } catch (error) {
-      this.logger.error(
-        `Error creating default profile for user ${userId}:`,
-        error,
-      );
-      throw error;
-    }
-  }
-
-  /**
    * Validate scope and delivery settings
    */
   private async validateScopeAndDelivery(

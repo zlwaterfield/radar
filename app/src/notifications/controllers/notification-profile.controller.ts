@@ -94,16 +94,4 @@ export class NotificationProfileController {
       userId,
     );
   }
-
-  /**
-   * Create default profile from existing settings (migration helper)
-   */
-  @Post('migrate-from-settings')
-  async createDefaultFromSettings(
-    @GetUser('id') userId: string,
-  ): Promise<NotificationProfileWithMeta | null> {
-    return this.notificationProfileService.createDefaultProfileFromSettings(
-      userId,
-    );
-  }
 }

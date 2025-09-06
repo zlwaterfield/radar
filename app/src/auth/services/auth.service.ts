@@ -222,7 +222,6 @@ export class AuthService {
     const user = await this.databaseService.user.findUnique({
       where: { id: userId },
       include: {
-        settings: true,
         accounts: true,
       },
     });
@@ -274,11 +273,7 @@ export class AuthService {
       const session = await this.databaseService.session.findUnique({
         where: { id: sessionId },
         include: {
-          user: {
-            include: {
-              settings: true,
-            },
-          },
+          user: true,
         },
       });
 

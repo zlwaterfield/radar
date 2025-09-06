@@ -21,7 +21,6 @@ export class UsersService {
       return await this.databaseService.user.findUnique({
         where: { id },
         include: {
-          settings: true,
           repositories: true,
         },
       });
@@ -39,7 +38,6 @@ export class UsersService {
       return await this.databaseService.user.findUnique({
         where: { slackId },
         include: {
-          settings: true,
           repositories: true,
         },
       });
@@ -57,7 +55,6 @@ export class UsersService {
       return await this.databaseService.user.findUnique({
         where: { githubId },
         include: {
-          settings: true,
           repositories: true,
         },
       });
@@ -75,7 +72,6 @@ export class UsersService {
       return await this.databaseService.user.findUnique({
         where: { email },
         include: {
-          settings: true,
           repositories: true,
         },
       });
@@ -105,7 +101,6 @@ export class UsersService {
           githubRefreshToken: data.githubRefreshToken,
         },
         include: {
-          settings: true,
           repositories: true,
         },
       });
@@ -130,7 +125,6 @@ export class UsersService {
           updatedAt: new Date(),
         },
         include: {
-          settings: true,
           repositories: true,
         },
       });
@@ -207,7 +201,6 @@ export class UsersService {
           isActive: true,
         },
         include: {
-          settings: true,
           repositories: true,
         },
         orderBy: {
