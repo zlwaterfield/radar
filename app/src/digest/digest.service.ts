@@ -313,17 +313,39 @@ export class DigestService {
     scopeType: DigestScopeType,
     userLogin: string,
   ): boolean {
-    // For now, we only support user scope since team filtering would require
-    // more complex team membership checks against PR authors/reviewers
     if (scopeType === 'user') {
-      return true; // User scope includes all PRs user is involved in
-    } else if (scopeType === 'team') {
-      // For team scope, we would need to check if PR author/reviewers are team members
-      // This would require GitHub API calls to check team membership
-      // For now, return true and implement proper team filtering later
-      return true;
+      // For user scope, include PRs where:
+      // 1. User is the author
+      // 2. User is requested as reviewer  
+      // 3. User is assigned to the PR
+      
+      // Check if user is the PR author
+      if (pr.user.login === userLogin) {
+        return true;
+      }
+      
+      // Check if user is a requested reviewer
+      const isRequestedReviewer = pr.requested_reviewers.some(
+        (reviewer: any) => reviewer.login === userLogin
+      );
+      if (isRequestedReviewer) {
+        return true;
+      }
+      
+      // Check if user is assigned to the PR
+      const isAssigned = pr.assignees && pr.assignees.some(
+        (assignee: any) => assignee.login === userLogin
+      );
+      if (isAssigned) {
+        return true;
+      }
+      
+      return false;
     }
-    return true;
+
+    // TODO: add support for team scope
+    
+    return false;
   }
 
   /**
@@ -487,7 +509,7 @@ export class DigestService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*> 📝\n  \`${pr.base.repo.full_name}\``,
+            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\``,
           },
         });
       }
