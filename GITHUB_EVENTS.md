@@ -107,7 +107,6 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 - `mute_draft_pull_requests` - Skip draft PR notifications
 
 ### Mention Settings
-- `mention_in_comment` - @mentions in comments
 - `mention_in_pull_request` - @mentions in PR descriptions
 - `mention_in_issue` - @mentions in issue descriptions
 

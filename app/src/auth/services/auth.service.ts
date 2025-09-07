@@ -169,7 +169,6 @@ export class AuthService {
                 check_successes: false,
 
                 // Mentions
-                mention_in_comment: true,
                 mention_in_pull_request: true,
                 mention_in_issue: true,
 

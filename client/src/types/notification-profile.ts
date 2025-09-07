@@ -21,7 +21,6 @@ export interface NotificationPreferences {
   check_successes?: boolean;
 
   // Mentions
-  mention_in_comment?: boolean;
   mention_in_pull_request?: boolean;
   mention_in_issue?: boolean;
 

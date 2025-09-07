@@ -24,7 +24,6 @@ export const NOTIFICATION_PREFERENCE_FIELDS = {
     'check_successes'
   ],
   MENTIONS: [
-    'mention_in_comment',
     'mention_in_pull_request',
     'mention_in_issue'
   ],
@@ -67,7 +66,6 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
   check_successes: false,
 
   // Mentions
-  mention_in_comment: true,
   mention_in_pull_request: true,
   mention_in_issue: true,
 
@@ -104,7 +102,6 @@ export const NOTIFICATION_UI_GROUPS = {
   OTHER: {
     title: 'Other',
     fields: [
-      ['mention_in_comment', 'Mentioned in comments'],
       ['mention_in_pull_request', 'Mentioned in pull requests'],
       ['mention_in_issue', 'Mentioned in issues'],
     ] as const

@@ -54,7 +54,6 @@ export function validateNotificationPreferences(
     'issue_assigned',
     'check_failures',
     'check_successes',
-    'mention_in_comment',
     'mention_in_pull_request',
     'mention_in_issue',
     'mute_own_activity',

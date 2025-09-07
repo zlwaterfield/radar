@@ -627,7 +627,7 @@ export class NotificationService {
       watchingReasons.has(WatchingReason.MENTIONED) ||
       watchingReasons.has(WatchingReason.TEAM_MENTIONED)
     ) {
-      return preferences.mention_in_comment ?? true;
+      return preferences.mention_in_pull_request ?? true;
     }
 
     // Check preferences based on trigger
