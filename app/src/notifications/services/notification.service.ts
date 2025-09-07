@@ -214,12 +214,19 @@ export class NotificationService {
 
       // Check notification preferences for this event type
       const trigger = this.getTriggerFromEvent(payload, eventType);
+      const isPullRequest = this.isPullRequestEvent(eventType, payload);
+      const isIssue = this.isIssueEvent(eventType, payload);
+      
       if (
         trigger &&
         this.shouldNotifyBasedOnPreferences(
           profile.notificationPreferences,
           trigger,
           watchingReasons,
+          isPullRequest,
+          isIssue,
+          payload,
+          user.githubId,
         )
       ) {
         let reason = 'PREFERENCES_MATCH';
@@ -383,20 +390,17 @@ export class NotificationService {
         }
       }
 
-      // Check if user is mentioned in the PR/issue description
-      const body = data.body || '';
-      if (body && body.includes(`@${githubUsername}`)) {
+      // Check for mentions in both the main content and any comment content
+      const textToCheck = this.getTextContentForMentions(data, payload, eventType);
+      
+      // Check if user is mentioned (using word boundaries for accurate matching)
+      if (this.isUserMentioned(textToCheck, githubUsername)) {
         watchingReasons.add(WatchingReason.MENTIONED);
       }
 
-      // Check if user's teams are mentioned in the PR/issue description
-      if (body && user.teams.length > 0) {
-        for (const team of user.teams) {
-          if (body.includes(`@${team.organization}/${team.teamSlug}`)) {
-            watchingReasons.add(WatchingReason.TEAM_MENTIONED);
-            break;
-          }
-        }
+      // Check if user's teams are mentioned
+      if (this.areTeamsMentioned(textToCheck, user.teams)) {
+        watchingReasons.add(WatchingReason.TEAM_MENTIONED);
       }
 
       return watchingReasons;
@@ -615,52 +619,223 @@ export class NotificationService {
   }
 
   /**
+   * Determine if event type is for a pull request (context-aware for issue_comment)
+   */
+  private isPullRequestEvent(eventType: string, payload?: any): boolean {
+    // Direct PR event types
+    if (eventType === 'pull_request' || 
+        eventType === 'pull_request_review' || 
+        eventType === 'pull_request_review_comment') {
+      return true;
+    }
+    
+    // For issue_comment, check if it's a comment on a PR
+    if (eventType === 'issue_comment' && payload?.issue?.pull_request) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Determine if event type is for an issue (context-aware for issue_comment)
+   */
+  private isIssueEvent(eventType: string, payload?: any): boolean {
+    // Direct issue event
+    if (eventType === 'issue') {
+      return true;
+    }
+    
+    // For issue_comment, check if it's a comment on a regular issue (not a PR)
+    if (eventType === 'issue_comment' && !payload?.issue?.pull_request) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Get the appropriate mention preference based on event type
+   */
+  private getMentionPreference(
+    preferences: NotificationPreferences,
+    isPullRequest: boolean,
+    isIssue: boolean,
+  ): boolean {
+    if (isIssue) {
+      return preferences.mention_in_issue ?? true;
+    } else if (isPullRequest) {
+      return preferences.mention_in_pull_request ?? true;
+    } else {
+      // This should not happen with context-aware event detection, but fallback to PR preference
+      this.logger.warn('Unexpected event type context: not PR and not Issue for mention preference');
+      return preferences.mention_in_pull_request ?? true;
+    }
+  }
+
+  /**
+   * Get the appropriate event preference based on trigger and event type
+   */
+  private getEventPreference(
+    preferences: NotificationPreferences,
+    trigger: NotificationTrigger,
+    isPullRequest: boolean,
+    isIssue: boolean,
+    watchingReasons: Set<WatchingReason>,
+  ): boolean {
+    switch (trigger) {
+      case NotificationTrigger.COMMENTED:
+        return isIssue 
+          ? (preferences.issue_commented ?? true)
+          : (preferences.pull_request_commented ?? true);
+        
+      case NotificationTrigger.REVIEWED:
+        // Reviews only apply to PRs
+        return preferences.pull_request_reviewed ?? true;
+        
+      case NotificationTrigger.MERGED:
+        // Merging only applies to PRs
+        return preferences.pull_request_merged ?? true;
+        
+      case NotificationTrigger.CLOSED:
+      case NotificationTrigger.REOPENED:
+        return isIssue 
+          ? (preferences.issue_closed ?? true)
+          : (preferences.pull_request_closed ?? true);
+        
+      case NotificationTrigger.ASSIGNED:
+      case NotificationTrigger.UNASSIGNED:
+        const assignedPref = isIssue 
+          ? (preferences.issue_assigned ?? true)
+          : (preferences.pull_request_assigned ?? true);
+        return watchingReasons.has(WatchingReason.ASSIGNED) && assignedPref;
+        
+      case NotificationTrigger.REVIEW_REQUESTED:
+      case NotificationTrigger.REVIEW_REQUEST_REMOVED:
+        // Review requests only apply to PRs
+        return watchingReasons.has(WatchingReason.REVIEWER) && 
+               (preferences.pull_request_review_requested ?? true);
+        
+      case NotificationTrigger.OPENED:
+        return isIssue 
+          ? (preferences.issue_opened ?? true)
+          : (preferences.pull_request_opened ?? true);
+        
+      case NotificationTrigger.CHECK_FAILED:
+        return preferences.check_failures ?? false;
+        
+      case NotificationTrigger.CHECK_SUCCEEDED:
+        return preferences.check_successes ?? false;
+        
+      default:
+        return false;
+    }
+  }
+
+  /**
    * Check notification preferences for a specific trigger
    */
   private shouldNotifyBasedOnPreferences(
     preferences: NotificationPreferences,
     trigger: NotificationTrigger,
     watchingReasons: Set<WatchingReason>,
+    isPullRequest: boolean,
+    isIssue: boolean,
+    payload: any,
+    githubId: string,
   ): boolean {
-    // Always notify if mentioned
+    // Self-action filtering: Don't notify for own actions if mute_own_activity is enabled (default true)
+    if (payload.sender?.id?.toString() === githubId && preferences.mute_own_activity !== false) {
+      return false;
+    }
+    
+    // Bot comment filtering: Don't notify for bot actions if mute_bot_comments is enabled
+    if (payload.sender?.type === 'Bot' && preferences.mute_bot_comments === true) {
+      return false;
+    }
+    
+    // Draft PR filtering: Don't notify for draft PR activity if mute_draft_pull_requests is enabled
+    if (isPullRequest && preferences.mute_draft_pull_requests === true) {
+      const isDraft = payload.pull_request?.draft === true;
+      if (isDraft) {
+        return false;
+      }
+    }
+
+    // Always notify if mentioned - use appropriate preference based on event type
     if (
       watchingReasons.has(WatchingReason.MENTIONED) ||
       watchingReasons.has(WatchingReason.TEAM_MENTIONED)
     ) {
-      return preferences.mention_in_pull_request ?? true;
+      return this.getMentionPreference(preferences, isPullRequest, isIssue);
     }
 
-    // Check preferences based on trigger
-    switch (trigger) {
-      case NotificationTrigger.COMMENTED:
-        return preferences.pull_request_commented ?? true;
-      case NotificationTrigger.REVIEWED:
-        return preferences.pull_request_reviewed ?? true;
-      case NotificationTrigger.MERGED:
-        return preferences.pull_request_merged ?? true;
-      case NotificationTrigger.CLOSED:
-      case NotificationTrigger.REOPENED:
-        return preferences.pull_request_closed ?? true;
-      case NotificationTrigger.ASSIGNED:
-      case NotificationTrigger.UNASSIGNED:
-        return (
-          watchingReasons.has(WatchingReason.ASSIGNED) &&
-          (preferences.pull_request_assigned ?? true)
-        );
-      case NotificationTrigger.REVIEW_REQUESTED:
-      case NotificationTrigger.REVIEW_REQUEST_REMOVED:
-        return (
-          watchingReasons.has(WatchingReason.REVIEWER) &&
-          (preferences.pull_request_review_requested ?? true)
-        );
-      case NotificationTrigger.OPENED:
-        return preferences.pull_request_opened ?? true;
-      case NotificationTrigger.CHECK_FAILED:
-        return preferences.check_failures ?? false;
-      case NotificationTrigger.CHECK_SUCCEEDED:
-        return preferences.check_successes ?? false;
-      default:
-        return false;
+    // Check preferences based on trigger and event type
+    return this.getEventPreference(preferences, trigger, isPullRequest, isIssue, watchingReasons);
+  }
+
+  /**
+   * Get all text content that should be checked for mentions
+   */
+  private getTextContentForMentions(data: any, payload: any, eventType: string): string {
+    const textParts: string[] = [];
+    
+    // Always include the main body (PR/issue description)
+    if (data.body) {
+      textParts.push(data.body);
     }
+    
+    // For comment events, also include the comment body
+    switch (eventType) {
+      case 'issue_comment':
+        if (payload.comment?.body) {
+          textParts.push(payload.comment.body);
+        }
+        break;
+      case 'pull_request_review':
+        if (payload.review?.body) {
+          textParts.push(payload.review.body);
+        }
+        break;
+      case 'pull_request_review_comment':
+        if (payload.comment?.body) {
+          textParts.push(payload.comment.body);
+        }
+        break;
+    }
+    
+    return textParts.join('\n\n');
+  }
+
+  /**
+   * Check if user is mentioned in text using word boundaries for accurate matching
+   */
+  private isUserMentioned(text: string, githubUsername: string): boolean {
+    if (!text || !githubUsername) {
+      return false;
+    }
+    
+    // Use word boundary regex to prevent false positives like @johndoe matching @johndoesthings
+    const mentionRegex = new RegExp(`\\B@${githubUsername}\\b`, 'i');
+    return mentionRegex.test(text);
+  }
+
+  /**
+   * Check if any of the user's teams are mentioned in text
+   */
+  private areTeamsMentioned(text: string, teams: any[]): boolean {
+    if (!text || !teams?.length) {
+      return false;
+    }
+    
+    for (const team of teams) {
+      // Check for @org/team-name mentions
+      const teamMentionRegex = new RegExp(`\\B@${team.organization}/${team.teamSlug}\\b`, 'i');
+      if (teamMentionRegex.test(text)) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 }
