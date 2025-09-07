@@ -200,11 +200,14 @@ export class NotificationService {
           shouldMatch: false,
           matchedKeywords: [],
           matchDetails: {},
-          reason: 'SCOPE_MISMATCH',
+          reason: 'REPOSITORY_FILTER_MISMATCH',
           context: {
             profileId: profile.id,
             profileName: profile.name,
             scopeType: profile.scopeType,
+            repositoryId: payload.repository?.id?.toString(),
+            repositoryName: payload.repository?.full_name,
+            repositoryFilter: profile.repositoryFilter,
           },
         };
       }
@@ -552,9 +555,63 @@ export class NotificationService {
     userId: string,
     payload: any,
   ): boolean {
-    // For now, we'll implement basic scope checking
+    // Check repository filtering
+    if (!this.checkRepositoryFilter(profile, payload)) {
+      this.logger.debug(
+        `Profile ${profile.name} (${profile.id}) repository filter mismatch for repository ${payload.repository?.full_name}`
+      );
+      return false;
+    }
+
     // TODO: Add team scope validation when we have team context in payloads
-    return true; // All scopes match for now
+    return true;
+  }
+
+  /**
+   * Check if the repository from the event matches the profile's repository filter
+   */
+  private checkRepositoryFilter(
+    profile: NotificationProfileWithMeta,
+    payload: any,
+  ): boolean {
+    const repositoryId = payload.repository?.id?.toString();
+    
+    if (!repositoryId) {
+      this.logger.warn('No repository ID found in payload');
+      return false;
+    }
+
+    const repositoryFilter = profile.repositoryFilter;
+    
+    // If filter type is 'all', include all repositories
+    if (repositoryFilter.type === 'all') {
+      this.logger.debug(
+        `Profile ${profile.name} accepts all repositories, allowing ${payload.repository?.full_name}`
+      );
+      return true;
+    }
+    
+    // If filter type is 'selected', check if repository is in the selected list
+    if (repositoryFilter.type === 'selected') {
+      if (!repositoryFilter.repoIds || repositoryFilter.repoIds.length === 0) {
+        this.logger.warn(
+          `Profile ${profile.name} has selected filter but no repository IDs configured`
+        );
+        return false;
+      }
+      
+      const isIncluded = repositoryFilter.repoIds.includes(repositoryId);
+      this.logger.debug(
+        `Profile ${profile.name} repository filter: ${isIncluded ? 'INCLUDED' : 'EXCLUDED'} - ${payload.repository?.full_name} (${repositoryId})`
+      );
+      return isIncluded;
+    }
+    
+    // Unknown filter type, default to false for safety
+    this.logger.warn(
+      `Profile ${profile.name} has unknown repository filter type: ${repositoryFilter.type}`
+    );
+    return false;
   }
 
   /**
