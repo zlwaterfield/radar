@@ -88,31 +88,44 @@ export class DigestService {
   /**
    * Check if current time matches user's digest time (within 15-minute window)
    */
-  isDigestTimeMatched(digestTime: string, timezone: string, now: Date = new Date()): boolean {
+  isDigestTimeMatched(
+    digestTime: string,
+    timezone: string,
+    now: Date = new Date(),
+  ): boolean {
     const [hours, minutes] = digestTime.split(':').map(Number);
 
     // Round minutes to nearest 15-minute interval
     const roundedMinutes = Math.floor(minutes / 15) * 15;
 
     // Convert current time to user's timezone
-    const userTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+    const userTime = new Date(
+      now.toLocaleString('en-US', { timeZone: timezone }),
+    );
 
-    return userTime.getHours() === hours && userTime.getMinutes() === roundedMinutes;
+    return (
+      userTime.getHours() === hours && userTime.getMinutes() === roundedMinutes
+    );
   }
 
   /**
    * Check if digest was already sent today for this config
    */
-  async wasDigestSentToday(configId: string, timezone: string): Promise<boolean> {
+  async wasDigestSentToday(
+    configId: string,
+    timezone: string,
+  ): Promise<boolean> {
     // Get current time in user's timezone
     const now = new Date();
-    const userTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-    
+    const userTime = new Date(
+      now.toLocaleString('en-US', { timeZone: timezone }),
+    );
+
     // Create start of day (00:00:00) in user's timezone
     const today = new Date(userTime);
     today.setHours(0, 0, 0, 0);
 
-    // Create start of next day in user's timezone  
+    // Create start of next day in user's timezone
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -316,35 +329,35 @@ export class DigestService {
     if (scopeType === 'user') {
       // For user scope, include PRs where:
       // 1. User is the author
-      // 2. User is requested as reviewer  
+      // 2. User is requested as reviewer
       // 3. User is assigned to the PR
-      
+
       // Check if user is the PR author
       if (pr.user.login === userLogin) {
         return true;
       }
-      
+
       // Check if user is a requested reviewer
       const isRequestedReviewer = pr.requested_reviewers.some(
-        (reviewer: any) => reviewer.login === userLogin
+        (reviewer: any) => reviewer.login === userLogin,
       );
       if (isRequestedReviewer) {
         return true;
       }
-      
+
       // Check if user is assigned to the PR
-      const isAssigned = pr.assignees && pr.assignees.some(
-        (assignee: any) => assignee.login === userLogin
-      );
+      const isAssigned =
+        pr.assignees &&
+        pr.assignees.some((assignee: any) => assignee.login === userLogin);
       if (isAssigned) {
         return true;
       }
-      
+
       return false;
     }
 
     // TODO: add support for team scope
-    
+
     return false;
   }
 

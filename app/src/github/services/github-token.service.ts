@@ -112,9 +112,9 @@ export class GitHubTokenService {
         const testClient = new Octokit({
           auth: user.githubAccessToken,
         });
-        
+
         await testClient.users.getAuthenticated();
-        
+
         // Current token is valid
         return user.githubAccessToken;
       } catch (testError) {
@@ -180,9 +180,9 @@ export class GitHubTokenService {
         const testClient = new Octokit({
           auth: user.githubAccessToken,
         });
-        
+
         await testClient.users.getAuthenticated();
-        
+
         // Current token is valid
         return user.githubAccessToken;
       } catch (testError) {

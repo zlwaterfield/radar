@@ -1,9 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import type { JsonValue } from '@prisma/client/runtime/library';
 import type { NotificationPreferences } from '../types/user.types';
-import { 
+import {
   ALL_NOTIFICATION_PREFERENCE_FIELDS,
-  DEFAULT_NOTIFICATION_PREFERENCES 
+  DEFAULT_NOTIFICATION_PREFERENCES,
 } from '../constants/notification-preferences.constants';
 
 /**
@@ -82,7 +82,6 @@ export function validateNotificationPreferences(
   return result;
 }
 
-
 /**
  * Safely converts null to undefined for optional fields
  */
@@ -97,4 +96,3 @@ export function nullToUndefined<T>(value: T | null): T | undefined {
 export function createDefaultNotificationPreferences(): NotificationPreferences {
   return { ...DEFAULT_NOTIFICATION_PREFERENCES };
 }
-

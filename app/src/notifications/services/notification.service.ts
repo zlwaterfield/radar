@@ -471,7 +471,10 @@ export class NotificationService {
               // Try to get user's valid GitHub token first, fall back to app client
               let accessToken: string | undefined;
               if (userId) {
-                accessToken = await this.githubTokenService.getValidTokenForApiCall(userId) || undefined;
+                accessToken =
+                  (await this.githubTokenService.getValidTokenForApiCall(
+                    userId,
+                  )) || undefined;
               }
 
               const fullPRData = await this.githubService.getPullRequest(
@@ -563,7 +566,10 @@ export class NotificationService {
     watchingReasons: Set<WatchingReason>,
   ): boolean {
     // Always notify if mentioned
-    if (watchingReasons.has(WatchingReason.MENTIONED) || watchingReasons.has(WatchingReason.TEAM_MENTIONED)) {
+    if (
+      watchingReasons.has(WatchingReason.MENTIONED) ||
+      watchingReasons.has(WatchingReason.TEAM_MENTIONED)
+    ) {
       return preferences.mention_in_comment ?? true;
     }
 
@@ -580,10 +586,16 @@ export class NotificationService {
         return preferences.pull_request_closed ?? true;
       case NotificationTrigger.ASSIGNED:
       case NotificationTrigger.UNASSIGNED:
-        return watchingReasons.has(WatchingReason.ASSIGNED) && (preferences.pull_request_assigned ?? true);
+        return (
+          watchingReasons.has(WatchingReason.ASSIGNED) &&
+          (preferences.pull_request_assigned ?? true)
+        );
       case NotificationTrigger.REVIEW_REQUESTED:
       case NotificationTrigger.REVIEW_REQUEST_REMOVED:
-        return watchingReasons.has(WatchingReason.REVIEWER) && (preferences.pull_request_review_requested ?? true);
+        return (
+          watchingReasons.has(WatchingReason.REVIEWER) &&
+          (preferences.pull_request_review_requested ?? true)
+        );
       case NotificationTrigger.OPENED:
         return preferences.pull_request_opened ?? true;
       case NotificationTrigger.CHECK_FAILED:

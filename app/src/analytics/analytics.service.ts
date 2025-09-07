@@ -55,7 +55,7 @@ export class AnalyticsService {
           timestamp: new Date(),
         },
       });
-      
+
       // Immediately flush the event to ensure it's sent
       await this.posthog.flush();
     } catch (error) {

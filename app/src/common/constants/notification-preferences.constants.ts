@@ -6,33 +6,30 @@
 export const NOTIFICATION_PREFERENCE_FIELDS = {
   PR_ACTIVITY: [
     'pull_request_opened',
-    'pull_request_closed', 
+    'pull_request_closed',
     'pull_request_merged',
     'pull_request_reviewed',
     'pull_request_commented',
     'pull_request_assigned',
-    'pull_request_review_requested'
+    'pull_request_review_requested',
   ],
   ISSUE_ACTIVITY: [
     'issue_opened',
     'issue_closed',
-    'issue_commented', 
-    'issue_assigned'
+    'issue_commented',
+    'issue_assigned',
   ],
-  CI_CD: [
-    'check_failures',
-    'check_successes'
-  ],
+  CI_CD: ['check_failures', 'check_successes'],
   MENTIONS: [
     'mention_in_comment',
     'mention_in_pull_request',
-    'mention_in_issue'
+    'mention_in_issue',
   ],
   NOISE_CONTROL: [
     'mute_own_activity',
     'mute_bot_comments',
-    'mute_draft_pull_requests'
-  ]
+    'mute_draft_pull_requests',
+  ],
 } as const;
 
 export const ALL_NOTIFICATION_PREFERENCE_FIELDS = [
@@ -40,7 +37,7 @@ export const ALL_NOTIFICATION_PREFERENCE_FIELDS = [
   ...NOTIFICATION_PREFERENCE_FIELDS.ISSUE_ACTIVITY,
   ...NOTIFICATION_PREFERENCE_FIELDS.CI_CD,
   ...NOTIFICATION_PREFERENCE_FIELDS.MENTIONS,
-  ...NOTIFICATION_PREFERENCE_FIELDS.NOISE_CONTROL
+  ...NOTIFICATION_PREFERENCE_FIELDS.NOISE_CONTROL,
 ] as const;
 
 /**
@@ -90,16 +87,16 @@ export const NOTIFICATION_UI_GROUPS = {
       ['pull_request_commented', 'PR commented'],
       ['pull_request_assigned', 'PR assigned'],
       ['pull_request_review_requested', 'PR review requested'],
-    ] as const
+    ] as const,
   },
   ISSUE_EVENTS: {
-    title: 'Issues', 
+    title: 'Issues',
     fields: [
       ['issue_opened', 'Issue opened'],
       ['issue_closed', 'Issue closed'],
       ['issue_commented', 'Issue commented'],
       ['issue_assigned', 'Issue assigned'],
-    ] as const
+    ] as const,
   },
   OTHER: {
     title: 'Other',
@@ -107,10 +104,12 @@ export const NOTIFICATION_UI_GROUPS = {
       ['mention_in_comment', 'Mentioned in comments'],
       ['mention_in_pull_request', 'Mentioned in pull requests'],
       ['mention_in_issue', 'Mentioned in issues'],
-    ] as const
-  }
+    ] as const,
+  },
 } as const;
 
 // TypeScript utility types
-export type NotificationPreferenceKey = typeof ALL_NOTIFICATION_PREFERENCE_FIELDS[number];
-export type NotificationPreferenceDefaults = typeof DEFAULT_NOTIFICATION_PREFERENCES;
+export type NotificationPreferenceKey =
+  (typeof ALL_NOTIFICATION_PREFERENCE_FIELDS)[number];
+export type NotificationPreferenceDefaults =
+  typeof DEFAULT_NOTIFICATION_PREFERENCES;

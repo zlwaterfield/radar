@@ -13,7 +13,6 @@ export interface UserProfile {
   updatedAt: Date;
 }
 
-
 export interface NotificationPreferences {
   // PR & Issue Activity
   pull_request_opened?: boolean;
@@ -48,7 +47,6 @@ export interface NotificationPreferences {
   mute_bot_comments?: boolean;
   mute_draft_pull_requests?: boolean; // Ignore draft PR activity
 }
-
 
 export interface UserRepository {
   id: string;

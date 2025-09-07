@@ -318,5 +318,4 @@ export class NotificationProfileService {
       );
     }
   }
-
 }
