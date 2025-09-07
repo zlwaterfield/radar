@@ -114,7 +114,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     // Collect all enabled preferences with their labels
     Object.values(NOTIFICATION_UI_GROUPS).forEach(group => {
       Object.values(group.sections).forEach(section => {
-        section.fields.forEach(([key, label]) => {
+        section.fields.forEach(([key, label]: [keyof NotificationPreferences, string]) => {
           if (preferences[key as keyof NotificationPreferences]) {
             enabled.push(label);
           }
