@@ -18,7 +18,8 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 **User Settings**:
 - `pull_request_opened` - New PRs opened
 - `pull_request_closed` - PRs closed/merged
-- `pull_request_assigned` - PR assignments
+- `pull_request_assigned` - PR assignments  
+- `pull_request_review_requested` - Review requested
 - `mention_in_pull_request` - @mentions in PR descriptions
 
 **Trigger Conditions**:
@@ -32,6 +33,7 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 
 **User Settings**:
 - `pull_request_reviewed` - Reviews submitted on PRs
+- `pull_request_commented` - Comments on PR reviews
 
 **Trigger Conditions**:
 - Repository tracked by user
@@ -43,7 +45,7 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 **GitHub Actions**: `created`
 
 **User Settings**:
-- `pull_request_commented` - Comments on PR reviews
+- `pull_request_commented` - Comments on PR reviews (covers both PR review comments and issue comments on PRs)
 
 **Trigger Conditions**:
 - Repository tracked by user
@@ -102,6 +104,26 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 - Installation creator matches user's GitHub ID
 
 ## User Settings Control
+
+### UI Organization (Action-Based)
+
+The notification preferences UI is organized by user intent rather than event type:
+
+**Direct Actions** - Things requiring your attention:
+- `mention_in_pull_request` - @mentions in PRs
+- `mention_in_issue` - @mentions in issues  
+- `pull_request_assigned` - Assigned to PR
+- `issue_assigned` - Assigned to issue
+- `pull_request_review_requested` - Review requested
+
+**Activity Updates** - Updates on PRs and issues you're involved with:
+- `pull_request_opened` - New PRs opened
+- `pull_request_closed` - PRs closed/merged  
+- `pull_request_reviewed` - PR reviews submitted
+- `pull_request_commented` - PR comments
+- `issue_opened` - New issues opened
+- `issue_closed` - Issues closed
+- `issue_commented` - Issue comments
 
 ### Noise Control Settings
 - `mute_own_activity` - Skip notifications for user's own actions

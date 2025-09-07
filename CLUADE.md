@@ -93,9 +93,11 @@ Users can now create multiple digest configurations with:
 Advanced notification system with:
 - **Priority-Based Processing**: Higher priority profiles processed first
 - **Keyword Matching**: Per-profile keyword lists with LLM integration toggle
-- **Granular Preferences**: Individual event type toggles per profile
+- **Action-Based UI Organization**: Preferences organized by "Direct Actions" (requiring attention) vs "Activity Updates" (informational)
+- **Granular Preferences**: Individual event type toggles per profile, grouped by PR/Issue within action categories
 - **Scope Control**: User or team-based notification filtering
 - **Delivery Flexibility**: DM or channel delivery per profile
+- **Rich Profile Display**: Shows enabled events as visual tags in profile management interface
 
 **Database Schema:**
 - `NotificationProfile` table: Flexible notification configurations
@@ -104,7 +106,9 @@ Advanced notification system with:
 **Key Files:**
 - `app/src/notifications/services/notification-profile.service.ts`: Profile management
 - `app/src/notifications/controllers/notification-profile.controller.ts`: REST API
-- `client/src/components/NotificationProfileManager.tsx`: UI for profile management
+- `client/src/components/NotificationProfileManager.tsx`: UI for profile management with event display
+- `client/src/components/NotificationProfileForm.tsx`: Form with action-based UI organization
+- `client/src/constants/notification-preferences.constants.ts`: UI groups organized by Direct Actions/Activity Updates
 
 ### Team Management System
 GitHub team integration with:

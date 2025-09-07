@@ -74,27 +74,49 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
  * UI field configuration for forms
  */
 export const NOTIFICATION_UI_GROUPS = {
-  PR_EVENTS: {
-    title: 'Pull requests',
-    fields: [
-      ['pull_request_opened', 'PR opened'],
-      ['pull_request_closed', 'PR closed/merged'],
-      ['pull_request_reviewed', 'PR reviewed'],
-      ['pull_request_commented', 'PR commented'],
-      ['pull_request_assigned', 'PR assigned'],
-      ['pull_request_review_requested', 'PR review requested'],
-      ['mention_in_pull_request', 'Mentioned in pull requests'],
-    ] as const
+  DIRECT_ACTIONS: {
+    title: 'Direct Actions',
+    description: 'Things requiring your attention',
+    sections: {
+      PULL_REQUESTS: {
+        title: 'Pull Requests',
+        fields: [
+          ['mention_in_pull_request', 'Mentioned in pull requests'],
+          ['pull_request_assigned', 'Assigned to pull request'],
+          ['pull_request_review_requested', 'Review requested'],
+        ] as const
+      },
+      ISSUES: {
+        title: 'Issues',
+        fields: [
+          ['mention_in_issue', 'Mentioned in issues'],
+          ['issue_assigned', 'Assigned to issue'],
+        ] as const
+      }
+    }
   },
-  ISSUE_EVENTS: {
-    title: 'Issues', 
-    fields: [
-      ['issue_opened', 'Issue opened'],
-      ['issue_closed', 'Issue closed'],
-      ['issue_commented', 'Issue commented'],
-      ['issue_assigned', 'Issue assigned'],
-      ['mention_in_issue', 'Mentioned in issues'],
-    ] as const
+  ACTIVITY_UPDATES: {
+    title: 'Activity Updates',
+    description: 'Updates on PRs and issues you\'re involved with',
+    sections: {
+      PULL_REQUESTS: {
+        title: 'Pull Requests',
+        fields: [
+          ['pull_request_opened', 'Pull request opened'],
+          ['pull_request_closed', 'Pull request closed/merged'],
+          ['pull_request_reviewed', 'Pull request reviewed'],
+          ['pull_request_commented', 'Pull request commented'],
+        ] as const
+      },
+      ISSUES: {
+        title: 'Issues',
+        fields: [
+          ['issue_opened', 'Issue opened'],
+          ['issue_closed', 'Issue closed'],
+          ['issue_commented', 'Issue commented'],
+        ] as const
+      }
+    }
   }
 } as const;
 

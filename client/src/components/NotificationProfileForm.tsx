@@ -450,37 +450,89 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Event preferences</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* PR Events */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">{NOTIFICATION_UI_GROUPS.PR_EVENTS.title}</h4>
-                {NOTIFICATION_UI_GROUPS.PR_EVENTS.fields.map(([key, label]) => (
-                  <label key={key} className="flex items-center text-sm">
-                    <input
-                      type="checkbox"
-                      checked={formData.notificationPreferences[key as keyof NotificationPreferences] ?? false}
-                      onChange={(e) => handlePreferenceChange(key as keyof NotificationPreferences, e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
-                    />
-                    {label}
-                  </label>
-                ))}
+            <div className="space-y-8">
+              {/* Direct Actions */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">{NOTIFICATION_UI_GROUPS.DIRECT_ACTIONS.title}</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{NOTIFICATION_UI_GROUPS.DIRECT_ACTIONS.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Direct Actions - Pull Requests */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-gray-800 dark:text-gray-200 text-sm">{NOTIFICATION_UI_GROUPS.DIRECT_ACTIONS.sections.PULL_REQUESTS.title}</h5>
+                    {NOTIFICATION_UI_GROUPS.DIRECT_ACTIONS.sections.PULL_REQUESTS.fields.map(([key, label]) => (
+                      <label key={key} className="flex items-center text-sm">
+                        <input
+                          type="checkbox"
+                          checked={formData.notificationPreferences[key as keyof NotificationPreferences] ?? false}
+                          onChange={(e) => handlePreferenceChange(key as keyof NotificationPreferences, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  
+                  {/* Direct Actions - Issues */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-gray-800 dark:text-gray-200 text-sm">{NOTIFICATION_UI_GROUPS.DIRECT_ACTIONS.sections.ISSUES.title}</h5>
+                    {NOTIFICATION_UI_GROUPS.DIRECT_ACTIONS.sections.ISSUES.fields.map(([key, label]) => (
+                      <label key={key} className="flex items-center text-sm">
+                        <input
+                          type="checkbox"
+                          checked={formData.notificationPreferences[key as keyof NotificationPreferences] ?? false}
+                          onChange={(e) => handlePreferenceChange(key as keyof NotificationPreferences, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
               
-              {/* Issue Events */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">{NOTIFICATION_UI_GROUPS.ISSUE_EVENTS.title}</h4>
-                {NOTIFICATION_UI_GROUPS.ISSUE_EVENTS.fields.map(([key, label]) => (
-                  <label key={key} className="flex items-center text-sm">
-                    <input
-                      type="checkbox"
-                      checked={formData.notificationPreferences[key as keyof NotificationPreferences] ?? false}
-                      onChange={(e) => handlePreferenceChange(key as keyof NotificationPreferences, e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
-                    />
-                    {label}
-                  </label>
-                ))}
+              {/* Activity Updates */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">{NOTIFICATION_UI_GROUPS.ACTIVITY_UPDATES.title}</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{NOTIFICATION_UI_GROUPS.ACTIVITY_UPDATES.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Activity Updates - Pull Requests */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-gray-800 dark:text-gray-200 text-sm">{NOTIFICATION_UI_GROUPS.ACTIVITY_UPDATES.sections.PULL_REQUESTS.title}</h5>
+                    {NOTIFICATION_UI_GROUPS.ACTIVITY_UPDATES.sections.PULL_REQUESTS.fields.map(([key, label]) => (
+                      <label key={key} className="flex items-center text-sm">
+                        <input
+                          type="checkbox"
+                          checked={formData.notificationPreferences[key as keyof NotificationPreferences] ?? false}
+                          onChange={(e) => handlePreferenceChange(key as keyof NotificationPreferences, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  
+                  {/* Activity Updates - Issues */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-gray-800 dark:text-gray-200 text-sm">{NOTIFICATION_UI_GROUPS.ACTIVITY_UPDATES.sections.ISSUES.title}</h5>
+                    {NOTIFICATION_UI_GROUPS.ACTIVITY_UPDATES.sections.ISSUES.fields.map(([key, label]) => (
+                      <label key={key} className="flex items-center text-sm">
+                        <input
+                          type="checkbox"
+                          checked={formData.notificationPreferences[key as keyof NotificationPreferences] ?? false}
+                          onChange={(e) => handlePreferenceChange(key as keyof NotificationPreferences, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

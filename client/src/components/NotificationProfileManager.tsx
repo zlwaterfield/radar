@@ -5,7 +5,8 @@ import { NotificationProfileForm } from './NotificationProfileForm';
 import Button from './Button';
 import Switch from './Switch';
 import { toast } from 'sonner';
-import type { NotificationProfile } from '../types/notification-profile';
+import type { NotificationProfile, NotificationPreferences } from '../types/notification-profile';
+import { NOTIFICATION_UI_GROUPS } from '../constants/notification-preferences.constants';
 
 interface NotificationProfileManagerProps {
   className?: string;
@@ -107,6 +108,23 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     }
   };
 
+  const getEnabledPreferences = (preferences: NotificationPreferences) => {
+    const enabled: string[] = [];
+    
+    // Collect all enabled preferences with their labels
+    Object.values(NOTIFICATION_UI_GROUPS).forEach(group => {
+      Object.values(group.sections).forEach(section => {
+        section.fields.forEach(([key, label]) => {
+          if (preferences[key as keyof NotificationPreferences]) {
+            enabled.push(label);
+          }
+        });
+      });
+    });
+    
+    return enabled;
+  };
+
   return (
     <div className={`space-y-6 ${className}`}>
       <div className="flex items-center justify-between">
@@ -191,23 +209,59 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                           }
                         </span>
                       </div>
+                      
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">🔔 Events:</span>
+                        <span className="ml-1 text-gray-900 dark:text-white">
+                          {getEnabledPreferences(profile.notificationPreferences).length > 0
+                            ? `${getEnabledPreferences(profile.notificationPreferences).length} event${getEnabledPreferences(profile.notificationPreferences).length !== 1 ? 's' : ''} enabled`
+                            : 'No events enabled'
+                          }
+                        </span>
+                      </div>
                     </div>
                     
+                    {/* Keywords display */}
                     {profile.keywords.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {profile.keywords.slice(0, 5).map((keyword) => (
-                          <span
-                            key={keyword}
-                            className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded"
-                          >
-                            {keyword}
-                          </span>
-                        ))}
-                        {profile.keywords.length > 5 && (
-                          <span className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded">
-                            +{profile.keywords.length - 5} more
-                          </span>
-                        )}
+                      <div className="mt-3">
+                        <div className="text-xs text-gray-500 mb-1">Keywords:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.keywords.slice(0, 5).map((keyword) => (
+                            <span
+                              key={keyword}
+                              className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                            >
+                              {keyword}
+                            </span>
+                          ))}
+                          {profile.keywords.length > 5 && (
+                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                              +{profile.keywords.length - 5} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Event preferences display */}
+                    {getEnabledPreferences(profile.notificationPreferences).length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs text-gray-500 mb-1">Enabled events:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {getEnabledPreferences(profile.notificationPreferences).slice(0, 6).map((eventLabel) => (
+                            <span
+                              key={eventLabel}
+                              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
+                            >
+                              {eventLabel}
+                            </span>
+                          ))}
+                          {getEnabledPreferences(profile.notificationPreferences).length > 6 && (
+                            <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                              +{getEnabledPreferences(profile.notificationPreferences).length - 6} more
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
