@@ -46,23 +46,43 @@ export class LLMAnalyzerService {
     }
 
     try {
-      // Prepare the prompt for OpenAI
-      const prompt = `I have a piece of content and a list of keywords. Please determine if any of the keywords are present or closely related to the content. Return ONLY the matched keywords.
+      // Prepare the prompt for OpenAI with structured output
+      const prompt = `Analyze the following content and determine if any of the provided keywords are present, mentioned, or closely related to the content. Look for:
+- Exact matches of the keyword
+- Similar terms, synonyms, or related concepts
+- Context where the keyword's meaning is implied or discussed
+- Technical variations or abbreviations of the keyword
 
 Content: ${content}
 
-Keywords: ${keywords.join(', ')}
+Keywords to check: ${keywords.join(', ')}
 
-Return your response as a JSON object with the following format:
-{
-  "matched_keywords": ["keyword1", "keyword2"],
-  "match_details": {
-    "keyword1": "Exact match found",
-    "keyword2": "Related to content because..."
-  }
-}
+For each matched keyword, provide a brief explanation of why it matches (exact match, similar term, related concept, etc.).`;
 
-If no keywords match, return an empty list for matched_keywords.`;
+      // Define the JSON schema for structured output
+      const responseFormat = {
+        type: "json_schema",
+        json_schema: {
+          name: "keyword_match_response",
+          schema: {
+            type: "object",
+            properties: {
+              matched_keywords: {
+                type: "array",
+                items: { type: "string" },
+                description: "List of keywords that match or are closely related to the content"
+              },
+              match_details: {
+                type: "object",
+                additionalProperties: { type: "string" },
+                description: "Details explaining why each keyword matched"
+              }
+            },
+            required: ["matched_keywords", "match_details"],
+            additionalProperties: false
+          }
+        }
+      };
 
       this.logger.debug(
         `LLM request: content length ${content.length}, keywords: ${keywords}`,
@@ -78,6 +98,7 @@ If no keywords match, return an empty list for matched_keywords.`;
           model: this.llmModel,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
+          response_format: responseFormat,
         }),
       });
 
@@ -95,7 +116,7 @@ If no keywords match, return an empty list for matched_keywords.`;
         `LLM response received: ${responseContent?.length || 0} characters`,
       );
 
-      // Parse the JSON response
+      // Parse the structured JSON response
       try {
         const result: KeywordMatchResponse = JSON.parse(responseContent);
         const matchedKeywords = result.matched_keywords || [];
@@ -107,7 +128,7 @@ If no keywords match, return an empty list for matched_keywords.`;
 
         return { matchedKeywords, matchDetails };
       } catch (parseError) {
-        this.logger.error(`Failed to parse LLM response: ${responseContent}`);
+        this.logger.error(`Failed to parse structured LLM response: ${responseContent}`, parseError);
         return { matchedKeywords: [], matchDetails: {} };
       }
     } catch (error) {
