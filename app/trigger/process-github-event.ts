@@ -139,9 +139,10 @@ async function processEventNotifications(event: any): Promise<boolean> {
         'pull_request_review_comment': 'pull_request_review_comment' as const,
       };
 
+      let decision: any = null;
       const mappedEventType = eventTypeMap[eventType as keyof typeof eventTypeMap];
       if (mappedEventType) {
-        const decision = await notificationService.processEvent(user.id, payload, event.id, mappedEventType);
+        decision = await notificationService.processEvent(user.id, payload, event.id, mappedEventType);
         shouldNotify = decision.shouldNotify;
         matchedKeywords = decision.primaryProfile?.matchedKeywords || [];
         matchDetails = decision.primaryProfile?.matchDetails || {};
@@ -160,7 +161,7 @@ async function processEventNotifications(event: any): Promise<boolean> {
       
       if (shouldNotify) {
         // Create and send the actual notification
-        const notification = await createNotification(user, event, eventType, action, payload, repositoryName, reason, context);
+        const notification = await createNotification(user, event, eventType, action, payload, repositoryName, reason, context, decision);
         if (notification) {
           notificationCount++;
           console.log(`✅ Successfully created notification ${notification.id} for user ${user.githubLogin}`);
@@ -266,7 +267,8 @@ async function createNotification(
   payload: any,
   repositoryName: string,
   reason?: string,
-  context?: any
+  context?: any,
+  notificationDecision?: any
 ): Promise<any> {
   try {
     const title = generateNotificationTitle(eventType, action, payload);
@@ -301,7 +303,7 @@ async function createNotification(
       message,
       url,
       payload,
-    });
+    }, notificationDecision);
 
     if (slackResult.success && slackResult.messageTs) {
       // Update notification with message timestamp
@@ -322,9 +324,9 @@ async function createNotification(
 }
 
 /**
- * Send Slack notification to user with result details
+ * Send Slack notification to user with result details based on notification profile settings
  */
-async function sendSlackNotificationWithResult(user: any, notificationData: any): Promise<{ success: boolean; messageTs?: string }> {
+async function sendSlackNotificationWithResult(user: any, notificationData: any, notificationDecision?: any): Promise<{ success: boolean; messageTs?: string }> {
   try {
     if (!user.slackId || !user.slackAccessToken) {
       console.warn(`User ${user.id} missing Slack credentials`);
@@ -333,28 +335,59 @@ async function sendSlackNotificationWithResult(user: any, notificationData: any)
 
     // Initialize Slack client with user's token
     const slack = new WebClient(user.slackAccessToken);
-    
-    // Open DM channel with user
-    const dmResponse = await slack.conversations.open({
-      users: user.slackId
-    });
-    
-    if (!dmResponse.ok || !dmResponse.channel?.id) {
-      console.error(`Failed to open DM channel for user ${user.id}:`, dmResponse.error);
-      return { success: false };
-    }
-    
-    const channelId = dmResponse.channel.id;
     const slackMessage = createSlackMessage(notificationData);
     
-    // Send message to Slack
+    // Determine delivery target based on notification profile
+    let targetChannel: string;
+    let deliveryType = 'dm'; // Default to DM if no profile match
+    
+    // Check if we have a notification decision with profile information
+    if (notificationDecision?.primaryProfile?.profile) {
+      const profile = notificationDecision.primaryProfile.profile;
+      deliveryType = profile.deliveryType;
+      
+      if (profile.deliveryType === 'channel' && profile.deliveryTarget) {
+        // Send to specified channel
+        targetChannel = profile.deliveryTarget;
+        console.log(`Routing notification to channel ${targetChannel} based on profile "${profile.name}"`);
+      } else {
+        // Send to DM (deliveryType is 'dm' or no deliveryTarget specified)
+        const dmResponse = await slack.conversations.open({
+          users: user.slackId
+        });
+        
+        if (!dmResponse.ok || !dmResponse.channel?.id) {
+          console.error(`Failed to open DM channel for user ${user.id}:`, dmResponse.error);
+          return { success: false };
+        }
+        
+        targetChannel = dmResponse.channel.id;
+        console.log(`Routing notification to DM based on profile "${profile.name}"`);
+      }
+    } else {
+      // Fallback to DM if no profile information available
+      const dmResponse = await slack.conversations.open({
+        users: user.slackId
+      });
+      
+      if (!dmResponse.ok || !dmResponse.channel?.id) {
+        console.error(`Failed to open DM channel for user ${user.id}:`, dmResponse.error);
+        return { success: false };
+      }
+      
+      targetChannel = dmResponse.channel.id;
+      console.log(`Routing notification to DM (fallback - no profile match)`);
+    }
+    
+    // Send message to the determined target
     const messageResponse = await slack.chat.postMessage({
-      channel: channelId,
+      channel: targetChannel,
       ...slackMessage
     });
     
     if (messageResponse.ok && messageResponse.ts) {
-      console.log(`Successfully sent Slack notification to user ${user.id} (ts: ${messageResponse.ts})`);
+      const deliveryLocation = deliveryType === 'channel' ? `channel ${targetChannel}` : 'DM';
+      console.log(`Successfully sent Slack notification to user ${user.id} via ${deliveryLocation} (ts: ${messageResponse.ts})`);
       return { success: true, messageTs: messageResponse.ts };
     } else {
       console.error(`Failed to send Slack message to user ${user.id}:`, messageResponse.error);
