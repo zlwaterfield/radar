@@ -19,6 +19,7 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 - `pull_request_opened` - New PRs opened
 - `pull_request_closed` - PRs closed/merged
 - `pull_request_assigned` - PR assignments
+- `mention_in_pull_request` - @mentions in PR descriptions
 
 **Trigger Conditions**:
 - Repository must be tracked by user
@@ -59,6 +60,7 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 - `issue_opened` - New issues opened
 - `issue_closed` - Issues closed
 - `issue_assigned` - Issue assignments
+- `mention_in_issue` - @mentions in issue descriptions
 
 **Trigger Conditions**:
 - Repository tracked by user
@@ -105,10 +107,6 @@ This document maps all GitHub webhook events that generate Slack notifications, 
 - `mute_own_activity` - Skip notifications for user's own actions
 - `mute_bot_comments` - Skip bot-generated events (configurable)
 - `mute_draft_pull_requests` - Skip draft PR notifications
-
-### Mention Settings
-- `mention_in_pull_request` - @mentions in PR descriptions
-- `mention_in_issue` - @mentions in issue descriptions
 
 ### CI/CD Settings
 - `check_failures` - Failed status checks

@@ -157,20 +157,19 @@ export class AuthService {
                 pull_request_reviewed: true,
                 pull_request_commented: true,
                 pull_request_assigned: true,
+                pull_request_review_requested: true,
+                mention_in_pull_request: true,
 
                 // Issue Activity
                 issue_opened: true,
                 issue_closed: true,
                 issue_commented: true,
                 issue_assigned: true,
+                mention_in_issue: true,
 
                 // CI/CD
                 check_failures: false,
                 check_successes: false,
-
-                // Mentions
-                mention_in_pull_request: true,
-                mention_in_issue: true,
 
                 // Noise Control
                 mute_own_activity: true,

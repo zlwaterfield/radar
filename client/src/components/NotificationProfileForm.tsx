@@ -450,7 +450,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Event preferences</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* PR Events */}
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900">{NOTIFICATION_UI_GROUPS.PR_EVENTS.title}</h4>
@@ -471,22 +471,6 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900">{NOTIFICATION_UI_GROUPS.ISSUE_EVENTS.title}</h4>
                 {NOTIFICATION_UI_GROUPS.ISSUE_EVENTS.fields.map(([key, label]) => (
-                  <label key={key} className="flex items-center text-sm">
-                    <input
-                      type="checkbox"
-                      checked={formData.notificationPreferences[key as keyof NotificationPreferences] ?? false}
-                      onChange={(e) => handlePreferenceChange(key as keyof NotificationPreferences, e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-              
-              {/* Other Events */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">{NOTIFICATION_UI_GROUPS.OTHER.title}</h4>
-                {NOTIFICATION_UI_GROUPS.OTHER.fields.map(([key, label]) => (
                   <label key={key} className="flex items-center text-sm">
                     <input
                       type="checkbox"

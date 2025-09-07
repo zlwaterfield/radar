@@ -9,20 +9,18 @@ export interface NotificationPreferences {
   pull_request_commented?: boolean;
   pull_request_assigned?: boolean;
   pull_request_review_requested?: boolean;
+  mention_in_pull_request?: boolean;
 
   // Issue Activity
   issue_opened?: boolean;
   issue_closed?: boolean;
   issue_commented?: boolean;
   issue_assigned?: boolean;
+  mention_in_issue?: boolean;
 
   // CI/CD
   check_failures?: boolean;
   check_successes?: boolean;
-
-  // Mentions
-  mention_in_pull_request?: boolean;
-  mention_in_issue?: boolean;
 
   // Noise Control
   mute_own_activity?: boolean;
