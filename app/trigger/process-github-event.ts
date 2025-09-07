@@ -335,7 +335,7 @@ async function sendSlackNotificationWithResult(user: any, notificationData: any,
 
     // Initialize Slack client with user's token
     const slack = new WebClient(user.slackAccessToken);
-    const slackMessage = createSlackMessage(notificationData);
+    const slackMessage = createSlackMessage(notificationData, notificationDecision);
     
     // Determine delivery target based on notification profile
     let targetChannel: string;
@@ -429,28 +429,60 @@ const EVENT_COLORS: Record<string, string> = {
 /**
  * Create Slack message structure with proper formatting
  */
-function createSlackMessage(data: any) {
+function createSlackMessage(data: any, notificationDecision?: any) {
   const { eventType } = data;
   
   if (eventType === 'pull_request') {
-    return createPRSlackMessage(data);
+    return createPRSlackMessage(data, notificationDecision);
   } else if (eventType === 'issues') {
-    return createIssueSlackMessage(data);
+    return createIssueSlackMessage(data, notificationDecision);
   } else if (eventType === 'pull_request_review') {
-    return createPRReviewSlackMessage(data);
+    return createPRReviewSlackMessage(data, notificationDecision);
   } else if (eventType === 'pull_request_review_comment') {
-    return createPRReviewCommentSlackMessage(data);
+    return createPRReviewCommentSlackMessage(data, notificationDecision);
   } else if (eventType === 'issue_comment') {
-    return createIssueCommentSlackMessage(data);
+    return createIssueCommentSlackMessage(data, notificationDecision);
   } else {
     throw new Error(`Unknown event type: ${eventType}`);
   }
 }
 
 /**
+ * Create keyword match context block for Slack messages
+ */
+function createKeywordMatchBlock(notificationDecision?: any): any[] {
+  if (!notificationDecision?.primaryProfile?.matchedKeywords?.length) {
+    return [];
+  }
+
+  const matchedKeywords = notificationDecision.primaryProfile.matchedKeywords;
+  const matchDetails = notificationDecision.primaryProfile.matchDetails || {};
+  const profileName = notificationDecision.primaryProfile.profile?.name;
+
+  const keywordText = matchedKeywords.length === 1 
+    ? `🎯 *Keyword Match*: ${matchedKeywords[0]}`
+    : `🎯 *Keywords Matched*: ${matchedKeywords.join(', ')}`;
+
+  const profileText = profileName ? `\n_From profile: "${profileName}"_` : '';
+
+  return [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `${keywordText}${profileText}`
+      }
+    },
+    {
+      type: 'divider'
+    }
+  ];
+}
+
+/**
  * Create Slack message for pull request notifications
  */
-function createPRSlackMessage(data: any) {
+function createPRSlackMessage(data: any, notificationDecision?: any) {
   const { action, repositoryName, title, url, payload } = data;
   // Determine actual action for merged PRs
   const actualAction = (action === "closed" && payload.pull_request?.merged) ? "merged" : action;
@@ -519,6 +551,10 @@ function createPRSlackMessage(data: any) {
     },
   ];
 
+  // Add keyword match information if this was triggered by keywords
+  const keywordBlocks = createKeywordMatchBlock(notificationDecision);
+  blocks.push(...keywordBlocks);
+
   if (action in ["opened", "review_requested"]) {
     blocks.push({
       type: 'section',
@@ -553,7 +589,7 @@ function createPRSlackMessage(data: any) {
 /**
  * Create Slack message for issue notifications
  */
-function createIssueSlackMessage(data: any) {
+function createIssueSlackMessage(data: any, notificationDecision?: any) {
   const { action, repositoryName, title, url, payload } = data;
   
   // Map issue action to color
@@ -613,6 +649,10 @@ function createIssueSlackMessage(data: any) {
     },
   ];
 
+  // Add keyword match information if this was triggered by keywords
+  const keywordBlocks = createKeywordMatchBlock(notificationDecision);
+  blocks.push(...keywordBlocks);
+
   if (action in ["opened"]) {
     blocks.push({
       type: 'section',
@@ -647,7 +687,7 @@ function createIssueSlackMessage(data: any) {
 /**
  * Create Slack message for pull request review notifications
  */
-function createPRReviewSlackMessage(data: any) {
+function createPRReviewSlackMessage(data: any, notificationDecision?: any) {
   const { action, repositoryName, title, message, url, payload } = data;
   
   // Map review state to color
@@ -695,6 +735,10 @@ function createPRReviewSlackMessage(data: any) {
       }
     },
   ];
+
+  // Add keyword match information if this was triggered by keywords
+  const keywordBlocks = createKeywordMatchBlock(notificationDecision);
+  blocks.push(...keywordBlocks);
   
   // Add review comment if present
   if (payload.review?.body) {
@@ -731,7 +775,7 @@ function createPRReviewSlackMessage(data: any) {
 /**
  * Create Slack message for pull request comment notifications
  */
-function createPRReviewCommentSlackMessage(data: any) {
+function createPRReviewCommentSlackMessage(data: any, notificationDecision?: any) {
   const { repositoryName, title, message, url, payload } = data;
   const color = EVENT_COLORS.commented;
   
@@ -765,6 +809,13 @@ function createPRReviewCommentSlackMessage(data: any) {
         action_id: 'view_pr'
       }
     },
+  ];
+
+  // Add keyword match information if this was triggered by keywords
+  const keywordBlocks = createKeywordMatchBlock(notificationDecision);
+  blocks.push(...keywordBlocks);
+
+  blocks.push(
     {
       type: 'section',
       text: {
@@ -781,7 +832,7 @@ function createPRReviewCommentSlackMessage(data: any) {
         }
       ]
     } as any
-  ];
+  );
 
   return {
     blocks: [],
@@ -797,7 +848,7 @@ function createPRReviewCommentSlackMessage(data: any) {
 /**
  * Create Slack message for issue comment notifications
  */
-function createIssueCommentSlackMessage(data: any) {
+function createIssueCommentSlackMessage(data: any, notificationDecision?: any) {
   const { repositoryName, title, url, payload } = data;
   const color = EVENT_COLORS.issue_commented;
   
@@ -845,6 +896,10 @@ function createIssueCommentSlackMessage(data: any) {
       }
     },
   ];
+
+  // Add keyword match information if this was triggered by keywords
+  const keywordBlocks = createKeywordMatchBlock(notificationDecision);
+  blocks.push(...keywordBlocks);
   
   // Add comment content if available
   if (payload.comment?.body) {
