@@ -253,7 +253,7 @@ export class DigestConfigService {
         userId: user.id,
         userGithubLogin: user.githubLogin!,
         slackId: user.slackId || undefined,
-        slackAccessToken: user.slackAccessToken || undefined,
+        slackBotToken: user.slackBotToken || undefined,
         digestConfigs: user.digestConfigs.map((config) => ({
           ...config,
           repositoryFilter:
@@ -335,20 +335,20 @@ export class DigestConfigService {
       };
 
       if (config.deliveryType === 'dm') {
-        if (!user.slackId || !user.slackAccessToken) {
+        if (!user.slackId || !user.slackBotToken) {
           throw new BadRequestException(
             'User missing Slack credentials for DM delivery',
           );
         }
         deliveryInfo.slackId = user.slackId;
-        deliveryInfo.slackAccessToken = user.slackAccessToken;
+        deliveryInfo.slackBotToken = user.slackBotToken;
       } else if (config.deliveryType === 'channel') {
-        if (!config.deliveryTarget || !user.slackAccessToken) {
+        if (!config.deliveryTarget || !user.slackBotToken) {
           throw new BadRequestException(
-            'Missing Slack channel or access token for channel delivery',
+            'Missing Slack channel or bot token for channel delivery',
           );
         }
-        deliveryInfo.slackAccessToken = user.slackAccessToken;
+        deliveryInfo.slackBotToken = user.slackBotToken;
       }
 
       return {

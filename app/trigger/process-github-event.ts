@@ -328,13 +328,13 @@ async function createNotification(
  */
 async function sendSlackNotificationWithResult(user: any, notificationData: any, notificationDecision?: any): Promise<{ success: boolean; messageTs?: string }> {
   try {
-    if (!user.slackId || !user.slackAccessToken) {
+    if (!user.slackId || !user.slackBotToken) {
       console.warn(`User ${user.id} missing Slack credentials`);
       return { success: false };
     }
 
-    // Initialize Slack client with user's token
-    const slack = new WebClient(user.slackAccessToken);
+    // Initialize Slack client with user's bot token
+    const slack = new WebClient(user.slackBotToken);
     const slackMessage = createSlackMessage(notificationData, notificationDecision);
     
     // Determine delivery target based on notification profile

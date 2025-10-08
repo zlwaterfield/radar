@@ -113,13 +113,14 @@ export class SlackController {
           this.logger.log('Processing app_home_opened event...');
           this.logger.log(`Event data: ${JSON.stringify(event)}`);
 
-          // Get user ID from the event
+          // Get user ID and team ID from the event
           const userId = event.user;
+          const teamId = body.team_id;
 
-          this.logger.log(`User ID from event: ${userId}`);
+          this.logger.log(`User ID from event: ${userId}, Team ID: ${teamId}`);
 
           if (userId) {
-            await this.slackService.handleAppHomeOpened(userId);
+            await this.slackService.handleAppHomeOpened(userId, teamId);
           } else {
             this.logger.warn('No user ID found in app_home_opened event');
           }
@@ -194,8 +195,15 @@ export class SlackController {
   @ApiResponse({ status: 200, description: 'Connection test result' })
   async testConnection(@GetUser() user: User) {
     try {
-      // Get user's Slack access token (would need to be decrypted)
-      const isConnected = await this.slackService.testConnection();
+      // Get user's Slack bot token (would need to be decrypted)
+      if (!user.slackBotToken) {
+        return {
+          connected: false,
+          error: 'No Slack bot token found',
+        };
+      }
+
+      const isConnected = await this.slackService.testConnection(user.slackBotToken);
 
       return {
         connected: isConnected,
@@ -221,13 +229,13 @@ export class SlackController {
   async sendTestMessage(@GetUser() user: User) {
     try {
       // Open DM channel with user
-      if (!user.slackId) {
+      if (!user.slackId || !user.slackBotToken) {
         return {
           success: false,
-          error: 'User missing Slack ID',
+          error: 'User missing Slack credentials',
         };
       }
-      const channelId = await this.slackService.openDMChannel(user.slackId);
+      const channelId = await this.slackService.openDMChannel(user.slackId, user.slackBotToken);
 
       if (!channelId) {
         return {
@@ -256,7 +264,7 @@ export class SlackController {
             },
           },
         ],
-      });
+      }, user.slackBotToken);
 
       return {
         success: !!result,
@@ -281,14 +289,14 @@ export class SlackController {
   @ApiResponse({ status: 200, description: 'User Slack profile' })
   async getUserProfile(@GetUser() user: User) {
     try {
-      if (!user.slackId) {
+      if (!user.slackId || !user.slackBotToken) {
         return {
           success: false,
-          error: 'User missing Slack ID',
+          error: 'User missing Slack credentials',
         };
       }
-      const profile = await this.slackService.getUserInfo(user.slackId);
-      const teamInfo = await this.slackService.getTeamInfo();
+      const profile = await this.slackService.getUserInfo(user.slackId, user.slackBotToken);
+      const teamInfo = await this.slackService.getTeamInfo(user.slackBotToken);
 
       return {
         user: profile,

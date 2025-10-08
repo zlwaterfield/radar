@@ -27,8 +27,9 @@ model User {
   // Slack integration
   slackId           String?  @unique @map("slack_id")
   slackTeamId       String?  @map("slack_team_id")
-  slackAccessToken  String?  @map("slack_access_token") // encrypted
-  slackRefreshToken String? @map("slack_refresh_token") // encrypted
+  slackBotToken     String?  @map("slack_bot_token") // encrypted - workspace-specific bot token for sending messages
+  slackUserToken    String?  @map("slack_user_token") // encrypted - user token (rarely used)
+  slackRefreshToken String?  @map("slack_refresh_token") // encrypted
 
   // GitHub integration  
   githubId            String? @unique @map("github_id")

@@ -48,7 +48,8 @@ export class SlackIntegrationService {
         where: { id: userId },
         data: {
           slackId: slackTokens.authed_user.id,
-          slackAccessToken: slackTokens.access_token,
+          slackBotToken: slackTokens.access_token, // Bot token - workspace-specific, used for all operations
+          slackUserToken: slackTokens.authed_user?.access_token, // User token (optional)
           slackRefreshToken: slackTokens.refresh_token,
           slackTeamId: slackTokens.team?.id,
         },
@@ -63,13 +64,13 @@ export class SlackIntegrationService {
 
   async disconnectSlackForUser(userId: string): Promise<void> {
     try {
-      // Since slackId is required in the current schema, we can't set it to null
-      // For now, we'll update the tokens only
+      // Clear Slack tokens
       await this.databaseService.user.update({
         where: { id: userId },
         data: {
-          slackAccessToken: '',
-          slackRefreshToken: '',
+          slackBotToken: null,
+          slackUserToken: null,
+          slackRefreshToken: null,
         },
       });
 

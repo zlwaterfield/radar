@@ -33,10 +33,15 @@ export class CreateUserDto {
   @IsOptional()
   slackTeamId?: string;
 
-  @ApiPropertyOptional({ description: 'Encrypted Slack access token' })
+  @ApiPropertyOptional({ description: 'Encrypted Slack bot token' })
   @IsString()
   @IsOptional()
-  slackAccessToken?: string;
+  slackBotToken?: string;
+
+  @ApiPropertyOptional({ description: 'Encrypted Slack user token' })
+  @IsString()
+  @IsOptional()
+  slackUserToken?: string;
 
   @ApiPropertyOptional({ description: 'Encrypted Slack refresh token' })
   @IsString()

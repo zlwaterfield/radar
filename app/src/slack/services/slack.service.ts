@@ -41,12 +41,10 @@ export class SlackService {
    */
   async sendMessage(
     message: SlackMessage,
-    accessToken?: string,
+    accessToken: string,
   ): Promise<SlackMessageResponse | null> {
     try {
-      const client = accessToken
-        ? this.createUserClient(accessToken)
-        : this.botClient;
+      const client = this.createUserClient(accessToken);
 
       const messageParams: any = {
         channel: message.channel,
@@ -82,12 +80,10 @@ export class SlackService {
     channel: string,
     messageTs: string,
     message: SlackMessage,
-    accessToken?: string,
+    accessToken: string,
   ): Promise<SlackMessageResponse | null> {
     try {
-      const client = accessToken
-        ? this.createUserClient(accessToken)
-        : this.botClient;
+      const client = this.createUserClient(accessToken);
 
       const updateParams: any = {
         channel,
@@ -121,12 +117,10 @@ export class SlackService {
   async deleteMessage(
     channel: string,
     messageTs: string,
-    accessToken?: string,
+    accessToken: string,
   ): Promise<boolean> {
     try {
-      const client = accessToken
-        ? this.createUserClient(accessToken)
-        : this.botClient;
+      const client = this.createUserClient(accessToken);
 
       const response = await client.chat.delete({
         channel,
@@ -151,12 +145,10 @@ export class SlackService {
    */
   async getUserInfo(
     userId: string,
-    accessToken?: string,
+    accessToken: string,
   ): Promise<SlackUser | null> {
     try {
-      const client = accessToken
-        ? this.createUserClient(accessToken)
-        : this.botClient;
+      const client = this.createUserClient(accessToken);
 
       const response = await client.users.info({
         user: userId,
@@ -184,11 +176,9 @@ export class SlackService {
   /**
    * Get Slack team info
    */
-  async getTeamInfo(accessToken?: string): Promise<SlackTeam | null> {
+  async getTeamInfo(accessToken: string): Promise<SlackTeam | null> {
     try {
-      const client = accessToken
-        ? this.createUserClient(accessToken)
-        : this.botClient;
+      const client = this.createUserClient(accessToken);
 
       const response = await client.team.info();
 
@@ -214,12 +204,10 @@ export class SlackService {
    */
   async openDMChannel(
     userId: string,
-    accessToken?: string,
+    accessToken: string,
   ): Promise<string | null> {
     try {
-      const client = accessToken
-        ? this.createUserClient(accessToken)
-        : this.botClient;
+      const client = this.createUserClient(accessToken);
 
       const response = await client.conversations.open({
         users: userId,
@@ -331,11 +319,9 @@ export class SlackService {
   /**
    * Test Slack connection
    */
-  async testConnection(accessToken?: string): Promise<boolean> {
+  async testConnection(accessToken: string): Promise<boolean> {
     try {
-      const client = accessToken
-        ? this.createUserClient(accessToken)
-        : this.botClient;
+      const client = this.createUserClient(accessToken);
 
       const response = await client.auth.test();
       return response.ok;
@@ -351,7 +337,7 @@ export class SlackService {
   /**
    * Publish home tab view for user
    */
-  async publishHomeView(userId: string, blocks: any[]): Promise<boolean> {
+  async publishHomeView(userId: string, blocks: any[], botToken: string): Promise<boolean> {
     try {
       this.logger.log(`[publishHomeView] Called with userId: ${JSON.stringify(userId)}, type: ${typeof userId}`);
       this.logger.log(`[publishHomeView] userId length: ${userId?.length}, is empty: ${userId === ''}, is null: ${userId === null}, is undefined: ${userId === undefined}`);
@@ -364,10 +350,18 @@ export class SlackService {
         return false;
       }
 
+      if (!botToken) {
+        this.logger.error(`[publishHomeView] No bot token provided for user ${userId}`);
+        return false;
+      }
+
       this.logger.log(`[publishHomeView] Publishing home view for user: ${userId}`);
       this.logger.log(`[publishHomeView] Blocks count: ${blocks?.length}`);
 
-      const response = await this.botClient.views.publish({
+      // Use the workspace-specific bot token
+      const client = new WebClient(botToken);
+
+      const response = await client.views.publish({
         user_id: userId,
         view: {
           type: 'home',
@@ -414,16 +408,16 @@ export class SlackService {
   /**
    * Handle app home opened event
    */
-  async handleAppHomeOpened(userId: string): Promise<void> {
+  async handleAppHomeOpened(userId: string, teamId?: string): Promise<void> {
     try {
-      this.logger.log(`[handleAppHomeOpened] Called with userId: ${JSON.stringify(userId)}, type: ${typeof userId}`);
+      this.logger.log(`[handleAppHomeOpened] Called with userId: ${JSON.stringify(userId)}, teamId: ${teamId}, type: ${typeof userId}`);
 
       // Check if user exists in our database
       const user = await this.databaseService.user.findUnique({
         where: { slackId: userId },
       });
 
-      this.logger.log(`[handleAppHomeOpened] User found in DB: ${!!user}, user slackId: ${user?.slackId}`);
+      this.logger.log(`[handleAppHomeOpened] User found in DB: ${!!user}, user slackId: ${user?.slackId}, has bot token: ${!!user?.slackBotToken}`);
 
       const blocks = user
         ? this.createAuthenticatedHomeView(user)
@@ -431,7 +425,17 @@ export class SlackService {
 
       this.logger.log(`[handleAppHomeOpened] Created ${user ? 'authenticated' : 'unauthenticated'} view with ${blocks?.length} blocks`);
 
-      await this.publishHomeView(userId, blocks);
+      // Use the user's workspace-specific bot token
+      const botToken = user?.slackBotToken;
+
+      if (!botToken) {
+        this.logger.warn(`[handleAppHomeOpened] No bot token found for user ${userId}. User needs to reconnect via OAuth.`);
+        return;
+      }
+
+      this.logger.log(`[handleAppHomeOpened] Using user-specific bot token`);
+
+      await this.publishHomeView(userId, blocks, botToken);
     } catch (error) {
       this.logger.error(
         `[handleAppHomeOpened] ERROR - Error handling app home opened for user ${userId}:`,

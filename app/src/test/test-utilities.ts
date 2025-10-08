@@ -69,7 +69,7 @@ export class TestDataFactory {
       githubId: '12345',
       githubLogin: 'testuser',
       slackId: 'U123456',
-      slackAccessToken: 'xoxp-test-token',
+      slackBotToken: 'xoxb-test-token',
       isActive: true,
       settings: {
         notificationPreferences: {

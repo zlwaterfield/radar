@@ -281,7 +281,7 @@ export class DigestService {
 
       // Send based on delivery type
       if (deliveryInfo.type === 'dm') {
-        if (!deliveryInfo.slackId || !deliveryInfo.slackAccessToken) {
+        if (!deliveryInfo.slackId || !deliveryInfo.slackBotToken) {
           this.logger.warn(
             `Config ${config.id} missing Slack credentials for DM delivery`,
           );
@@ -289,20 +289,20 @@ export class DigestService {
         }
 
         result = await this.slackService.sendDirectMessage(
-          deliveryInfo.slackAccessToken,
+          deliveryInfo.slackBotToken,
           deliveryInfo.slackId,
           message,
         );
       } else if (deliveryInfo.type === 'channel') {
-        if (!deliveryInfo.target || !deliveryInfo.slackAccessToken) {
+        if (!deliveryInfo.target || !deliveryInfo.slackBotToken) {
           this.logger.warn(
-            `Config ${config.id} missing channel or Slack token for channel delivery`,
+            `Config ${config.id} missing channel or Slack bot token for channel delivery`,
           );
           return false;
         }
 
         result = await this.slackService.sendChannelMessage(
-          deliveryInfo.slackAccessToken,
+          deliveryInfo.slackBotToken,
           deliveryInfo.target,
           message,
         );

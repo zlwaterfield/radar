@@ -48,7 +48,7 @@ export interface MultipleDigestUserData {
   userId: string;
   userGithubLogin: string;
   slackId?: string;
-  slackAccessToken?: string;
+  slackBotToken?: string;
   digestConfigs: DigestConfigWithMeta[];
   repositories: Array<{
     owner: string;
@@ -76,7 +76,7 @@ export interface DigestExecutionData {
   deliveryInfo: {
     type: DigestDeliveryType;
     target?: string;
-    slackAccessToken?: string;
+    slackBotToken?: string;
     slackId?: string;
   };
 }

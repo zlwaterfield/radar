@@ -218,7 +218,7 @@ describe('Webhook to Slack Flow Simulation', () => {
     user: any,
   ) {
     // Simulate message creation logic
-    if (!user.slackId || !user.slackAccessToken) {
+    if (!user.slackId || !user.slackBotToken) {
       return { success: false, error: 'User missing Slack credentials' };
     }
 

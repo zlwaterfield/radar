@@ -231,8 +231,11 @@ export class AuthService {
     // Decrypt tokens if requested
     return {
       ...user,
-      slackAccessToken: user.slackAccessToken
-        ? this.decryptToken(user.slackAccessToken)
+      slackBotToken: user.slackBotToken
+        ? this.decryptToken(user.slackBotToken)
+        : null,
+      slackUserToken: user.slackUserToken
+        ? this.decryptToken(user.slackUserToken)
         : null,
       slackRefreshToken: user.slackRefreshToken
         ? this.decryptToken(user.slackRefreshToken)
