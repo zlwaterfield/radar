@@ -2,12 +2,11 @@
 
 - Now
    - Make sure all events for notifications profiles are working
-   - Get home page loading
-   - Look into duplicate notifications
+   - Look into duplicate notifications from PR comments
    - Fix digest slack message styling
-- Next
    - Scoped teams logic
    - Slack / Github user connecting to @ in notifications
+- Next
    - Billing and subscription management
    - Github Discussions support
    - Better Slack homepage
