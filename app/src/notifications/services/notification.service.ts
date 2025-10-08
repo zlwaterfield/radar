@@ -155,6 +155,23 @@ export class NotificationService {
     context?: any;
   }> {
     try {
+      // Fetch user data to get githubId for preference checks
+      const user = await this.databaseService.user.findUnique({
+        where: { id: userId },
+        select: { githubId: true },
+      });
+
+      if (!user?.githubId) {
+        this.logger.warn(`User ${userId} has no githubId, skipping profile match`);
+        return {
+          shouldMatch: false,
+          matchedKeywords: [],
+          matchDetails: {},
+          reason: 'NO_GITHUB_ID',
+          context: { profileId: profile.id, profileName: profile.name },
+        };
+      }
+
       // Extract content for keyword matching
       const content = this.extractContentFromPayload(payload, eventType);
 
@@ -182,7 +199,7 @@ export class NotificationService {
         eventType,
         userId,
       );
-      const watchingReasons = await this.determineWatchingReasons(userId, data);
+      const watchingReasons = await this.determineWatchingReasons(userId, data, payload, eventType);
 
       if (watchingReasons.size === 0) {
         return {
@@ -263,6 +280,16 @@ export class NotificationService {
       };
     } catch (error) {
       this.logger.error(`Error checking profile match: ${error}`);
+      await this.analyticsService.trackError(
+        userId,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          eventId,
+          eventType,
+          operation: 'notification_profile_match',
+          category: 'notification_critical',
+        },
+      );
       return {
         shouldMatch: false,
         matchedKeywords: [],
@@ -279,6 +306,8 @@ export class NotificationService {
   async determineWatchingReasons(
     userId: string,
     data: any,
+    payload: any,
+    eventType: string,
   ): Promise<Set<WatchingReason>> {
     const watchingReasons = new Set<WatchingReason>();
 
