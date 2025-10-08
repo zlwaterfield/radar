@@ -29,6 +29,7 @@ export interface DigestConfigData {
   isEnabled: boolean;
   digestTime: string; // HH:MM format
   timezone: string;
+  daysOfWeek: number[]; // 0=Sunday, 6=Saturday
   scopeType: DigestScopeType;
   scopeValue?: string | null; // null for user, teamId for team
   repositoryFilter: RepositoryFilter;

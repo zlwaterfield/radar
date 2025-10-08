@@ -86,7 +86,7 @@ export const dailyDigest = schedules.task({
 
               // Check if it's time to send this digest
               const now = new Date();
-              if (!digestService.isDigestTimeMatched(config.digestTime, config.timezone, now)) {
+              if (!digestService.isDigestTimeMatched(config.digestTime, config.timezone, config.daysOfWeek, now)) {
                 console.log(`Config ${config.id} scheduled for ${config.digestTime} (${config.timezone}), current time ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}, skipping`);
                 successCount++; // Count as success since it's not time yet
                 continue;

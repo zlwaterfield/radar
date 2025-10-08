@@ -87,10 +87,12 @@ export class DigestService {
 
   /**
    * Check if current time matches user's digest time (within 15-minute window)
+   * and if today is one of the configured days
    */
   isDigestTimeMatched(
     digestTime: string,
     timezone: string,
+    daysOfWeek: number[],
     now: Date = new Date(),
   ): boolean {
     const [hours, minutes] = digestTime.split(':').map(Number);
@@ -102,6 +104,12 @@ export class DigestService {
     const userTime = new Date(
       now.toLocaleString('en-US', { timeZone: timezone }),
     );
+
+    // Check if current day is in the configured days
+    const currentDay = userTime.getDay(); // 0=Sunday, 6=Saturday
+    if (!daysOfWeek.includes(currentDay)) {
+      return false;
+    }
 
     return (
       userTime.getHours() === hours && userTime.getMinutes() === roundedMinutes

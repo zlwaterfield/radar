@@ -174,6 +174,56 @@ export default function DigestConfigModal({
                 </select>
               </div>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Days of week
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                Select which days to receive digests
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Sun', value: 0 },
+                  { label: 'Mon', value: 1 },
+                  { label: 'Tue', value: 2 },
+                  { label: 'Wed', value: 3 },
+                  { label: 'Thu', value: 4 },
+                  { label: 'Fri', value: 5 },
+                  { label: 'Sat', value: 6 },
+                ].map((day) => {
+                  const daysOfWeek = formData.daysOfWeek || [];
+                  const isSelected = daysOfWeek.includes(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const currentDays = formData.daysOfWeek || [];
+                        const newDays = isSelected
+                          ? currentDays.filter(d => d !== day.value)
+                          : [...currentDays, day.value].sort((a, b) => a - b);
+                        setFormData({ ...formData, daysOfWeek: newDays });
+                      }}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        isSelected
+                          ? 'bg-marian-blue-500 text-white hover:bg-marian-blue-600'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {(!formData.daysOfWeek || formData.daysOfWeek.length === 0) && (
+                <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                  Please select at least one day
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Scope Settings - Commented out for now */}
@@ -359,7 +409,7 @@ export default function DigestConfigModal({
             type="button"
             variant="primary"
             onClick={onSave}
-            disabled={isSaving || !formData.name.trim()}
+            disabled={isSaving || !formData.name.trim() || !formData.daysOfWeek || formData.daysOfWeek.length === 0}
             loading={isSaving}
           >
             {editingConfig ? 'Update' : 'Create'}

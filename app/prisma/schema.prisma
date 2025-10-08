@@ -157,6 +157,7 @@ model DigestConfig {
   // Schedule
   digestTime String @map("digest_time") // HH:MM format
   timezone   String @default("UTC")
+  daysOfWeek Int[] @default([0, 1, 2, 3, 4, 5, 6]) @map("days_of_week") // 0=Sunday, 6=Saturday
   
   // Scope settings
   scopeType String @map("scope_type") // "user" | "team"

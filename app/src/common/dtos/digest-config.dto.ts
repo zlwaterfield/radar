@@ -5,6 +5,10 @@ import {
   IsEnum,
   IsObject,
   ValidateNested,
+  IsArray,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import type {
@@ -41,6 +45,12 @@ export class CreateDigestConfigDto {
 
   @IsString()
   timezone: string;
+
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  daysOfWeek: number[]; // 0=Sunday, 6=Saturday
 
   @IsString()
   @IsEnum(['user', 'team'])
@@ -86,6 +96,13 @@ export class UpdateDigestConfigDto {
   @IsOptional()
   @IsString()
   timezone?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  daysOfWeek?: number[]; // 0=Sunday, 6=Saturday
 
   @IsOptional()
   @IsString()

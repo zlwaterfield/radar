@@ -105,6 +105,7 @@ export class DigestConfigService {
           isEnabled: data.isEnabled,
           digestTime: data.digestTime,
           timezone: data.timezone,
+          daysOfWeek: data.daysOfWeek,
           scopeType: data.scopeType,
           scopeValue: data.scopeValue,
           repositoryFilter: data.repositoryFilter as any,
@@ -167,6 +168,7 @@ export class DigestConfigService {
       if (data.digestTime !== undefined)
         updateData.digestTime = data.digestTime;
       if (data.timezone !== undefined) updateData.timezone = data.timezone;
+      if (data.daysOfWeek !== undefined) updateData.daysOfWeek = data.daysOfWeek;
       if (data.scopeType !== undefined) updateData.scopeType = data.scopeType;
       if (data.scopeValue !== undefined)
         updateData.scopeValue = data.scopeValue;

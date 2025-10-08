@@ -41,6 +41,7 @@ export default function DigestSettings() {
     isEnabled: true,
     digestTime: '09:00',
     timezone: 'UTC',
+    daysOfWeek: [1, 2, 3, 4, 5], // Monday-Friday by default
     scopeType: 'user',
     scopeValue: undefined,
     repositoryFilter: { type: 'all' },
@@ -128,6 +129,7 @@ export default function DigestSettings() {
       isEnabled: true,
       digestTime: '09:00',
       timezone: 'UTC',
+      daysOfWeek: [1, 2, 3, 4, 5], // Monday-Friday by default
       scopeType: 'user',
       scopeValue: undefined,
       repositoryFilter: { type: 'all' },
@@ -145,6 +147,7 @@ export default function DigestSettings() {
       isEnabled: config.isEnabled,
       digestTime: config.digestTime,
       timezone: config.timezone,
+      daysOfWeek: config.daysOfWeek || [1, 2, 3, 4, 5], // Default to weekdays if not set
       scopeType: config.scopeType,
       scopeValue: config.scopeValue || undefined,
       repositoryFilter: config.repositoryFilter,
@@ -275,6 +278,17 @@ export default function DigestSettings() {
     }
   };
 
+  const getDaysDisplay = (daysOfWeek: number[]) => {
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    if (daysOfWeek.length === 7) {
+      return 'Every day';
+    }
+    if (daysOfWeek.length === 5 && daysOfWeek.every(d => d >= 1 && d <= 5)) {
+      return 'Weekdays';
+    }
+    return daysOfWeek.sort((a, b) => a - b).map(d => dayNames[d]).join(', ');
+  };
+
   if (loading || isLoading) {
     return <Loader size="large" />;
   }
@@ -374,7 +388,14 @@ export default function DigestSettings() {
                               {formatTime(config.digestTime)} ({config.timezone})
                             </span>
                           </div>
-                          
+
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">📅 Days:</span>
+                            <span className="ml-1 text-gray-900 dark:text-white">
+                              {getDaysDisplay(config.daysOfWeek)}
+                            </span>
+                          </div>
+
                           <div className="flex flex-col gap-2">
                             {/* <div>
                               <span className="text-gray-500 dark:text-gray-400">👤 Scope:</span>
@@ -493,6 +514,7 @@ export default function DigestSettings() {
       </div>
 
       <DigestConfigModal
+        key={editingConfig?.id || 'new'}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSave={handleSaveConfig}

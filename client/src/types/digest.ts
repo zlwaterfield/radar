@@ -14,6 +14,7 @@ export interface DigestConfig {
   isEnabled: boolean;
   digestTime: string; // HH:MM format
   timezone: string;
+  daysOfWeek: number[]; // 0=Sunday, 6=Saturday
   scopeType: DigestScopeType;
   scopeValue?: string | null; // null for user, teamId for team
   repositoryFilter: RepositoryFilter;
@@ -30,6 +31,7 @@ export interface CreateDigestConfig {
   isEnabled: boolean;
   digestTime: string;
   timezone: string;
+  daysOfWeek: number[]; // 0=Sunday, 6=Saturday
   scopeType: DigestScopeType;
   scopeValue?: string;
   repositoryFilter: RepositoryFilter;
