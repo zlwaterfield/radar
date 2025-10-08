@@ -111,12 +111,17 @@ export class SlackController {
         // Special handling for app_home_opened events
         if (eventType === 'app_home_opened') {
           this.logger.log('Processing app_home_opened event...');
+          this.logger.log(`Event data: ${JSON.stringify(event)}`);
 
           // Get user ID from the event
           const userId = event.user;
 
+          this.logger.log(`User ID from event: ${userId}`);
+
           if (userId) {
             await this.slackService.handleAppHomeOpened(userId);
+          } else {
+            this.logger.warn('No user ID found in app_home_opened event');
           }
 
           return res.status(200).json({ ok: true });

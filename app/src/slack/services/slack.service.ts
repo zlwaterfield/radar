@@ -353,6 +353,20 @@ export class SlackService {
    */
   async publishHomeView(userId: string, blocks: any[]): Promise<boolean> {
     try {
+      this.logger.log(`[publishHomeView] Called with userId: ${JSON.stringify(userId)}, type: ${typeof userId}`);
+      this.logger.log(`[publishHomeView] userId length: ${userId?.length}, is empty: ${userId === ''}, is null: ${userId === null}, is undefined: ${userId === undefined}`);
+
+      // Validate userId before making API call
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        this.logger.error(
+          `[publishHomeView] Invalid user_id - userId: ${JSON.stringify(userId)}, type: ${typeof userId}`,
+        );
+        return false;
+      }
+
+      this.logger.log(`[publishHomeView] Publishing home view for user: ${userId}`);
+      this.logger.log(`[publishHomeView] Blocks count: ${blocks?.length}`);
+
       const response = await this.botClient.views.publish({
         user_id: userId,
         view: {
@@ -362,14 +376,14 @@ export class SlackService {
       });
 
       if (response.ok) {
-        this.logger.log(`Home view published for user ${userId}`);
+        this.logger.log(`[publishHomeView] SUCCESS - Home view published for user ${userId}`);
         return true;
       } else {
-        this.logger.error(`Failed to publish home view: ${response.error}`);
+        this.logger.error(`[publishHomeView] FAILED - Failed to publish home view: ${response.error}`);
         return false;
       }
     } catch (error) {
-      this.logger.error('Error publishing home view:', error);
+      this.logger.error('[publishHomeView] ERROR - Error publishing home view:', error);
       return false;
     }
   }
@@ -402,19 +416,25 @@ export class SlackService {
    */
   async handleAppHomeOpened(userId: string): Promise<void> {
     try {
+      this.logger.log(`[handleAppHomeOpened] Called with userId: ${JSON.stringify(userId)}, type: ${typeof userId}`);
+
       // Check if user exists in our database
       const user = await this.databaseService.user.findUnique({
         where: { slackId: userId },
       });
 
+      this.logger.log(`[handleAppHomeOpened] User found in DB: ${!!user}, user slackId: ${user?.slackId}`);
+
       const blocks = user
         ? this.createAuthenticatedHomeView(user)
         : this.createUnauthenticatedHomeView();
 
+      this.logger.log(`[handleAppHomeOpened] Created ${user ? 'authenticated' : 'unauthenticated'} view with ${blocks?.length} blocks`);
+
       await this.publishHomeView(userId, blocks);
     } catch (error) {
       this.logger.error(
-        `Error handling app home opened for user ${userId}:`,
+        `[handleAppHomeOpened] ERROR - Error handling app home opened for user ${userId}:`,
         error,
       );
     }
