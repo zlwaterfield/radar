@@ -746,7 +746,7 @@ function createPRReviewSlackMessage(data: any, notificationDecision?: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${processMarkdownForSlack(payload.review.body, 300)}`
+        text: `${processMarkdownForSlack(payload.review.body)}`
       }
     });
   }
@@ -820,7 +820,7 @@ function createPRReviewCommentSlackMessage(data: any, notificationDecision?: any
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: processMarkdownForSlack(payload.comment?.body || message, 1000)
+        text: processMarkdownForSlack(payload.comment?.body || message)
       }
     },
     {
@@ -907,7 +907,7 @@ function createIssueCommentSlackMessage(data: any, notificationDecision?: any) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: processMarkdownForSlack(payload.comment.body, 300)
+        text: processMarkdownForSlack(payload.comment.body)
       }
     });
   }
@@ -937,7 +937,7 @@ function createIssueCommentSlackMessage(data: any, notificationDecision?: any) {
 /**
  * Convert GitHub markdown to Slack-compatible mrkdwn and truncate
  */
-function processMarkdownForSlack(text: string, maxLength: number = 300): string {
+function processMarkdownForSlack(text: string, maxLength?: number): string {
   if (!text) return '';
   
   // Basic markdown conversions for Slack
@@ -960,7 +960,7 @@ function processMarkdownForSlack(text: string, maxLength: number = 300): string 
     .replace(/>/g, '&gt;');
   
   // Truncate if too long
-  if (processed.length > maxLength) {
+  if (maxLength && processed.length > maxLength) {
     processed = processed.substring(0, maxLength - 3) + '...';
   }
   
