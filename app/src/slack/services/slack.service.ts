@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WebClient } from '@slack/web-api';
-import { App as SlackApp } from '@slack/bolt';
 import { DatabaseService } from '../../database/database.service';
 import type {
   SlackMessage,
@@ -15,7 +14,6 @@ import type {
 export class SlackService {
   private readonly logger = new Logger(SlackService.name);
   private readonly botClient: WebClient;
-  private readonly slackApp: SlackApp;
 
   constructor(
     private readonly configService: ConfigService,
@@ -29,15 +27,6 @@ export class SlackService {
     );
 
     this.botClient = new WebClient(botToken);
-
-    this.slackApp = new SlackApp({
-      token: botToken,
-      signingSecret,
-      socketMode: false,
-    });
-
-    this.logger.log('SlackApp initialized successfully');
-    this.setupSlackEventHandlers();
   }
 
   /**
@@ -406,69 +395,6 @@ export class SlackService {
       this.logger.error('Error handling OAuth callback:', error);
       return null;
     }
-  }
-
-  /**
-   * Get Slack app instance for event handling
-   */
-  getSlackApp(): SlackApp {
-    return this.slackApp;
-  }
-
-  /**
-   * Setup Slack event handlers
-   */
-  private setupSlackEventHandlers(): void {
-    // Handle app home opened
-    this.slackApp.event('app_home_opened', async ({ event, logger }: any) => {
-      try {
-        await this.handleAppHomeOpened(event.user);
-      } catch (error) {
-        logger.error('Error handling app_home_opened:', error);
-      }
-    });
-
-    // Handle app mentions
-    this.slackApp.event('app_mention', async ({ event, say }: any) => {
-      try {
-        await say({
-          text: `Hello <@${event.user}>! I'm Radar. I help you track GitHub activity. Use the Home tab to get started.`,
-          thread_ts: event.ts,
-        });
-      } catch (error) {
-        this.logger.error('Error handling app mention:', error);
-      }
-    });
-
-    // Handle direct messages
-    this.slackApp.event('message', async ({ message, say }: any) => {
-      try {
-        if (message.subtype) return; // Ignore bot messages and other subtypes
-
-        // Only respond to DMs
-        if (message.channel_type === 'im') {
-          await say({
-            text: "Hello! I'm Radar. I help you track GitHub activity. Use my Home tab to manage your settings and connect repositories.",
-          });
-        }
-      } catch (error) {
-        this.logger.error('Error handling direct message:', error);
-      }
-    });
-
-    // Handle slash commands
-    this.slackApp.command('/radar', async ({ command, ack, respond }: any) => {
-      await ack();
-
-      try {
-        await respond({
-          text: `Hello <@${command.user_id}>! Radar helps you track GitHub activity.\n\nAvailable commands:\n• Use the Home tab to manage settings\n• Connect your GitHub repositories\n• Set up notification preferences`,
-          response_type: 'ephemeral',
-        });
-      } catch (error) {
-        this.logger.error('Error handling /radar command:', error);
-      }
-    });
   }
 
   /**
