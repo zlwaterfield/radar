@@ -329,6 +329,36 @@ export class NotificationService {
         return watchingReasons;
       }
 
+      // Special handling for review_requested event
+      // Only notify the specific reviewer(s) being requested, not everyone watching
+      if (payload.action === 'review_requested') {
+        const requestedReviewer = payload.requested_reviewer;
+        const requestedTeam = payload.requested_team;
+
+        // Check if this user is the requested reviewer
+        if (requestedReviewer && requestedReviewer.login === githubUsername) {
+          watchingReasons.add(WatchingReason.REVIEWER);
+          return watchingReasons; // Return early, only notify this specific reviewer
+        }
+
+        // Check if this user's team is the requested team
+        if (requestedTeam) {
+          const userTeamSlugs = user.teams.map(
+            (t) => `${t.organization}/${t.teamSlug}`,
+          );
+          const requestedTeamPath = `${requestedTeam.parent?.login || payload.repository?.owner?.login}/${requestedTeam.slug}`;
+
+          if (userTeamSlugs.includes(requestedTeamPath)) {
+            watchingReasons.add(WatchingReason.TEAM_REVIEWER);
+            return watchingReasons; // Return early, only notify team members
+          }
+        }
+
+        // If this user is not the requested reviewer/team, return empty set
+        // This prevents notifying others who are watching the PR (like the author)
+        return watchingReasons;
+      }
+
       // Determine if this is a PR or an issue
       let isPR = false;
       if (data.head || data.requested_reviewers) {
