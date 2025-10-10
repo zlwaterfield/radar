@@ -335,8 +335,14 @@ export class NotificationService {
         const requestedReviewer = payload.requested_reviewer;
         const requestedTeam = payload.requested_team;
 
+        console.log(`[REVIEW_REQUEST_DEBUG] Processing review request for user ${githubUsername} (ID: ${user.githubId})`);
+        console.log(`[REVIEW_REQUEST_DEBUG] Requested reviewer:`, requestedReviewer);
+        console.log(`[REVIEW_REQUEST_DEBUG] Requested team:`, requestedTeam);
+        console.log(`[REVIEW_REQUEST_DEBUG] Repository:`, payload.repository?.owner?.login);
+
         // Check if this user is the requested reviewer
         if (requestedReviewer && requestedReviewer.login === githubUsername) {
+          console.log(`[REVIEW_REQUEST_DEBUG] ✅ User ${githubUsername} is the requested reviewer`);
           watchingReasons.add(WatchingReason.REVIEWER);
           return watchingReasons; // Return early, only notify this specific reviewer
         }
@@ -346,16 +352,25 @@ export class NotificationService {
           const userTeamSlugs = user.teams.map(
             (t) => `${t.organization}/${t.teamSlug}`,
           );
-          const requestedTeamPath = `${requestedTeam.parent?.login || payload.repository?.owner?.login}/${requestedTeam.slug}`;
+          const requestedTeamPath = `${payload.repository?.owner?.login}/${requestedTeam.slug}`;
+
+          console.log(`[REVIEW_REQUEST_DEBUG] User teams:`, userTeamSlugs);
+          console.log(`[REVIEW_REQUEST_DEBUG] Requested team path:`, requestedTeamPath);
 
           if (userTeamSlugs.includes(requestedTeamPath)) {
+            console.log(`[REVIEW_REQUEST_DEBUG] ✅ User ${githubUsername} is in the requested team`);
             watchingReasons.add(WatchingReason.TEAM_REVIEWER);
             return watchingReasons; // Return early, only notify team members
+          } else {
+            console.log(`[REVIEW_REQUEST_DEBUG] ❌ User ${githubUsername} is not in the requested team`);
           }
+        } else {
+          console.log(`[REVIEW_REQUEST_DEBUG] No team requested, only individual reviewer`);
         }
 
         // If this user is not the requested reviewer/team, return empty set
         // This prevents notifying others who are watching the PR (like the author)
+        console.log(`[REVIEW_REQUEST_DEBUG] ❌ User ${githubUsername} is not the requested reviewer or team member - no notification`);
         return watchingReasons;
       }
 
