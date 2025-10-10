@@ -585,7 +585,15 @@ export class DigestService {
       accessToken,
     );
 
+    this.logger.log(
+      `[Digest Debug] Found ${openPRs.length} open PRs in ${repo.owner}/${repo.repo}`,
+    );
+
     for (const pr of openPRs) {
+      this.logger.log(
+        `[Digest Debug] Processing PR #${pr.number}: "${pr.title}" by ${pr.user.login}, draft: ${pr.draft}, state: ${pr.state}`,
+      );
+
       // Filter PRs based on digest scope
       if (
         !this.isPRInScope(
@@ -594,13 +602,18 @@ export class DigestService {
           executionData.userGithubLogin,
         )
       ) {
+        this.logger.log(
+          `[Digest Debug] PR #${pr.number} NOT in scope (scopeType: ${executionData.config.scopeType}, userLogin: ${executionData.userGithubLogin})`,
+        );
         continue;
       }
 
+      this.logger.log(`[Digest Debug] PR #${pr.number} IS in scope`);
+
       // Check if this is the user's own PR first
       if (pr.user.login === executionData.userGithubLogin) {
-        this.logger.debug(
-          `Processing user's own PR #${pr.number}: ${pr.title}`,
+        this.logger.log(
+          `[Digest Debug] Processing user's own PR #${pr.number}: ${pr.title}`,
         );
 
         // Category 2: User's PRs approved by others and ready to merge
@@ -613,17 +626,17 @@ export class DigestService {
         );
 
         if (isApprovedAndReady) {
-          this.logger.debug(
-            `PR #${pr.number} categorized as approvedReadyToMerge`,
+          this.logger.log(
+            `[Digest Debug] PR #${pr.number} categorized as approvedReadyToMerge`,
           );
           digest.approvedReadyToMerge.push(pr);
         }
         // Category 3 & 4: User's own PRs (separate draft from not-yet-approved)
         else if (pr.draft) {
-          this.logger.debug(`PR #${pr.number} categorized as userDraftPRs`);
+          this.logger.log(`[Digest Debug] PR #${pr.number} categorized as userDraftPRs (draft=${pr.draft})`);
           digest.userDraftPRs.push(pr);
         } else {
-          this.logger.debug(`PR #${pr.number} categorized as userOpenPRs`);
+          this.logger.log(`[Digest Debug] PR #${pr.number} categorized as userOpenPRs`);
           digest.userOpenPRs.push(pr);
         }
       }

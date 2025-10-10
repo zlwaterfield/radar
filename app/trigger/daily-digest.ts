@@ -110,9 +110,10 @@ export const dailyDigest = schedules.task({
               const digest = await digestService.generateDigestForConfig(executionData);
 
               // Send digest using the configured delivery method
-              const totalPRs = digest.waitingOnUser.length + 
-                               digest.approvedReadyToMerge.length + 
-                               digest.userOpenPRs.length;
+              const totalPRs = digest.waitingOnUser.length +
+                               digest.approvedReadyToMerge.length +
+                               digest.userOpenPRs.length +
+                               digest.userDraftPRs.length;
 
               if (totalPRs > 0) {
                 const sent = await digestService.sendDigestForConfig(executionData, digest);
