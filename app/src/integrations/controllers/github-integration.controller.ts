@@ -187,6 +187,19 @@ export class GitHubIntegrationController {
 
         const frontendUrl = `${this.configService.get('app.frontendUrl')}/onboarding?github=app_installed`;
         return res?.redirect(frontendUrl);
+      } else if (setupAction === 'update') {
+        this.logger.log(
+          `GitHub App installation updated for user ${userId}, installation ID: ${installationId}`,
+        );
+
+        // Re-fetch repositories to sync any changes
+        await this.githubIntegrationService.handleAppInstallation(
+          userId,
+          installationId,
+        );
+
+        const frontendUrl = `${this.configService.get('app.frontendUrl')}/onboarding?github=app_updated`;
+        return res?.redirect(frontendUrl);
       } else {
         // Handle other setup actions if needed
         const frontendUrl = `${this.configService.get('app.frontendUrl')}/onboarding?error=github_app_setup_cancelled`;
