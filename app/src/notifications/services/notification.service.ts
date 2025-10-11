@@ -787,7 +787,8 @@ export class NotificationService {
       case NotificationTrigger.REVIEW_REQUESTED:
       case NotificationTrigger.REVIEW_REQUEST_REMOVED:
         // Review requests only apply to PRs
-        return watchingReasons.has(WatchingReason.REVIEWER) && 
+        return (watchingReasons.has(WatchingReason.REVIEWER) ||
+                watchingReasons.has(WatchingReason.TEAM_REVIEWER)) &&
                (preferences.pull_request_review_requested ?? true);
         
       case NotificationTrigger.OPENED:
