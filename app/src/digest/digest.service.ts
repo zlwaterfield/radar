@@ -4,6 +4,7 @@ import { GitHubService } from '../github/services/github.service';
 import { SlackService } from '../slack/services/slack.service';
 import { DigestConfigService } from './digest-config.service';
 import { GitHubIntegrationService } from '../integrations/services/github-integration.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import type { GitHubPullRequest } from '../common/types/github.types';
 import type {
   DigestPRCategory,
@@ -21,6 +22,7 @@ export class DigestService {
     private readonly slackService: SlackService,
     private readonly digestConfigService: DigestConfigService,
     private readonly githubIntegrationService: GitHubIntegrationService,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
   /**
@@ -247,6 +249,15 @@ export class DigestService {
         `Error generating digest for config ${executionData.configId}:`,
         error,
       );
+      await this.analyticsService.trackError(
+        executionData.userId,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'digest_generation',
+          configId: executionData.configId,
+          category: 'digest_critical',
+        },
+      );
       throw error;
     }
   }
@@ -321,6 +332,16 @@ export class DigestService {
       this.logger.error(
         `Error sending digest for config ${executionData.configId}:`,
         error,
+      );
+      await this.analyticsService.trackError(
+        executionData.userId,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'digest_delivery',
+          configId: executionData.configId,
+          deliveryType: executionData.deliveryInfo.type,
+          category: 'digest_critical',
+        },
       );
       return false;
     }

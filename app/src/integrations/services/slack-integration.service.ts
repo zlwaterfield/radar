@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
+import { AnalyticsService } from '../../analytics/analytics.service';
 
 @Injectable()
 export class SlackIntegrationService {
@@ -9,6 +10,7 @@ export class SlackIntegrationService {
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
   async exchangeCodeForTokens(code: string): Promise<any> {
@@ -37,6 +39,14 @@ export class SlackIntegrationService {
       return tokens;
     } catch (error) {
       this.logger.error('Error exchanging code for tokens:', error);
+      await this.analyticsService.trackError(
+        'slack_oauth',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'slack_token_exchange',
+          category: 'slack_integration_critical',
+        },
+      );
       throw error;
     }
   }
@@ -58,6 +68,14 @@ export class SlackIntegrationService {
       this.logger.log(`Slack connected for user ${userId}`);
     } catch (error) {
       this.logger.error('Error connecting Slack for user:', error);
+      await this.analyticsService.trackError(
+        userId,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'slack_connect_user',
+          category: 'slack_integration_critical',
+        },
+      );
       throw error;
     }
   }
@@ -77,6 +95,14 @@ export class SlackIntegrationService {
       this.logger.log(`Slack disconnected for user ${userId}`);
     } catch (error) {
       this.logger.error('Error disconnecting Slack for user:', error);
+      await this.analyticsService.trackError(
+        userId,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'slack_disconnect_user',
+          category: 'slack_integration',
+        },
+      );
       throw error;
     }
   }

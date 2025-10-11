@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   CreateDigestConfigDto,
   UpdateDigestConfigDto,
@@ -21,7 +22,10 @@ import type {
 export class DigestConfigService {
   private readonly logger = new Logger(DigestConfigService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly analyticsService: AnalyticsService,
+  ) {}
 
   /**
    * Get all digest configurations for a user
@@ -115,6 +119,20 @@ export class DigestConfigService {
       });
 
       this.logger.log(`Created digest config ${config.id} for user ${userId}`);
+
+      // Track digest config creation in PostHog
+      await this.analyticsService.track(userId, 'digest_config_created', {
+        configId: config.id,
+        configName: config.name,
+        isEnabled: config.isEnabled,
+        digestTime: config.digestTime,
+        timezone: config.timezone,
+        daysOfWeek: config.daysOfWeek,
+        scopeType: config.scopeType,
+        deliveryType: config.deliveryType,
+        repositoryFilterType: (config.repositoryFilter as any)?.type,
+        deliveryChannel: config.deliveryType === 'channel' ? config.deliveryTarget : undefined,
+      });
 
       return {
         ...config,

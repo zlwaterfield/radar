@@ -123,6 +123,15 @@ export class AuthService {
           data: userData as any,
         });
 
+        // Track new user signup in PostHog
+        await this.analyticsService.track(user.id, 'user_signed_up', {
+          providerId,
+          hasGitHub: !!user.githubId,
+          hasSlack: !!user.slackId,
+          email: user.email,
+          name: user.name,
+        });
+
         // Create account record
         const now = new Date();
         await this.databaseService.account.create({

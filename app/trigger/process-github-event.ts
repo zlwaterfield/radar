@@ -23,7 +23,7 @@ const githubTokenService = new GitHubTokenService(configService, databaseService
 const githubService = new GitHubService(configService, databaseService, analyticsService, githubTokenService);
 const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
 // Initialize all services properly
-const notificationProfileService = new NotificationProfileService(databaseService);
+const notificationProfileService = new NotificationProfileService(databaseService, analyticsService);
 const notificationService = new NotificationService(databaseService, githubService, githubTokenService, llmAnalyzerService, notificationProfileService, analyticsService);
 
 // Event processing task payload

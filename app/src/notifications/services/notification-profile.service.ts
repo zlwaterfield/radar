@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
+import { AnalyticsService } from '../../analytics/analytics.service';
 import {
   CreateNotificationProfileDto,
   UpdateNotificationProfileDto,
@@ -21,7 +22,10 @@ import type { NotificationPreferences } from '../../common/types/user.types';
 export class NotificationProfileService {
   private readonly logger = new Logger(NotificationProfileService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly analyticsService: AnalyticsService,
+  ) {}
 
   /**
    * Get all notification profiles for a user
@@ -160,6 +164,20 @@ export class NotificationProfileService {
       this.logger.log(
         `Created notification profile ${profile.id} for user ${userId}`,
       );
+
+      // Track notification profile creation in PostHog
+      await this.analyticsService.track(userId, 'notification_profile_created', {
+        profileId: profile.id,
+        profileName: profile.name,
+        isEnabled: profile.isEnabled,
+        scopeType: profile.scopeType,
+        deliveryType: profile.deliveryType,
+        hasKeywords: profile.keywords.length > 0,
+        keywordCount: profile.keywords.length,
+        keywordLLMEnabled: profile.keywordLLMEnabled,
+        repositoryFilterType: (profile.repositoryFilter as any)?.type,
+        priority: profile.priority,
+      });
 
       return {
         ...profile,
