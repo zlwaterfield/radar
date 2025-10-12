@@ -3,12 +3,13 @@
 import React from 'react';
 import { format } from 'date-fns';
 import Button from '@/components/Button';
-import { 
-  DigestConfig, 
-  CreateDigestConfig, 
+import Modal from '@/components/Modal';
+import {
+  DigestConfig,
+  CreateDigestConfig,
   Repository,
   Team,
-  DigestDeliveryType 
+  DigestDeliveryType
 } from '@/types/digest';
 
 interface DigestConfigModalProps {
@@ -34,16 +35,13 @@ export default function DigestConfigModal({
   // teams,
   isSaving
 }: DigestConfigModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {editingConfig ? 'Edit' : 'Create'} digest configuration
-          </h3>
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {editingConfig ? 'Edit' : 'Create'} digest configuration
+        </h3>
+      </div>
 
         <div className="p-6 space-y-6">
           {/* Basic Settings */}
@@ -397,25 +395,24 @@ export default function DigestConfigModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            onClick={onSave}
-            disabled={isSaving || !formData.name.trim() || !formData.daysOfWeek || formData.daysOfWeek.length === 0}
-            loading={isSaving}
-          >
-            {editingConfig ? 'Update' : 'Create'}
-          </Button>
-        </div>
+      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onClose}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          onClick={onSave}
+          disabled={isSaving || !formData.name.trim() || !formData.daysOfWeek || formData.daysOfWeek.length === 0}
+          loading={isSaving}
+        >
+          {editingConfig ? 'Update' : 'Create'}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

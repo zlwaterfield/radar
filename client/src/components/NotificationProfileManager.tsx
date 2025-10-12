@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiPlus, FiSettings, FiBell, FiBellOff, FiTarget, FiHash, FiMessageSquare, FiTrash2 } from 'react-icons/fi';
+import { FiBell } from 'react-icons/fi';
 import { useNotificationProfiles } from '../hooks/useNotificationProfiles';
 import { NotificationProfileForm } from './NotificationProfileForm';
 import Button from './Button';
@@ -80,17 +80,6 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     }
   };
 
-  const getDeliveryIcon = (deliveryType: string) => {
-    switch (deliveryType) {
-      case 'dm':
-        return <FiMessageSquare className="h-4 w-4" />;
-      case 'channel':
-        return <FiHash className="h-4 w-4" />;
-      default:
-        return <FiMessageSquare className="h-4 w-4" />;
-    }
-  };
-
   const getRepositoryDisplay = (profile: NotificationProfile) => {
     if (profile.repositoryFilter.type === 'all') {
       return 'All repositories';
@@ -126,8 +115,8 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      <div className="flex items-center justify-between">
+    <div className={className}>
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <FiBell className="h-5 w-5" />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
-import type { 
-  NotificationProfile, 
+import type {
+  NotificationProfile,
   CreateNotificationProfileRequest,
   UpdateNotificationProfileRequest,
   NotificationPreferences,
@@ -10,6 +10,7 @@ import { DEFAULT_NOTIFICATION_PREFERENCES, NOTIFICATION_UI_GROUPS } from '../con
 import type { DigestDeliveryType, DigestScopeType, RepositoryFilter } from '../types/digest';
 import axios from '@/lib/axios';
 import Button from './Button';
+import Modal from './Modal';
 
 interface Team {
   teamId: string;
@@ -170,13 +171,12 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {profile ? 'Edit' : 'Create'} notification profile
-          </h3>
-        </div>
+    <Modal isOpen={true} onClose={onClose}>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {profile ? 'Edit' : 'Create'} notification profile
+        </h3>
+      </div>
 
         <div className="p-6 space-y-6">
           {error && (
@@ -539,26 +539,25 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
 
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-          <Button
-            type="button"
-            onClick={onClose}
-            variant="secondary"
-            size="md"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading || !formData.name.trim()}
-            variant="primary"
-            size="md"
-            loading={loading}
-          >
-            {profile ? 'Update' : 'Create'}
-          </Button>
-        </div>
+      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <Button
+          type="button"
+          onClick={onClose}
+          variant="secondary"
+          size="md"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={loading || !formData.name.trim()}
+          variant="primary"
+          size="md"
+          loading={loading}
+        >
+          {profile ? 'Update' : 'Create'}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }
