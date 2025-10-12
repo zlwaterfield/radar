@@ -23,7 +23,22 @@ export default function SignInPage() {
 
     try {
       await signIn(formData.email, formData.password);
-      router.push('/onboarding'); // Redirect to onboarding after sign in
+
+      // Check if user has completed onboarding
+      const [slackResponse, githubResponse] = await Promise.all([
+        fetch('/api/integrations/slack/status'),
+        fetch('/api/integrations/github/status'),
+      ]);
+
+      const slackStatus = await slackResponse.json();
+      const githubStatus = await githubResponse.json();
+
+      // If user has connected either Slack or GitHub, redirect to notifications settings
+      if (slackStatus.connected || githubStatus.connected) {
+        router.push('/settings/notifications');
+      } else {
+        router.push('/onboarding');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {
