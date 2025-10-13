@@ -17,7 +17,6 @@ interface Team {
   teamName: string;
   organization: string;
   permission: string;
-  enabled: boolean;
 }
 
 export default function TeamsSettings() {
@@ -26,15 +25,12 @@ export default function TeamsSettings() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [toggleAllLoading, setToggleAllLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalTeams, setTotalTeams] = useState(0);
-  const [enabledFilter, setEnabledFilter] = useState<boolean | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [togglingTeams, setTogglingTeams] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -51,7 +47,6 @@ export default function TeamsSettings() {
         params: {
           page: currentPage,
           per_page: pageSize,
-          enabled: enabledFilter !== null ? enabledFilter : undefined,
           search: debouncedSearchTerm || undefined
         }
       });
@@ -68,14 +63,14 @@ export default function TeamsSettings() {
     } finally {
       setTeamsLoading(false);
     }
-  }, [user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm]);
+  }, [user?.id, currentPage, pageSize, debouncedSearchTerm]);
 
   // Fetch teams when user is authenticated or filters/pagination changes
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       fetchTeams();
     }
-  }, [isAuthenticated, user?.id, currentPage, pageSize, enabledFilter, debouncedSearchTerm, fetchTeams]);
+  }, [isAuthenticated, user?.id, currentPage, pageSize, debouncedSearchTerm, fetchTeams]);
 
   // Debounced search effect
   useEffect(() => {
@@ -102,73 +97,6 @@ export default function TeamsSettings() {
     }
   };
 
-  const toggleTeam = async (teamId: string) => {
-    try {
-      const team = teams.find(t => t.id === teamId);
-      if (!team) return;
-      
-      const newEnabledState = !team.enabled;
-      
-      // Set toggling state for this team
-      setTogglingTeams(prev => {
-        const newSet = new Set(prev);
-        newSet.add(teamId);
-        return newSet;
-      });
-      
-      // Update UI optimistically
-      setTeams(prevTeams => 
-        prevTeams.map(t => 
-          t.id === teamId ? { ...t, enabled: newEnabledState } : t
-        )
-      );
-      
-      // Call API to update enabled status
-      await axios.patch(`/api/users/me/teams/${teamId}/toggle`, {
-        enabled: newEnabledState
-      });
-      
-      // No need to refresh teams here, we've already updated the UI
-    } catch (error) {
-      console.error('Error toggling team:', error);
-      // Revert UI if there was an error
-      fetchTeams();
-      toast.error('Failed to update team status');
-    } finally {
-      // Remove toggling state for this team
-      setTogglingTeams(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(teamId);
-        return newSet;
-      });
-    }
-  };
-
-  const toggleAllTeams = async (enabled: boolean) => {
-    try {
-      setToggleAllLoading(true);
-      
-      // Update UI optimistically
-      setTeams(prevTeams => 
-        prevTeams.map(t => ({ ...t, enabled }))
-      );
-      
-      // Call API to toggle all teams
-      await axios.patch(`/api/users/me/teams/toggle-all`, {
-        enabled
-      });
-      
-      toast.success(`All teams ${enabled ? 'enabled' : 'disabled'} successfully`);
-    } catch (error) {
-      console.error('Error toggling all teams:', error);
-      // Revert UI if there was an error
-      fetchTeams();
-      toast.error('Failed to update teams');
-    } finally {
-      setToggleAllLoading(false);
-    }
-  };
-
   if (loading) {
     return <Loader size="large" />;
   }
@@ -180,9 +108,9 @@ export default function TeamsSettings() {
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
             GitHub teams
           </h3>
-          <Button 
+          <Button
             onClick={refreshTeams}
-            disabled={refreshing || toggleAllLoading}
+            disabled={refreshing}
             variant="primary"
             size="sm"
             icon={<FiRefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />}
@@ -225,11 +153,7 @@ export default function TeamsSettings() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <TeamTable 
-                  teams={teams}
-                  togglingTeams={togglingTeams}
-                  toggleTeam={toggleTeam}
-                />
+                <TeamTable teams={teams} />
               </div>
             )}
             
@@ -269,35 +193,6 @@ export default function TeamsSettings() {
               </div>
             )}
           </>
-        )}
-        
-        {teams.length > 0 && (
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Bulk actions for all teams
-              </p>
-              <div className="flex space-x-2">
-                <Button 
-                  onClick={() => toggleAllTeams(true)}
-                  disabled={toggleAllLoading || refreshing}
-                  variant="secondary"
-                  size="sm"
-                >
-                  Enable all
-                </Button>
-                <Button 
-                  onClick={() => toggleAllTeams(false)}
-                  disabled={toggleAllLoading || refreshing}
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-500 dark:hover:bg-red-100"
-                >
-                  Disable all
-                </Button>
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </div>

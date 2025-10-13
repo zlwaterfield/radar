@@ -187,6 +187,19 @@ export class DigestService {
 
       const accessToken = user.githubAccessToken;
 
+      // Fetch team members if scope is 'team'
+      let teamMemberLogins: string[] = [];
+      if (
+        executionData.config.scopeType === 'team' &&
+        executionData.config.scopeValue
+      ) {
+        teamMemberLogins = await this.getTeamMemberLogins(
+          executionData.config.scopeValue,
+          executionData.userId,
+          accessToken,
+        );
+      }
+
       // Process each repository configured for this digest
       for (const repo of executionData.repositories) {
         let currentAccessToken = accessToken;
@@ -200,6 +213,7 @@ export class DigestService {
               digest,
               executionData,
               currentAccessToken,
+              teamMemberLogins,
             );
             break; // Success, exit retry loop
           } catch (error) {
@@ -285,8 +299,29 @@ export class DigestService {
         return true;
       }
 
+      // Get team name if scope is 'team'
+      let teamName: string | undefined;
+      if (config.scopeType === 'team' && config.scopeValue) {
+        const userTeam = await this.databaseService.userTeam.findFirst({
+          where: {
+            userId: executionData.userId,
+            teamId: config.scopeValue,
+          },
+          select: {
+            teamName: true,
+          },
+        });
+        teamName = userTeam?.teamName;
+      }
+
       // Create digest message
-      const message = this.createDigestSlackMessage(digest, config.name);
+      const message = this.createDigestSlackMessage(
+        digest,
+        config.name,
+        config.scopeType,
+        teamName,
+        executionData.userGithubLogin,
+      );
 
       let result: any = null;
 
@@ -354,6 +389,7 @@ export class DigestService {
     pr: GitHubPullRequest,
     scopeType: DigestScopeType,
     userLogin: string,
+    teamMemberLogins?: string[],
   ): boolean {
     if (scopeType === 'user') {
       // For user scope, include PRs where:
@@ -385,7 +421,45 @@ export class DigestService {
       return false;
     }
 
-    // TODO: add support for team scope
+    if (scopeType === 'team' && teamMemberLogins && teamMemberLogins.length > 0) {
+      // For team scope, include PRs where any team member is involved
+      return this.isPRInTeamScope(pr, teamMemberLogins);
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if PR involves any team members
+   */
+  private isPRInTeamScope(
+    pr: GitHubPullRequest,
+    teamMemberLogins: string[],
+  ): boolean {
+    // Check if PR author is a team member
+    if (teamMemberLogins.includes(pr.user.login)) {
+      return true;
+    }
+
+    // Check if any requested reviewer is a team member
+    const reviewerLogins = pr.requested_reviewers.map((r: any) => r.login);
+    const hasTeamReviewer = pr.requested_reviewers.some((reviewer: any) =>
+      teamMemberLogins.includes(reviewer.login),
+    );
+    if (hasTeamReviewer) {
+      return true;
+    }
+
+    // Check if any assignee is a team member
+    const assigneeLogins = pr.assignees?.map((a: any) => a.login) || [];
+    const hasTeamAssignee =
+      pr.assignees &&
+      pr.assignees.some((assignee: any) =>
+        teamMemberLogins.includes(assignee.login),
+      );
+    if (hasTeamAssignee) {
+      return true;
+    }
 
     return false;
   }
@@ -396,9 +470,16 @@ export class DigestService {
   private createDigestSlackMessage(
     digest: DigestPRCategory,
     configName?: string,
+    scopeType?: DigestScopeType,
+    teamName?: string,
+    currentUserLogin?: string,
   ) {
     const blocks = [];
     const attachments = [];
+
+    // Determine if this is a team-scoped digest
+    const isTeamScope = scopeType === 'team';
+    const scopeContext = isTeamScope && teamName ? teamName : 'your';
 
     // Header with config name if provided
     const headerText = configName
@@ -416,12 +497,16 @@ export class DigestService {
 
     // PRs waiting for user review (red color)
     if (digest.waitingOnUser.length > 0) {
+      const waitingText = isTeamScope
+        ? `*PRs waiting for review (${digest.waitingOnUser.length})*`
+        : `*PRs waiting for your review (${digest.waitingOnUser.length})*`;
+
       const waitingBlocks = [
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*PRs waiting for your review (${digest.waitingOnUser.length})*`,
+            text: waitingText,
           },
         },
       ];
@@ -431,7 +516,7 @@ export class DigestService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\` by ${pr.user.login}`,
+            text: `• <${pr.html_url}|*${pr.title} (#${pr.number})*>\n  ${pr.base.repo.full_name} (<https://github.com/${pr.user.login}|${pr.user.login}>)`,
           },
         });
       }
@@ -456,12 +541,16 @@ export class DigestService {
 
     // User's PRs approved and ready to merge (green color)
     if (digest.approvedReadyToMerge.length > 0) {
+      const approvedText = isTeamScope
+        ? `*PRs approved and ready to merge (${digest.approvedReadyToMerge.length})*`
+        : `*Your PRs approved and ready to merge (${digest.approvedReadyToMerge.length})*`;
+
       const approvedBlocks = [
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Your PRs approved and ready to merge (${digest.approvedReadyToMerge.length})*`,
+            text: approvedText,
           },
         },
       ];
@@ -471,7 +560,7 @@ export class DigestService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\``,
+            text: `• <${pr.html_url}|*${pr.title} (#${pr.number})*>\n  ${pr.base.repo.full_name}`,
           },
         });
       }
@@ -496,22 +585,29 @@ export class DigestService {
 
     // User's open PRs (yellow/orange color)
     if (digest.userOpenPRs.length > 0) {
+      const openText = isTeamScope
+        ? `*Open PRs (${digest.userOpenPRs.length})*`
+        : `*Your open PRs (${digest.userOpenPRs.length})*`;
+
       const openBlocks = [
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Your open PRs (${digest.userOpenPRs.length})*`,
+            text: openText,
           },
         },
       ];
 
       for (const pr of digest.userOpenPRs.slice(0, 5)) {
+        const authorInfo = pr.user.login !== currentUserLogin
+          ? ` (<https://github.com/${pr.user.login}|${pr.user.login}>)`
+          : '';
         openBlocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\``,
+            text: `• <${pr.html_url}|*${pr.title} (#${pr.number})*>\n  ${pr.base.repo.full_name}${authorInfo}`,
           },
         });
       }
@@ -536,22 +632,29 @@ export class DigestService {
 
     // User's draft PRs (blue color)
     if (digest.userDraftPRs.length > 0) {
+      const draftText = isTeamScope
+        ? `*Draft PRs (${digest.userDraftPRs.length})*`
+        : `*Your draft PRs (${digest.userDraftPRs.length})*`;
+
       const draftBlocks = [
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Your draft PRs (${digest.userDraftPRs.length})*`,
+            text: draftText,
           },
         },
       ];
 
       for (const pr of digest.userDraftPRs.slice(0, 5)) {
+        const authorInfo = pr.user.login !== currentUserLogin
+          ? ` (<https://github.com/${pr.user.login}|${pr.user.login}>)`
+          : '';
         draftBlocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title}*>\n  \`${pr.base.repo.full_name}\``,
+            text: `• <${pr.html_url}|*${pr.title} (#${pr.number})*>\n  ${pr.base.repo.full_name}${authorInfo}`,
           },
         });
       }
@@ -590,6 +693,64 @@ export class DigestService {
   }
 
   /**
+   * Get team member logins for a given team ID
+   */
+  private async getTeamMemberLogins(
+    teamId: string,
+    userId: string,
+    accessToken: string,
+  ): Promise<string[]> {
+    try {
+      this.logger.log(
+        `[GET TEAM MEMBERS] Looking up team ${teamId} for user ${userId}`,
+      );
+
+      // Get team details from database
+      const userTeam = await this.databaseService.userTeam.findFirst({
+        where: {
+          userId,
+          teamId,
+        },
+        select: {
+          organization: true,
+          teamSlug: true,
+          teamName: true,
+        },
+      });
+
+      if (!userTeam) {
+        this.logger.warn(
+          `[GET TEAM MEMBERS] ✗ Team ${teamId} not found for user ${userId}`,
+        );
+        return [];
+      }
+
+      this.logger.log(
+        `[GET TEAM MEMBERS] Found team: ${userTeam.teamName} (${userTeam.organization}/${userTeam.teamSlug})`,
+      );
+
+      // Fetch team members from GitHub
+      const memberLogins = await this.githubService.getTeamMembers(
+        userTeam.organization,
+        userTeam.teamSlug,
+        accessToken,
+      );
+
+      this.logger.log(
+        `[GET TEAM MEMBERS] ✓ Fetched ${memberLogins.length} members from GitHub: ${JSON.stringify(memberLogins)}`,
+      );
+
+      return memberLogins;
+    } catch (error) {
+      this.logger.error(
+        `[GET TEAM MEMBERS] ✗ Error fetching team members for team ${teamId}:`,
+        error,
+      );
+      return [];
+    }
+  }
+
+  /**
    * Process a single repository for digest generation
    */
   private async processRepositoryForDigest(
@@ -597,6 +758,7 @@ export class DigestService {
     digest: DigestPRCategory,
     executionData: DigestExecutionData,
     accessToken: string,
+    teamMemberLogins: string[] = [],
   ): Promise<void> {
     // Get open PRs for this repository
     const openPRs = await this.githubService.getPullRequests(
@@ -621,6 +783,7 @@ export class DigestService {
           pr,
           executionData.config.scopeType,
           executionData.userGithubLogin,
+          teamMemberLogins,
         )
       ) {
         this.logger.log(
@@ -632,7 +795,14 @@ export class DigestService {
       this.logger.log(`[Digest Debug] PR #${pr.number} IS in scope`);
 
       // Check if this is the user's own PR first
-      if (pr.user.login === executionData.userGithubLogin) {
+      const isUsersPR = pr.user.login === executionData.userGithubLogin;
+      const isWaitingOnUser = this.isPRWaitingOnUser(pr, executionData.userGithubLogin);
+
+      this.logger.log(
+        `[CATEGORIZATION] PR #${pr.number}: isUsersPR=${isUsersPR}, isWaitingOnUser=${isWaitingOnUser}, scopeType=${executionData.config.scopeType}, teamMembersCount=${teamMemberLogins.length}`,
+      );
+
+      if (isUsersPR) {
         this.logger.log(
           `[Digest Debug] Processing user's own PR #${pr.number}: ${pr.title}`,
         );
@@ -661,9 +831,45 @@ export class DigestService {
           digest.userOpenPRs.push(pr);
         }
       }
-      // Category 1: PRs waiting on user (review requested) - other people's PRs
-      else if (this.isPRWaitingOnUser(pr, executionData.userGithubLogin)) {
+      // For team scope: categorize team member PRs differently
+      // Include both PRs waiting on user AND other team member PRs
+      else if (executionData.config.scopeType === 'team' && teamMemberLogins.length > 0) {
+        this.logger.log(
+          `[TEAM MEMBER PR] PR #${pr.number} is team member's PR (author: ${pr.user.login})`,
+        );
+        this.logger.log(
+          `[TEAM MEMBER PR] PR #${pr.number} isWaitingOnUser=${isWaitingOnUser}, draft=${pr.draft}`,
+        );
+
+        // If user is requested as reviewer, add to waitingOnUser
+        if (isWaitingOnUser) {
+          this.logger.log(
+            `[TEAM MEMBER PR] ✓ PR #${pr.number} categorized as waitingOnUser (team member's PR, review requested)`,
+          );
+          digest.waitingOnUser.push(pr);
+        }
+        // Otherwise add to open or draft
+        else if (!pr.draft) {
+          this.logger.log(`[TEAM MEMBER PR] ✓ PR #${pr.number} categorized as userOpenPRs (team member's PR)`);
+          digest.userOpenPRs.push(pr);
+        } else {
+          this.logger.log(`[TEAM MEMBER PR] ✓ PR #${pr.number} categorized as userDraftPRs (team member's draft)`);
+          digest.userDraftPRs.push(pr);
+        }
+      }
+      // For user scope: PRs waiting on user (review requested) - other people's PRs
+      else if (isWaitingOnUser) {
+        this.logger.log(
+          `[Digest Debug] PR #${pr.number} categorized as waitingOnUser (review requested from ${executionData.userGithubLogin})`,
+        );
         digest.waitingOnUser.push(pr);
+      } else {
+        this.logger.log(
+          `[CATEGORIZATION] ✗ PR #${pr.number} did NOT match any category - SKIPPED!`,
+        );
+        this.logger.log(
+          `[CATEGORIZATION] Debug info - scopeType: ${executionData.config.scopeType}, teamMembersCount: ${teamMemberLogins.length}, author: ${pr.user.login}, currentUser: ${executionData.userGithubLogin}`,
+        );
       }
     }
   }

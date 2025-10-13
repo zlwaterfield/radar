@@ -641,6 +641,44 @@ export class GitHubService {
   }
 
   /**
+   * Get all members of a specific team
+   * @param org - Organization name
+   * @param teamSlug - Team slug
+   * @param accessToken - User access token
+   * @returns Array of team member logins
+   */
+  async getTeamMembers(
+    org: string,
+    teamSlug: string,
+    accessToken: string,
+  ): Promise<string[]> {
+    try {
+      const octokit = this.createUserClient(accessToken);
+
+      const { data: members} = await octokit.rest.teams.listMembersInOrg({
+        org,
+        team_slug: teamSlug,
+        per_page: 100,
+      });
+
+      const memberLogins = members.map((member) => member.login);
+      this.logger.log(
+        `Retrieved ${memberLogins.length} members for team ${org}/${teamSlug}`,
+      );
+
+      return memberLogins;
+    } catch (error) {
+      this.logger.error(
+        `Error fetching team members for ${org}/${teamSlug}:`,
+        error,
+      );
+      // Return empty array on error rather than throwing
+      // This allows digest to continue even if team member fetch fails
+      return [];
+    }
+  }
+
+  /**
    * Get GitHub App private key from config
    */
   private getPrivateKey(): string {

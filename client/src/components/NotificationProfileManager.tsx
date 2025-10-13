@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiBell } from 'react-icons/fi';
 import { useNotificationProfiles } from '../hooks/useNotificationProfiles';
 import { NotificationProfileForm } from './NotificationProfileForm';
@@ -7,6 +7,13 @@ import Switch from './Switch';
 import { toast } from 'sonner';
 import type { NotificationProfile, NotificationPreferences } from '../types/notification-profile';
 import { NOTIFICATION_UI_GROUPS } from '../constants/notification-preferences.constants';
+import axios from '@/lib/axios';
+
+interface Team {
+  teamId: string;
+  teamName: string;
+  organization: string;
+}
 
 interface NotificationProfileManagerProps {
   className?: string;
@@ -16,6 +23,22 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
   const { profiles, loading, error, deleteProfile, createProfile, updateProfile } = useNotificationProfiles();
   const [showForm, setShowForm] = useState(false);
   const [editingProfile, setEditingProfile] = useState<NotificationProfile | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+
+  useEffect(() => {
+    loadTeams();
+  }, []);
+
+  const loadTeams = async () => {
+    try {
+      const response = await axios.get('/api/users/me/teams');
+      if (response.data && response.data.data) {
+        setTeams(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error loading teams:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -78,6 +101,16 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
       console.error('Failed to toggle profile:', error);
       toast.error('Failed to update notification profile');
     }
+  };
+
+  const getScopeDisplay = (profile: NotificationProfile) => {
+    if (profile.scopeType === 'user') {
+      return 'Just your activity';
+    } else if (profile.scopeType === 'team') {
+      const team = teams.find(t => t.teamId === profile.scopeValue);
+      return team ? `Team: ${team.teamName}` : 'Team: Unknown team';
+    }
+    return 'Not specified';
   };
 
   const getRepositoryDisplay = (profile: NotificationProfile) => {
@@ -176,29 +209,36 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                     
                     <div className="flex flex-col gap-2 text-sm">
                       <div>
+                        <span className="text-gray-500 dark:text-gray-400">🎯 Scope:</span>
+                        <span className="ml-1 text-gray-900 dark:text-white">
+                          {getScopeDisplay(profile)}
+                        </span>
+                      </div>
+
+                      <div>
                         <span className="text-gray-500 dark:text-gray-400">📤 Delivery:</span>
                         <span className="ml-1 text-gray-900 dark:text-white">
                           {getDeliveryDisplay(profile)}
                         </span>
                       </div>
-                      
+
                       <div>
                         <span className="text-gray-500 dark:text-gray-400">📁 Repos:</span>
                         <span className="ml-1 text-gray-900 dark:text-white">
                           {getRepositoryDisplay(profile)}
                         </span>
                       </div>
-                      
+
                       <div>
                         <span className="text-gray-500 dark:text-gray-400">🎪 Keywords:</span>
                         <span className="ml-1 text-gray-900 dark:text-white">
-                          {profile.keywords.length > 0 
+                          {profile.keywords.length > 0
                             ? `${profile.keywords.length} keyword${profile.keywords.length !== 1 ? 's' : ''}`
                             : 'No keywords'
                           }
                         </span>
                       </div>
-                      
+
                       <div>
                         <span className="text-gray-500 dark:text-gray-400">🔔 Events:</span>
                         <span className="ml-1 text-gray-900 dark:text-white">

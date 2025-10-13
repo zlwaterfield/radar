@@ -216,12 +216,12 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
           </div>
 
           {/* Scope Settings */}
-          {/* <div className="space-y-4">
+          <div className="space-y-4">
             <h4 className="font-medium text-gray-900 dark:text-white">Scope</h4>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Activity scope
+                What notifications to receive
               </label>
               <div className="space-y-2">
                 <label className="flex items-center">
@@ -230,11 +230,11 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                     name="scopeType"
                     value="user"
                     checked={formData.scopeType === 'user'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, scopeType: e.target.value as any, scopeValue: '' }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, scopeType: 'user', scopeValue: '' }))}
                     className="mr-2"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Your activity (includes your teams)
+                    Just your activity
                   </span>
                 </label>
                 <label className="flex items-center">
@@ -243,15 +243,15 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                     name="scopeType"
                     value="team"
                     checked={formData.scopeType === 'team'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, scopeType: e.target.value as any }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, scopeType: 'team' }))}
                     className="mr-2"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Specific team activity
+                    Specific team's activity
                   </span>
                 </label>
               </div>
-              
+
               {formData.scopeType === 'team' && (
                 <div className="mt-2">
                   <select
@@ -266,10 +266,13 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Receive notifications when any team member is involved
+                  </p>
                 </div>
               )}
             </div>
-          </div> */}
+          </div>
 
           {/* Repository Settings */}
           <div className="space-y-4">
@@ -550,7 +553,11 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
         </Button>
         <Button
           onClick={handleSubmit}
-          disabled={loading || !formData.name.trim()}
+          disabled={
+            loading ||
+            !formData.name.trim() ||
+            (formData.scopeType === 'team' && !formData.scopeValue)
+          }
           variant="primary"
           size="md"
           loading={loading}

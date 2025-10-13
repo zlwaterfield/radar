@@ -1,6 +1,4 @@
 import React from 'react';
-import Loader from '@/components/Loader';
-import Switch from '@/components/Switch';
 
 interface Team {
   id: string;
@@ -8,20 +6,13 @@ interface Team {
   teamName: string;
   organization: string;
   permission: string;
-  enabled: boolean;
 }
 
 interface TeamTableProps {
   teams: Team[];
-  togglingTeams: Set<string>;
-  toggleTeam: (teamId: string) => void;
 }
 
-const TeamTable: React.FC<TeamTableProps> = ({ 
-  teams, 
-  togglingTeams, 
-  toggleTeam 
-}) => {
+const TeamTable: React.FC<TeamTableProps> = ({ teams }) => {
   return (
     <div className="overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
       <div className="overflow-x-auto">
@@ -30,7 +21,7 @@ const TeamTable: React.FC<TeamTableProps> = ({
           <tr>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Team</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Organization</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Permission</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -53,14 +44,9 @@ const TeamTable: React.FC<TeamTableProps> = ({
                 {team.organization}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <Switch
-                  id={`toggle-${team.id}`}
-                  checked={team.enabled}
-                  onChange={() => toggleTeam(team.id)}
-                  disabled={togglingTeams.has(team.id)}
-                  loading={togglingTeams.has(team.id)}
-                  showStatusText={true}
-                />
+                <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
+                  {team.permission}
+                </span>
               </td>
             </tr>
           ))}

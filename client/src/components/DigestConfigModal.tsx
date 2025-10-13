@@ -20,7 +20,7 @@ interface DigestConfigModalProps {
   formData: CreateDigestConfig;
   setFormData: (data: CreateDigestConfig) => void;
   repositories: Repository[];
-  // teams: Team[];
+  teams: any[];
   isSaving: boolean;
 }
 
@@ -32,7 +32,7 @@ export default function DigestConfigModal({
   formData,
   setFormData,
   repositories,
-  // teams,
+  teams,
   isSaving
 }: DigestConfigModalProps) {
   return (
@@ -224,13 +224,13 @@ export default function DigestConfigModal({
             </div>
           </div>
 
-          {/* Scope Settings - Commented out for now */}
-          {/* <div className="space-y-4">
+          {/* Scope Settings */}
+          <div className="space-y-4">
             <h4 className="font-medium text-gray-900 dark:text-white">Scope</h4>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Activity scope
+                What PRs to include
               </label>
               <div className="space-y-2">
                 <label className="flex items-center">
@@ -239,11 +239,11 @@ export default function DigestConfigModal({
                     name="scopeType"
                     value="user"
                     checked={formData.scopeType === 'user'}
-                    onChange={(e) => setFormData({...formData, scopeType: e.target.value as DigestScopeType, scopeValue: undefined})}
+                    onChange={(e) => setFormData({...formData, scopeType: 'user', scopeValue: undefined})}
                     className="mr-2"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Your activity (includes your teams)
+                    Just your PRs
                   </span>
                 </label>
                 <label className="flex items-center">
@@ -252,15 +252,15 @@ export default function DigestConfigModal({
                     name="scopeType"
                     value="team"
                     checked={formData.scopeType === 'team'}
-                    onChange={(e) => setFormData({...formData, scopeType: e.target.value as DigestScopeType})}
+                    onChange={(e) => setFormData({...formData, scopeType: 'team'})}
                     className="mr-2"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Specific team activity
+                    Specific team's PRs
                   </span>
                 </label>
               </div>
-              
+
               {formData.scopeType === 'team' && (
                 <div className="mt-2">
                   <select
@@ -275,10 +275,13 @@ export default function DigestConfigModal({
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Includes PRs where any team member is involved
+                  </p>
                 </div>
               )}
             </div>
-          </div> */}
+          </div>
 
           {/* Repository Settings */}
           <div className="space-y-4">
@@ -407,7 +410,13 @@ export default function DigestConfigModal({
           type="button"
           variant="primary"
           onClick={onSave}
-          disabled={isSaving || !formData.name.trim() || !formData.daysOfWeek || formData.daysOfWeek.length === 0}
+          disabled={
+            isSaving ||
+            !formData.name.trim() ||
+            !formData.daysOfWeek ||
+            formData.daysOfWeek.length === 0 ||
+            (formData.scopeType === 'team' && !formData.scopeValue)
+          }
           loading={isSaving}
         >
           {editingConfig ? 'Update' : 'Create'}

@@ -62,66 +62,6 @@ export class UserTeamsService {
   }
 
   /**
-   * Get enabled teams for user
-   */
-  async getEnabledTeams(userId: string): Promise<UserTeam[]> {
-    try {
-      return await this.databaseService.userTeam.findMany({
-        where: {
-          userId,
-          enabled: true,
-        },
-        orderBy: [{ organization: 'asc' }, { teamName: 'asc' }],
-      });
-    } catch (error) {
-      this.logger.error(
-        `Error getting enabled teams for user ${userId}:`,
-        error,
-      );
-      return [];
-    }
-  }
-
-  /**
-   * Get enabled teams with pagination
-   */
-  async getEnabledTeamsPaginated(
-    userId: string,
-    page: number,
-    per_page: number,
-  ): Promise<{ teams: UserTeam[]; total: number }> {
-    try {
-      const skip = getPaginationSkip(page, per_page);
-
-      const [teams, total] = await Promise.all([
-        this.databaseService.userTeam.findMany({
-          where: {
-            userId,
-            enabled: true,
-          },
-          orderBy: [{ organization: 'asc' }, { teamName: 'asc' }],
-          skip,
-          take: per_page,
-        }),
-        this.databaseService.userTeam.count({
-          where: {
-            userId,
-            enabled: true,
-          },
-        }),
-      ]);
-
-      return { teams, total };
-    } catch (error) {
-      this.logger.error(
-        `Error getting paginated enabled teams for user ${userId}:`,
-        error,
-      );
-      return { teams: [], total: 0 };
-    }
-  }
-
-  /**
    * Sync user teams from GitHub
    */
   async syncUserTeams(
@@ -183,12 +123,11 @@ export class UserTeamsService {
           });
           updated++;
         } else {
-          // Add new team (enabled by default)
+          // Add new team
           await this.databaseService.userTeam.create({
             data: {
               userId,
               ...teamData,
-              enabled: true,
             },
           });
           added++;
@@ -211,49 +150,10 @@ export class UserTeamsService {
   }
 
   /**
-   * Enable/disable team notifications
-   */
-  async toggleTeamNotifications(
-    userId: string,
-    teamId: string,
-    enabled: boolean,
-  ): Promise<UserTeam> {
-    try {
-      const team = await this.databaseService.userTeam.update({
-        where: {
-          id: teamId,
-          userId, // Ensure user owns the team
-        },
-        data: {
-          enabled,
-          updatedAt: new Date(),
-        },
-      });
-
-      this.logger.log(`Updated team ${teamId} for user ${userId}`);
-      return team;
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        'code' in error &&
-        (error as { code: string }).code === 'P2025'
-      ) {
-        throw new NotFoundException('Team not found');
-      }
-      this.logger.error(
-        `Error updating team ${teamId}:`,
-        error instanceof Error ? error.message : String(error),
-      );
-      throw error;
-    }
-  }
-
-  /**
    * Get team statistics for user
    */
   async getTeamStats(userId: string): Promise<{
     total: number;
-    enabled: number;
     byOrganization: Record<string, number>;
   }> {
     try {
@@ -261,7 +161,6 @@ export class UserTeamsService {
 
       const stats = {
         total: teams.length,
-        enabled: teams.filter((t) => t.enabled).length,
         byOrganization: {} as Record<string, number>,
       };
 
@@ -276,7 +175,6 @@ export class UserTeamsService {
       this.logger.error(`Error getting team stats for user ${userId}:`, error);
       return {
         total: 0,
-        enabled: 0,
         byOrganization: {},
       };
     }

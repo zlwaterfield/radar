@@ -212,16 +212,17 @@ export class NotificationService {
       }
 
       // Check if this matches the profile's scope
-      if (!this.checkProfileScope(profile, userId, payload)) {
+      if (!(await this.checkProfileScope(profile, userId, payload))) {
         return {
           shouldMatch: false,
           matchedKeywords: [],
           matchDetails: {},
-          reason: 'REPOSITORY_FILTER_MISMATCH',
+          reason: 'SCOPE_MISMATCH',
           context: {
             profileId: profile.id,
             profileName: profile.name,
             scopeType: profile.scopeType,
+            scopeValue: profile.scopeValue,
             repositoryId: payload.repository?.id?.toString(),
             repositoryName: payload.repository?.full_name,
             repositoryFilter: profile.repositoryFilter,
@@ -628,11 +629,11 @@ export class NotificationService {
   /**
    * Check if profile scope matches the current context
    */
-  private checkProfileScope(
+  private async checkProfileScope(
     profile: NotificationProfileWithMeta,
     userId: string,
     payload: any,
-  ): boolean {
+  ): Promise<boolean> {
     // Check repository filtering
     if (!this.checkRepositoryFilter(profile, payload)) {
       this.logger.debug(
@@ -641,8 +642,123 @@ export class NotificationService {
       return false;
     }
 
-    // TODO: Add team scope validation when we have team context in payloads
+    // Check team scope if profile is scoped to a team
+    if (profile.scopeType === 'team' && profile.scopeValue) {
+      return await this.checkTeamScope(profile, userId, payload);
+    }
+
+    // For 'user' scope, no additional checks needed
     return true;
+  }
+
+  /**
+   * Check if the event involves any team members
+   */
+  private async checkTeamScope(
+    profile: NotificationProfileWithMeta,
+    userId: string,
+    payload: any,
+  ): Promise<boolean> {
+    try {
+      // Get team details and fetch member logins
+      const userTeam = await this.databaseService.userTeam.findFirst({
+        where: {
+          userId,
+          teamId: profile.scopeValue!,
+        },
+        select: {
+          organization: true,
+          teamSlug: true,
+        },
+      });
+
+      if (!userTeam) {
+        this.logger.warn(
+          `Team ${profile.scopeValue} not found for user ${userId}`,
+        );
+        return false;
+      }
+
+      // Get user's access token to fetch team members
+      const user = await this.databaseService.user.findUnique({
+        where: { id: userId },
+        select: { githubAccessToken: true },
+      });
+
+      if (!user?.githubAccessToken) {
+        this.logger.warn(
+          `No GitHub access token for user ${userId} to fetch team members`,
+        );
+        return false;
+      }
+
+      // Fetch team members from GitHub
+      const teamMemberLogins = await this.githubService.getTeamMembers(
+        userTeam.organization,
+        userTeam.teamSlug,
+        user.githubAccessToken,
+      );
+
+      if (teamMemberLogins.length === 0) {
+        this.logger.warn(
+          `No team members found for ${userTeam.organization}/${userTeam.teamSlug}`,
+        );
+        return false;
+      }
+
+      // Check if any team member is involved in the event
+      return this.isTeamInvolvedInEvent(payload, teamMemberLogins);
+    } catch (error) {
+      this.logger.error(
+        `Error checking team scope for profile ${profile.id}:`,
+        error,
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Check if any team member is involved in the event (author, reviewer, assignee)
+   */
+  private isTeamInvolvedInEvent(
+    payload: any,
+    teamMemberLogins: string[],
+  ): boolean {
+    // Get the main object (PR or issue)
+    const mainObject = payload.pull_request || payload.issue || {};
+
+    // Check if author is a team member
+    if (mainObject.user?.login && teamMemberLogins.includes(mainObject.user.login)) {
+      return true;
+    }
+
+    // Check if any requested reviewer is a team member
+    const requestedReviewers = mainObject.requested_reviewers || [];
+    for (const reviewer of requestedReviewers) {
+      if (teamMemberLogins.includes(reviewer.login)) {
+        return true;
+      }
+    }
+
+    // Check if any assignee is a team member
+    const assignees = mainObject.assignees || [];
+    for (const assignee of assignees) {
+      if (teamMemberLogins.includes(assignee.login)) {
+        return true;
+      }
+    }
+
+    // Check if comment author is a team member (for comment events)
+    if (payload.comment?.user?.login && teamMemberLogins.includes(payload.comment.user.login)) {
+      return true;
+    }
+
+    // Check if review author is a team member (for review events)
+    if (payload.review?.user?.login && teamMemberLogins.includes(payload.review.user.login)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

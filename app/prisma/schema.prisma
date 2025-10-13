@@ -303,7 +303,6 @@ model UserTeam {
   teamName     String @map("team_name")
   organization String
   permission   String @default("member")
-  enabled      Boolean @default(true)
 
   @@unique([userId, teamId])
   @@map("user_team")
