@@ -555,6 +555,27 @@ function createPRSlackMessage(data: any, notificationDecision?: any) {
   const keywordBlocks = createKeywordMatchBlock(notificationDecision);
   blocks.push(...keywordBlocks);
 
+  // Add PR statistics for opened and review_requested actions
+  if (action === "opened" || action === "review_requested") {
+    const additions = payload.pull_request?.additions || 0;
+    const deletions = payload.pull_request?.deletions || 0;
+    const changedFiles = payload.pull_request?.changed_files || 0;
+
+    const statsText = `*${changedFiles}* ${changedFiles === 1 ? 'file' : 'files'} changed • ` +
+      `🟩 *+${additions}* • ` +
+      `🟥 *-${deletions}*`;
+
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: statsText
+        }
+      ]
+    } as any);
+  }
+
   if (action in ["opened", "review_requested"]) {
     blocks.push({
       type: 'section',
