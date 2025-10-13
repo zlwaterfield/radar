@@ -576,12 +576,13 @@ function createPRSlackMessage(data: any, notificationDecision?: any) {
     } as any);
   }
 
-  if (action in ["opened", "review_requested"]) {
+  // Add PR description for opened and review_requested actions
+  if ((action === "opened" || action === "review_requested") && payload.pull_request?.body) {
     blocks.push({
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: data.body,
+        text: processMarkdownForSlack(payload.pull_request.body),
       }
     });
   }
