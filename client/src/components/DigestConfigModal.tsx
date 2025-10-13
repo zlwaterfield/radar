@@ -256,7 +256,7 @@ export default function DigestConfigModal({
                     className="mr-2"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Specific team's PRs
+                    Specific team&apos;s PRs
                   </span>
                 </label>
               </div>

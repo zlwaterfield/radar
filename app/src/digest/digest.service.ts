@@ -511,26 +511,47 @@ export class DigestService {
         },
       ];
 
-      for (const pr of digest.waitingOnUser.slice(0, 5)) {
+      // Group PRs by repository
+      const prsByRepo = new Map<string, typeof digest.waitingOnUser>();
+      for (const pr of digest.waitingOnUser) {
+        const repoName = pr.base.repo.full_name;
+        if (!prsByRepo.has(repoName)) {
+          prsByRepo.set(repoName, []);
+        }
+        prsByRepo.get(repoName)!.push(pr);
+      }
+
+      // Display PRs grouped by repo
+      for (const [repoName, prs] of prsByRepo) {
         waitingBlocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title} (#${pr.number})*>\n  ${pr.base.repo.full_name} (<https://github.com/${pr.user.login}|${pr.user.login}>)`,
+            text: `${repoName}`,
           },
         });
-      }
 
-      if (digest.waitingOnUser.length > 5) {
-        waitingBlocks.push({
-          type: 'context',
-          elements: [
-            {
+        for (const pr of prs.slice(0, 5)) {
+          waitingBlocks.push({
+            type: 'section',
+            text: {
               type: 'mrkdwn',
-              text: `_...and ${digest.waitingOnUser.length - 5} more_`,
+              text: `<${pr.html_url}|${pr.title} (#${pr.number})> (<https://github.com/${pr.user.login}|${pr.user.login}>)`,
             },
-          ],
-        } as any);
+          });
+        }
+
+        if (prs.length > 5) {
+          waitingBlocks.push({
+            type: 'context',
+            elements: [
+              {
+                type: 'mrkdwn',
+                text: `_...and ${prs.length - 5} more in ${repoName}_`,
+              },
+            ],
+          } as any);
+        }
       }
 
       attachments.push({
@@ -555,26 +576,47 @@ export class DigestService {
         },
       ];
 
-      for (const pr of digest.approvedReadyToMerge.slice(0, 5)) {
+      // Group PRs by repository
+      const prsByRepo = new Map<string, typeof digest.approvedReadyToMerge>();
+      for (const pr of digest.approvedReadyToMerge) {
+        const repoName = pr.base.repo.full_name;
+        if (!prsByRepo.has(repoName)) {
+          prsByRepo.set(repoName, []);
+        }
+        prsByRepo.get(repoName)!.push(pr);
+      }
+
+      // Display PRs grouped by repo
+      for (const [repoName, prs] of prsByRepo) {
         approvedBlocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title} (#${pr.number})*>\n  ${pr.base.repo.full_name}`,
+            text: `${repoName}`,
           },
         });
-      }
 
-      if (digest.approvedReadyToMerge.length > 5) {
-        approvedBlocks.push({
-          type: 'context',
-          elements: [
-            {
+        for (const pr of prs.slice(0, 5)) {
+          approvedBlocks.push({
+            type: 'section',
+            text: {
               type: 'mrkdwn',
-              text: `_...and ${digest.approvedReadyToMerge.length - 5} more_`,
+              text: `<${pr.html_url}|${pr.title} (#${pr.number})>`,
             },
-          ],
-        } as any);
+          });
+        }
+
+        if (prs.length > 5) {
+          approvedBlocks.push({
+            type: 'context',
+            elements: [
+              {
+                type: 'mrkdwn',
+                text: `_...and ${prs.length - 5} more in ${repoName}_`,
+              },
+            ],
+          } as any);
+        }
       }
 
       attachments.push({
@@ -599,29 +641,50 @@ export class DigestService {
         },
       ];
 
-      for (const pr of digest.userOpenPRs.slice(0, 5)) {
-        const authorInfo = pr.user.login !== currentUserLogin
-          ? ` (<https://github.com/${pr.user.login}|${pr.user.login}>)`
-          : '';
+      // Group PRs by repository
+      const prsByRepo = new Map<string, typeof digest.userOpenPRs>();
+      for (const pr of digest.userOpenPRs) {
+        const repoName = pr.base.repo.full_name;
+        if (!prsByRepo.has(repoName)) {
+          prsByRepo.set(repoName, []);
+        }
+        prsByRepo.get(repoName)!.push(pr);
+      }
+
+      // Display PRs grouped by repo
+      for (const [repoName, prs] of prsByRepo) {
         openBlocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title} (#${pr.number})*>\n  ${pr.base.repo.full_name}${authorInfo}`,
+            text: `${repoName}`,
           },
         });
-      }
 
-      if (digest.userOpenPRs.length > 5) {
-        openBlocks.push({
-          type: 'context',
-          elements: [
-            {
+        for (const pr of prs.slice(0, 5)) {
+          const authorInfo = pr.user.login !== currentUserLogin
+            ? ` (<https://github.com/${pr.user.login}|${pr.user.login}>)`
+            : '';
+          openBlocks.push({
+            type: 'section',
+            text: {
               type: 'mrkdwn',
-              text: `_...and ${digest.userOpenPRs.length - 5} more_`,
+              text: `<${pr.html_url}|${pr.title} (#${pr.number})>${authorInfo}`,
             },
-          ],
-        } as any);
+          });
+        }
+
+        if (prs.length > 5) {
+          openBlocks.push({
+            type: 'context',
+            elements: [
+              {
+                type: 'mrkdwn',
+                text: `_...and ${prs.length - 5} more in ${repoName}_`,
+              },
+            ],
+          } as any);
+        }
       }
 
       attachments.push({
@@ -646,29 +709,50 @@ export class DigestService {
         },
       ];
 
-      for (const pr of digest.userDraftPRs.slice(0, 5)) {
-        const authorInfo = pr.user.login !== currentUserLogin
-          ? ` (<https://github.com/${pr.user.login}|${pr.user.login}>)`
-          : '';
+      // Group PRs by repository
+      const prsByRepo = new Map<string, typeof digest.userDraftPRs>();
+      for (const pr of digest.userDraftPRs) {
+        const repoName = pr.base.repo.full_name;
+        if (!prsByRepo.has(repoName)) {
+          prsByRepo.set(repoName, []);
+        }
+        prsByRepo.get(repoName)!.push(pr);
+      }
+
+      // Display PRs grouped by repo
+      for (const [repoName, prs] of prsByRepo) {
         draftBlocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• <${pr.html_url}|*${pr.title} (#${pr.number})*>\n  ${pr.base.repo.full_name}${authorInfo}`,
+            text: `${repoName}`,
           },
         });
-      }
 
-      if (digest.userDraftPRs.length > 5) {
-        draftBlocks.push({
-          type: 'context',
-          elements: [
-            {
+        for (const pr of prs.slice(0, 5)) {
+          const authorInfo = pr.user.login !== currentUserLogin
+            ? ` (<https://github.com/${pr.user.login}|${pr.user.login}>)`
+            : '';
+          draftBlocks.push({
+            type: 'section',
+            text: {
               type: 'mrkdwn',
-              text: `_...and ${digest.userDraftPRs.length - 5} more_`,
+              text: `<${pr.html_url}|${pr.title} (#${pr.number})>${authorInfo}`,
             },
-          ],
-        } as any);
+          });
+        }
+
+        if (prs.length > 5) {
+          draftBlocks.push({
+            type: 'context',
+            elements: [
+              {
+                type: 'mrkdwn',
+                text: `_...and ${prs.length - 5} more in ${repoName}_`,
+              },
+            ],
+          } as any);
+        }
       }
 
       attachments.push({
