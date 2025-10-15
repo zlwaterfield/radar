@@ -23,7 +23,7 @@ export function useEntitlements() {
 
   const fetchEntitlements = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/billing/entitlements`, {
+      const res = await fetch('/api/billing/entitlements', {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to fetch entitlements');

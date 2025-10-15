@@ -255,9 +255,7 @@ History of sent digests with counts and delivery info, linked to digest configs.
 - `GITHUB_WEBHOOK_SECRET` - Webhook signature verification
 
 ### Frontend (client/.env.local)
-- `NEXT_PUBLIC_API_URL` - Backend API URL (http://localhost:3000)
-- `BETTER_AUTH_SECRET` - Must match backend
-- `BETTER_AUTH_URL` - Auth callback URL
+- `API_URL` - Backend API URL (http://localhost:3000)
 
 ## Development Workflow
 

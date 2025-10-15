@@ -88,7 +88,7 @@ export default function BillingPage() {
 
   const fetchSubscription = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/billing/subscription`, {
+      const res = await fetch('/api/billing/subscription', {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to fetch subscription');
@@ -105,7 +105,7 @@ export default function BillingPage() {
   const handleUpgrade = async (priceId: string) => {
     try {
       setError(null);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/billing/checkout`, {
+      const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -123,7 +123,7 @@ export default function BillingPage() {
   const handleManageSubscription = async () => {
     try {
       setError(null);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/billing/portal`, {
+      const res = await fetch('/api/billing/portal', {
         method: 'POST',
         credentials: 'include',
       });
