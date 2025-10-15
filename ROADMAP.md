@@ -1,12 +1,19 @@
 ## 🎯 Roadmap
 
-- Now
 - Next
-   - Look into duplicate notifications from PR comments
-   - Slack / Github user connecting to @ in notifications
    - Billing and subscription management
+   - Slack / Github user connecting to @ in notifications
+   - Default digest and notification profile for easier onboarding
    - Github Discussions support
-   - Better Slack homepage
 - Later
+   - Utilizing labels/tags for filtering
+   - Look into duplicate notifications from PR comments
+   - Better Slack homepage
+   - Settings to filter digest by PR status
+   - Better digest logic to find PRs (looking back more than just 100 PRs)
+   - Storing PRs so we have better state on them for notifications?
+   - Better support for users who have one github account but use multiple workspaces
+   - More clarity on connecting github app (someone else on your team might have already done it)
    - More sources than just Github
    - User/team stats
+   - Team support?
