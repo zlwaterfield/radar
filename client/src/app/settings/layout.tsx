@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
-import { FiBell, FiCalendar, FiGitBranch, FiUsers, FiSearch, FiGithub, FiLogOut } from 'react-icons/fi';
+import { FiBell, FiCalendar, FiGitBranch, FiUsers, FiSearch, FiGithub, FiLogOut, FiMessageSquare } from 'react-icons/fi';
+import { useSurvey } from '@/hooks/useSurvey';
 
 export default function SettingsLayout({
   children,
@@ -14,6 +15,8 @@ export default function SettingsLayout({
 }) {
   const { user, isAuthenticated, signOut } = useAuth();
   const pathname = usePathname();
+  const surveyId = process.env.NEXT_PUBLIC_POSTHOG_SURVEY_ID || '';
+  const { showSurvey, isReady } = useSurvey(surveyId);
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -110,6 +113,19 @@ export default function SettingsLayout({
           </ul>
         </nav>
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          {isReady && surveyId && (
+            <Button
+              id="general-feedback-button"
+              onClick={showSurvey}
+              variant="ghost"
+              size="sm"
+              icon={<FiMessageSquare size={20} />}
+              className="w-full justify-start mb-3"
+              disabled={!isReady || !surveyId}
+            >
+              Give Feedback
+            </Button>
+          )}
           <div className="flex items-center mb-3">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-marian-blue-600 to-federal-blue-700 text-white flex items-center justify-center mr-2 shadow-md">
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
@@ -119,7 +135,7 @@ export default function SettingsLayout({
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
             </div>
           </div>
-          <Button 
+          <Button
             onClick={signOut}
             variant="ghost"
             size="sm"
