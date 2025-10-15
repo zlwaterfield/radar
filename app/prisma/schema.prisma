@@ -17,7 +17,7 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // Profile data  
+  // Profile data
   name          String?
   email         String? @unique
   emailVerified Boolean @default(false) @map("email_verified")
@@ -31,13 +31,16 @@ model User {
   slackUserToken    String?  @map("slack_user_token") // encrypted - user token (rarely used)
   slackRefreshToken String?  @map("slack_refresh_token") // encrypted
 
-  // GitHub integration  
+  // GitHub integration
   githubId            String? @unique @map("github_id")
   githubLogin         String? @unique @map("github_login")
   githubAccessToken   String? @map("github_access_token") // encrypted
   githubRefreshToken  String? @map("github_refresh_token") // encrypted
   githubInstallationId String? @map("github_installation_id")
   teamsLastSyncedAt   DateTime? @map("teams_last_synced_at")
+
+  // Stripe integration
+  stripeCustomerId String? @unique @map("stripe_customer_id")
 
   // Relations
   repositories        UserRepository[]
@@ -49,6 +52,8 @@ model User {
   sessions            Session[]
   accounts            Account[]
   teams               UserTeam[]
+  subscription        Subscription?
+  featureEntitlements FeatureEntitlement[]
 
   @@map("user")
 }
@@ -306,4 +311,63 @@ model UserTeam {
 
   @@unique([userId, teamId])
   @@map("user_team")
+}
+
+// Stripe subscription management
+
+model Subscription {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stripe data
+  stripeCustomerId     String  @unique @map("stripe_customer_id")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  stripePriceId        String? @map("stripe_price_id")
+
+  // Plan information
+  planName String @default("free") @map("plan_name") // "free", "basic", "pro", "enterprise"
+  status   String @default("active") // "active", "canceled", "past_due", "trialing", "incomplete"
+
+  // Billing periods
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+
+  // Trial tracking
+  trialStart   DateTime? @map("trial_start")
+  trialEnd     DateTime? @map("trial_end")
+  hasUsedTrial Boolean   @default(false) @map("has_used_trial")
+
+  // Legacy plan support
+  isLegacyPlan   Boolean @default(false) @map("is_legacy_plan")
+  legacyPlanName String? @map("legacy_plan_name")
+
+  @@map("subscription")
+}
+
+// Feature entitlements
+
+model FeatureEntitlement {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Feature details
+  featureLookupKey String @map("feature_lookup_key") // e.g., "repository_limit"
+  featureName      String @map("feature_name") // e.g., "Repository Limit"
+  value            String // JSON string: "3", "-1", "true", "false"
+
+  // Stripe entitlement tracking
+  stripeEntitlementId String?  @unique @map("stripe_entitlement_id")
+  isActive            Boolean @default(true) @map("is_active")
+
+  @@unique([userId, featureLookupKey])
+  @@map("feature_entitlement")
 }

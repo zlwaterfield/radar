@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FiBell } from 'react-icons/fi';
+import Link from 'next/link';
+import { FiBell, FiAlertCircle } from 'react-icons/fi';
 import { useNotificationProfiles } from '../hooks/useNotificationProfiles';
 import { NotificationProfileForm } from './NotificationProfileForm';
 import Button from './Button';
@@ -8,6 +9,7 @@ import { toast } from 'sonner';
 import type { NotificationProfile, NotificationPreferences } from '../types/notification-profile';
 import { NOTIFICATION_UI_GROUPS } from '../constants/notification-preferences.constants';
 import axios from '@/lib/axios';
+import { useEntitlements } from '@/hooks/useEntitlements';
 
 interface Team {
   teamId: string;
@@ -21,6 +23,7 @@ interface NotificationProfileManagerProps {
 
 export function NotificationProfileManager({ className = '' }: NotificationProfileManagerProps) {
   const { profiles, loading, error, deleteProfile, createProfile, updateProfile } = useNotificationProfiles();
+  const { canAddMore, getFeatureValue, loading: entitlementsLoading } = useEntitlements();
   const [showForm, setShowForm] = useState(false);
   const [editingProfile, setEditingProfile] = useState<NotificationProfile | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -147,6 +150,19 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     return enabled;
   };
 
+  const handleCreateProfile = () => {
+    // Check entitlement limit
+    if (!canAddMore('notification_profiles', profiles.length)) {
+      const limit = getFeatureValue('notification_profiles') as number;
+      toast.error(`You've reached your notification profile limit (${limit}). Upgrade your plan to create more profiles.`);
+      return;
+    }
+    setShowForm(true);
+  };
+
+  const profileLimit = getFeatureValue('notification_profiles') as number;
+  const atLimit = profileLimit !== -1 && profiles.length >= profileLimit;
+
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-6">
@@ -162,12 +178,36 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
         <Button
           type="button"
           variant="primary"
-          onClick={() => setShowForm(true)}
+          onClick={handleCreateProfile}
           className="flex items-center gap-2"
         >
           Create profile
         </Button>
       </div>
+
+      {/* Upgrade Banner */}
+      {!entitlementsLoading && atLimit && (
+        <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-start">
+            <FiAlertCircle className="text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0" size={20} />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                Notification profile limit reached
+              </p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                You&apos;ve reached your notification profile limit of {profileLimit}.{' '}
+                <Link
+                  href="/settings/billing"
+                  className="font-medium underline hover:text-yellow-900 dark:hover:text-yellow-100"
+                >
+                  Upgrade your plan
+                </Link>
+                {' '}to create more notification profiles.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {profiles.length === 0 ? (
         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 text-center">

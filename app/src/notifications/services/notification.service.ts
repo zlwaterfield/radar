@@ -176,19 +176,41 @@ export class NotificationService {
       const content = this.extractContentFromPayload(payload, eventType);
 
       // Check keyword matches first (highest priority)
-      if (profile.keywords.length > 0 && profile.keywordLLMEnabled) {
-        const keywordResult =
-          await this.llmAnalyzerService.matchKeywordsWithLLM(
-            content,
-            profile.keywords,
-          );
-        if (keywordResult.matchedKeywords.length > 0) {
+      if (profile.keywords.length > 0) {
+        let matchedKeywords: string[] = [];
+        let matchDetails: Record<string, string> = {};
+
+        if (profile.keywordLLMEnabled) {
+          // Use AI-powered matching for Pro users
+          const keywordResult =
+            await this.llmAnalyzerService.matchKeywordsWithLLM(
+              content,
+              profile.keywords,
+            );
+          matchedKeywords = keywordResult.matchedKeywords;
+          matchDetails = keywordResult.matchDetails;
+        } else {
+          // Use substring matching for Basic users
+          const lowerContent = content.toLowerCase();
+          for (const keyword of profile.keywords) {
+            if (lowerContent.includes(keyword.toLowerCase())) {
+              matchedKeywords.push(keyword);
+              matchDetails[keyword] = 'substring match';
+            }
+          }
+        }
+
+        if (matchedKeywords.length > 0) {
           return {
             shouldMatch: true,
-            matchedKeywords: keywordResult.matchedKeywords,
-            matchDetails: keywordResult.matchDetails,
+            matchedKeywords,
+            matchDetails,
             reason: 'KEYWORD_MATCH',
-            context: { profileId: profile.id, profileName: profile.name },
+            context: {
+              profileId: profile.id,
+              profileName: profile.name,
+              matchType: profile.keywordLLMEnabled ? 'AI' : 'substring'
+            },
           };
         }
       }

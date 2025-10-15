@@ -3,10 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: false,
+    rawBody: true, // Enable raw body globally
   });
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');

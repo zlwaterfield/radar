@@ -3,9 +3,11 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { AnalyticsService } from '../../analytics/analytics.service';
+import { EntitlementsService } from '../../stripe/services/entitlements.service';
 import {
   CreateNotificationProfileDto,
   UpdateNotificationProfileDto,
@@ -25,6 +27,7 @@ export class NotificationProfileService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly analyticsService: AnalyticsService,
+    private readonly entitlementsService: EntitlementsService,
   ) {}
 
   /**
@@ -140,8 +143,38 @@ export class NotificationProfileService {
     data: CreateNotificationProfileDto,
   ): Promise<NotificationProfileWithMeta> {
     try {
+      // Check entitlement limits
+      const currentCount = await this.databaseService.notificationProfile.count({
+        where: { userId },
+      });
+
+      const limitCheck = await this.entitlementsService.checkLimit(
+        userId,
+        'notification_profiles',
+        currentCount,
+      );
+
+      if (!limitCheck.allowed) {
+        throw new ForbiddenException(
+          `Profile limit reached (${limitCheck.limit}). Upgrade your plan to create more profiles.`,
+        );
+      }
+
       // Validate scope and delivery settings
       await this.validateScopeAndDelivery(userId, data);
+
+      // Validate AI keyword matching entitlement
+      if (data.keywordLLMEnabled) {
+        const hasAiKeywords = await this.entitlementsService.getFeatureValue(
+          userId,
+          'ai_keyword_matching',
+        );
+        if (!hasAiKeywords) {
+          throw new ForbiddenException(
+            'AI keyword matching requires a Pro plan. Upgrade to use this feature.',
+          );
+        }
+      }
 
       const profile = await this.databaseService.notificationProfile.create({
         data: {
@@ -218,6 +251,19 @@ export class NotificationProfileService {
         data.deliveryTarget
       ) {
         await this.validateScopeAndDelivery(userId, data as any);
+      }
+
+      // Validate AI keyword matching entitlement if trying to enable it
+      if (data.keywordLLMEnabled === true) {
+        const hasAiKeywords = await this.entitlementsService.getFeatureValue(
+          userId,
+          'ai_keyword_matching',
+        );
+        if (!hasAiKeywords) {
+          throw new ForbiddenException(
+            'AI keyword matching requires a Pro plan. Upgrade to use this feature.',
+          );
+        }
       }
 
       const updateData: any = {};

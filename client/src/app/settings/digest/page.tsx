@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
@@ -10,23 +11,26 @@ import DigestConfigModal from '@/components/DigestConfigModal';
 import { toast } from 'sonner';
 import axios from '@/lib/axios';
 import { format } from 'date-fns';
-import { 
-  DigestConfig, 
-  CreateDigestConfig, 
+import { FiAlertCircle } from 'react-icons/fi';
+import {
+  DigestConfig,
+  CreateDigestConfig,
   DigestHistory,
   Repository,
 } from '@/types/digest';
+import { useEntitlements } from '@/hooks/useEntitlements';
 
 export default function DigestSettings() {
   const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
-  
+  const { canAddMore, getFeatureValue, loading: entitlementsLoading } = useEntitlements();
+
   // State management
   const [digestConfigs, setDigestConfigs] = useState<DigestConfig[]>([]);
   const [history, setHistory] = useState<DigestHistory[]>([]);
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
-  
+
   // UI state
   const [activeTab, setActiveTab] = useState<'configs' | 'history'>('configs');
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -122,6 +126,13 @@ export default function DigestSettings() {
   };
 
   const handleCreateConfig = () => {
+    // Check entitlement limit
+    if (!canAddMore('digest_configs', digestConfigs.length)) {
+      const limit = getFeatureValue('digest_configs') as number;
+      toast.error(`You've reached your digest configuration limit (${limit}). Upgrade your plan to create more digests.`);
+      return;
+    }
+
     setEditingConfig(null);
     setFormData({
       name: '',
@@ -293,6 +304,9 @@ export default function DigestSettings() {
     return <Loader size="large" />;
   }
 
+  const digestLimit = getFeatureValue('digest_configs') as number;
+  const atLimit = digestLimit !== -1 && digestConfigs.length >= digestLimit;
+
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-100 dark:border-gray-700">
       {/* Header */}
@@ -304,6 +318,30 @@ export default function DigestSettings() {
           Manage multiple digest configurations with different schedules and delivery options
         </p>
       </div>
+
+      {/* Upgrade Banner */}
+      {!entitlementsLoading && atLimit && activeTab === 'configs' && (
+        <div className="mx-6 mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-start">
+            <FiAlertCircle className="text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0" size={20} />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                Digest configuration limit reached
+              </p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                You&apos;ve reached your digest configuration limit of {digestLimit}.{' '}
+                <Link
+                  href="/settings/billing"
+                  className="font-medium underline hover:text-yellow-900 dark:hover:text-yellow-100"
+                >
+                  Upgrade your plan
+                </Link>
+                {' '}to create more digest configurations.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="px-6 pt-4">

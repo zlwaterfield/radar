@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
+import Link from 'next/link';
 import type {
   NotificationProfile,
   CreateNotificationProfileRequest,
@@ -11,6 +12,7 @@ import type { DigestDeliveryType, DigestScopeType, RepositoryFilter } from '../t
 import axios from '@/lib/axios';
 import Button from './Button';
 import Modal from './Modal';
+import { useEntitlements } from '@/hooks/useEntitlements';
 
 interface Team {
   teamId: string;
@@ -37,6 +39,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
   const [error, setError] = useState<string | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [repositories, setRepositories] = useState<Repository[]>([]);
+  const { getFeatureValue, loading: entitlementsLoading } = useEntitlements();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -390,43 +393,105 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
 
           {/* Keywords */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Keywords</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Keywords</h3>
+
+            {!entitlementsLoading && (
+              <>
+                {getFeatureValue('keyword_matching') || getFeatureValue('ai_keyword_matching') ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Keyword matching mode
+                      </label>
+                      <div className="space-y-2">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="keywordMode"
+                            checked={!formData.keywordLLMEnabled}
+                            onChange={() => setFormData(prev => ({ ...prev, keywordLLMEnabled: false }))}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 mr-2"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            Substring matching (exact text match)
+                          </span>
+                        </label>
+
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="keywordMode"
+                            checked={formData.keywordLLMEnabled}
+                            onChange={() => {
+                              if (getFeatureValue('ai_keyword_matching')) {
+                                setFormData(prev => ({ ...prev, keywordLLMEnabled: true }));
+                              }
+                            }}
+                            disabled={!getFeatureValue('ai_keyword_matching')}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 mr-2 disabled:opacity-50"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            AI-powered matching (semantic understanding)
+                            {!getFeatureValue('ai_keyword_matching') && (
+                              <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                                (Pro plan only)
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      </div>
+
+                      {!getFeatureValue('ai_keyword_matching') && (
+                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                          <p className="text-sm text-blue-800 dark:text-blue-200">
+                            Upgrade to{' '}
+                            <Link href="/settings/billing" className="font-medium underline hover:text-blue-900 dark:hover:text-blue-100">
+                              Pro plan
+                            </Link>
+                            {' '}to use AI-powered keyword matching for semantic understanding.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      Keyword matching is available on{' '}
+                      <Link href="/settings/billing" className="font-medium underline hover:text-yellow-900 dark:hover:text-yellow-100">
+                        paid plans
+                      </Link>
+                      . Upgrade to use this feature.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
             
-            <div className="flex items-center mb-2">
-              <input
-                type="checkbox"
-                id="keywordLLMEnabled"
-                checked={formData.keywordLLMEnabled}
-                onChange={(e) => setFormData(prev => ({ ...prev, keywordLLMEnabled: e.target.checked }))}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="keywordLLMEnabled" className="ml-2 text-sm text-gray-700">
-                Enable AI-powered keyword matching
-              </label>
-            </div>
-            
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newKeyword}
-                onChange={(e) => setNewKeyword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddKeyword();
-                  }
-                }}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Add a keyword..."
-              />
-              <button
-                type="button"
-                onClick={handleAddKeyword}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                <FiPlus className="h-4 w-4" />
-              </button>
-            </div>
+            {(getFeatureValue('keyword_matching') || getFeatureValue('ai_keyword_matching')) && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newKeyword}
+                  onChange={(e) => setNewKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddKeyword();
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Add a keyword..."
+                />
+                <button
+                  type="button"
+                  onClick={handleAddKeyword}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  <FiPlus className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             
             {formData.keywords.length > 0 && (
               <div className="flex flex-wrap gap-2">

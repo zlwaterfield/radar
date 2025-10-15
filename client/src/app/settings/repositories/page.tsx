@@ -2,14 +2,16 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
-import { FiRefreshCw } from 'react-icons/fi';
+import { FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 import { toast } from 'sonner';
 import RepositoryTable from '@/components/RepositoryTable';
 import type { PaginatedResponse } from '@/types/pagination';
+import { useEntitlements } from '@/hooks/useEntitlements';
 
 interface Repository {
   id: string;
@@ -25,6 +27,7 @@ interface Repository {
 export default function RepositoriesSettings() {
   const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const { canAddMore, getFeatureValue, loading: entitlementsLoading } = useEntitlements();
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [repoLoading, setRepoLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,6 +40,7 @@ export default function RepositoriesSettings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [togglingRepos, setTogglingRepos] = useState<Set<string>>(new Set());
+  const [enabledCount, setEnabledCount] = useState(0);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -63,6 +67,9 @@ export default function RepositoriesSettings() {
         setRepositories(response.data.data || []);
         setTotalPages(response.data.meta.total_pages || 1);
         setTotalRepos(response.data.meta.total || 0);
+        // Count enabled repositories
+        const enabled = (response.data.data || []).filter((r: Repository) => r.enabled).length;
+        setEnabledCount(enabled);
       }
     } catch (error) {
       console.error('Error fetching repositories:', error);
@@ -108,28 +115,38 @@ export default function RepositoriesSettings() {
     try {
       const repo = repositories.find(r => r.id === repoId);
       if (!repo) return;
-      
+
       const newEnabledState = !repo.enabled;
-      
+
+      // Check entitlement limit if enabling
+      if (newEnabledState && !canAddMore('repository_limit', enabledCount)) {
+        const limit = getFeatureValue('repository_limit') as number;
+        toast.error(`You've reached your repository limit (${limit}). Upgrade your plan to add more repositories.`);
+        return;
+      }
+
       // Set toggling state for this repo
       setTogglingRepos(prev => {
         const newSet = new Set(prev);
         newSet.add(repoId);
         return newSet;
       });
-      
+
       // Update UI optimistically
-      setRepositories(prevRepositories => 
-        prevRepositories.map(r => 
+      setRepositories(prevRepositories =>
+        prevRepositories.map(r =>
           r.id === repoId ? { ...r, enabled: newEnabledState } : r
         )
       );
-      
+
+      // Update enabled count
+      setEnabledCount(prev => newEnabledState ? prev + 1 : prev - 1);
+
       // Call API to update enabled status
       await axios.patch(`/api/users/me/repositories/${repoId}/toggle`, {
         enabled: newEnabledState
       });
-      
+
       // No need to refresh repositories here, we've already updated the UI
     } catch (error) {
       console.error('Error toggling repository:', error);
@@ -175,6 +192,9 @@ export default function RepositoriesSettings() {
     return <Loader size="large" />;
   }
 
+  const repoLimit = getFeatureValue('repository_limit') as number;
+  const atLimit = repoLimit !== -1 && enabledCount >= repoLimit;
+
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-100 dark:border-gray-700">
       <div className="px-6 py-6">
@@ -182,7 +202,7 @@ export default function RepositoriesSettings() {
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
             Repositories
           </h3>
-          <Button 
+          <Button
             onClick={refreshRepositories}
             disabled={refreshing || toggleAllLoading}
             variant="primary"
@@ -192,6 +212,30 @@ export default function RepositoriesSettings() {
             {refreshing ? 'Refreshing...' : 'Refresh repositories'}
           </Button>
         </div>
+
+        {/* Upgrade Banner */}
+        {!entitlementsLoading && atLimit && (
+          <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-start">
+              <FiAlertCircle className="text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0" size={20} />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  Repository limit reached
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                  You&apos;ve reached your repository limit of {repoLimit} enabled repositories.{' '}
+                  <Link
+                    href="/settings/billing"
+                    className="font-medium underline hover:text-yellow-900 dark:hover:text-yellow-100"
+                  >
+                    Upgrade your plan
+                  </Link>
+                  {' '}to add more repositories.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="mb-4">
           <div className="flex flex-col md:flex-row gap-4">

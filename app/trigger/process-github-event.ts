@@ -9,6 +9,7 @@ import { GitHubService } from "../src/github/services/github.service";
 import { GitHubTokenService } from "../src/github/services/github-token.service";
 import { GitHubIntegrationService } from "../src/integrations/services/github-integration.service";
 import { AnalyticsService } from "../src/analytics/analytics.service";
+import { EntitlementsService } from "../src/stripe/services/entitlements.service";
 import { ConfigService } from "@nestjs/config";
 
 // Initialize Prisma client for the task
@@ -22,8 +23,9 @@ const databaseService = new DatabaseService();
 const githubTokenService = new GitHubTokenService(configService, databaseService);
 const githubService = new GitHubService(configService, databaseService, analyticsService, githubTokenService);
 const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
+const entitlementsService = new EntitlementsService(databaseService);
 // Initialize all services properly
-const notificationProfileService = new NotificationProfileService(databaseService, analyticsService);
+const notificationProfileService = new NotificationProfileService(databaseService, analyticsService, entitlementsService);
 const notificationService = new NotificationService(databaseService, githubService, githubTokenService, llmAnalyzerService, notificationProfileService, analyticsService);
 
 // Event processing task payload
