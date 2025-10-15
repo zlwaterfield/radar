@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePostHog } from 'posthog-js/react'
+import { DisplaySurveyType } from 'posthog-js'
 
 export function useSurvey(surveyId: string) {
   const posthog = usePostHog()
@@ -23,7 +24,11 @@ export function useSurvey(surveyId: string) {
     }
 
     // Display the survey as a popover
-    posthog.displaySurvey(surveyId, 'popover')
+    posthog.displaySurvey(surveyId, { 
+      displayType: DisplaySurveyType.Popover, 
+      ignoreConditions: true, 
+      ignoreDelay: true 
+    })
   }
 
   return { showSurvey, isReady }
