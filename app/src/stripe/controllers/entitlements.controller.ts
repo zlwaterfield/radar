@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Get, UseGuards, Logger } from '@nestjs/common';
 import { EntitlementsService } from '../services/entitlements.service';
 import { DatabaseService } from '@/database/database.service';
 import { AuthGuard } from '@/auth/guards/auth.guard';
@@ -14,7 +14,7 @@ export class EntitlementsController {
     private readonly databaseService: DatabaseService,
   ) {}
 
-  @Post('backfill')
+  @Get('backfill')
   async backfillEntitlements() {
     this.logger.log('Starting entitlements backfill...');
 
