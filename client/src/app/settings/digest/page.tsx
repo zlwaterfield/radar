@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
@@ -11,7 +10,6 @@ import DigestConfigModal from '@/components/DigestConfigModal';
 import { toast } from 'sonner';
 import axios from '@/lib/axios';
 import { format } from 'date-fns';
-import { FiAlertCircle } from 'react-icons/fi';
 import {
   DigestConfig,
   CreateDigestConfig,
@@ -19,6 +17,7 @@ import {
   Repository,
 } from '@/types/digest';
 import { useEntitlements } from '@/hooks/useEntitlements';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 export default function DigestSettings() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -321,25 +320,8 @@ export default function DigestSettings() {
 
       {/* Upgrade Banner */}
       {!entitlementsLoading && atLimit && activeTab === 'configs' && (
-        <div className="mx-6 mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-          <div className="flex items-start">
-            <FiAlertCircle className="text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0" size={20} />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                Digest configuration limit reached
-              </p>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                You&apos;ve reached your digest configuration limit of {digestLimit}.{' '}
-                <Link
-                  href="/settings/billing"
-                  className="font-medium underline hover:text-yellow-900 dark:hover:text-yellow-100"
-                >
-                  Upgrade your plan
-                </Link>
-                {' '}to create more digest configurations.
-              </p>
-            </div>
-          </div>
+        <div className="mx-6 mt-4">
+          <UpgradeBanner limitType="digest_configs" currentLimit={digestLimit} />
         </div>
       )}
 

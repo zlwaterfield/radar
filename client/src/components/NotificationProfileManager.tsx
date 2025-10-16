@@ -10,6 +10,7 @@ import type { NotificationProfile, NotificationPreferences } from '../types/noti
 import { NOTIFICATION_UI_GROUPS } from '../constants/notification-preferences.constants';
 import axios from '@/lib/axios';
 import { useEntitlements } from '@/hooks/useEntitlements';
+import { UpgradeBanner } from './UpgradeBanner';
 
 interface Team {
   teamId: string;
@@ -187,25 +188,8 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
 
       {/* Upgrade Banner */}
       {!entitlementsLoading && atLimit && (
-        <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-          <div className="flex items-start">
-            <FiAlertCircle className="text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0" size={20} />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                Notification profile limit reached
-              </p>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                You&apos;ve reached your notification profile limit of {profileLimit}.{' '}
-                <Link
-                  href="/settings/billing"
-                  className="font-medium underline hover:text-yellow-900 dark:hover:text-yellow-100"
-                >
-                  Upgrade your plan
-                </Link>
-                {' '}to create more notification profiles.
-              </p>
-            </div>
-          </div>
+        <div className="mb-6">
+          <UpgradeBanner limitType="notification_profiles" currentLimit={profileLimit} />
         </div>
       )}
 

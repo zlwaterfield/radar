@@ -2,16 +2,16 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 import Loader from '@/components/Loader';
 import Button from '@/components/Button';
-import { FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import { FiRefreshCw } from 'react-icons/fi';
 import { toast } from 'sonner';
 import RepositoryTable from '@/components/RepositoryTable';
 import type { PaginatedResponse } from '@/types/pagination';
 import { useEntitlements } from '@/hooks/useEntitlements';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 interface Repository {
   id: string;
@@ -215,25 +215,8 @@ export default function RepositoriesSettings() {
 
         {/* Upgrade Banner */}
         {!entitlementsLoading && atLimit && (
-          <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div className="flex items-start">
-              <FiAlertCircle className="text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0" size={20} />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  Repository limit reached
-                </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                  You&apos;ve reached your repository limit of {repoLimit} enabled repositories.{' '}
-                  <Link
-                    href="/settings/billing"
-                    className="font-medium underline hover:text-yellow-900 dark:hover:text-yellow-100"
-                  >
-                    Upgrade your plan
-                  </Link>
-                  {' '}to add more repositories.
-                </p>
-              </div>
-            </div>
+          <div className="mb-4">
+            <UpgradeBanner limitType="repository_limit" currentLimit={repoLimit} />
           </div>
         )}
         
