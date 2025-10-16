@@ -23,6 +23,7 @@ model User {
   emailVerified Boolean @default(false) @map("email_verified")
   image         String?
   isActive      Boolean @default(true) @map("is_active")
+  isAdmin       Boolean @default(false) @map("is_admin")
 
   // Slack integration
   slackId           String?  @unique @map("slack_id")
