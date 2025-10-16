@@ -5,6 +5,7 @@ import { AuthController } from './controllers/auth.controller';
 import { AuthGuard } from './guards/auth.guard';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { StripeModule } from '../stripe/stripe.module';
 import { auth } from './auth.config';
 
 @Module({
@@ -12,6 +13,7 @@ import { auth } from './auth.config';
     BetterAuthModule.forRoot(auth),
     forwardRef(() => NotificationsModule),
     AnalyticsModule,
+    StripeModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthGuard],

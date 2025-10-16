@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { NotificationProfileService } from '../../notifications/services/notification-profile.service';
 import { AnalyticsService } from '../../analytics/analytics.service';
+import { EntitlementsService } from '../../stripe/services/entitlements.service';
 import { auth } from '../auth.config';
 import * as crypto from 'crypto-js';
 
@@ -15,6 +16,7 @@ export class AuthService {
     private readonly databaseService: DatabaseService,
     private readonly notificationProfileService: NotificationProfileService,
     private readonly analyticsService: AnalyticsService,
+    private readonly entitlementsService: EntitlementsService,
   ) {}
 
   /**
@@ -197,6 +199,19 @@ export class AuthService {
         } catch (error) {
           this.logger.warn(
             `Failed to create default notification profile for user ${user.id}:`,
+            error,
+          );
+        }
+
+        // Initialize feature entitlements
+        try {
+          await this.entitlementsService.syncUserEntitlements(user.id);
+          this.logger.log(
+            `Initialized feature entitlements for new user ${user.id}`,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Failed to initialize feature entitlements for user ${user.id}:`,
             error,
           );
         }
