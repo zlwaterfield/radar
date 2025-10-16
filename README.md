@@ -9,7 +9,8 @@ A Slack application that connects GitHub activity to your team's Slack workspace
 - **Real-time Delivery**: Near-instantaneous notifications from GitHub webhooks to Slack
 - **Comprehensive Event Support**: PRs, issues, reviews, comments, discussions, and more
 - **Keyword-Based Notifications**: Smart keyword matching (using AI 👀)
-- **Digest Notifications (coming soon)**: Configurable daily summaries of pull requests activity
+- **Digest Notifications**: Configurable scheduled summaries of pull requests activity
+- **Open Source Mode**: Run self-hosted with full features enabled (no billing required)
 
 ## 🛠 Tech Stack
 
@@ -140,6 +141,7 @@ For local development, you'll need a public URL for GitHub webhooks and Slack ev
 See the [documentation](./docs/README.md) for detailed setup instructions including:
 - [Creating a Slack app](./docs/slack_setup.md)
 - [Setting up GitHub authentication](./docs/github_setup.md)
+- [Open Source Mode](./docs/open_source_mode.md) - Run without billing/payments
 - User and team settings
 
 ### Environment Variables
@@ -151,6 +153,7 @@ Key environment variables include:
 - GitHub API credentials
 - Application settings
 - Trigger credentials
+- **Payment settings** (optional - set `PAYMENT_ENABLED=false` for open-source mode)
 
 ## 🤝 Contributing
 

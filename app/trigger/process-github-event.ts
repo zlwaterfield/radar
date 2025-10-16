@@ -23,7 +23,7 @@ const databaseService = new DatabaseService();
 const githubTokenService = new GitHubTokenService(configService, databaseService);
 const githubService = new GitHubService(configService, databaseService, analyticsService, githubTokenService);
 const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
-const entitlementsService = new EntitlementsService(databaseService);
+const entitlementsService = new EntitlementsService(databaseService, configService);
 // Initialize all services properly
 const notificationProfileService = new NotificationProfileService(databaseService, analyticsService, entitlementsService);
 const notificationService = new NotificationService(databaseService, githubService, githubTokenService, llmAnalyzerService, notificationProfileService, analyticsService);

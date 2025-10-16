@@ -17,6 +17,7 @@ export default function SettingsLayout({
   const pathname = usePathname();
   const surveyId = process.env.NEXT_PUBLIC_POSTHOG_SURVEY_ID || '';
   const { showSurvey, isReady } = useSurvey(surveyId);
+  const paymentEnabled = process.env.NEXT_PUBLIC_PAYMENT_ENABLED !== 'false';
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -92,17 +93,19 @@ export default function SettingsLayout({
               GitHub teams
             </Link>
           </li>
-          <li>
-            <Link href="/settings/billing"
-              className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
-                isActive('/settings/billing')
-                  ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}>
-              <FiCreditCard size={20} className="mr-3 flex-shrink-0" />
-              Billing
-            </Link>
-          </li>
+          {paymentEnabled && (
+            <li>
+              <Link href="/settings/billing"
+                className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
+                  isActive('/settings/billing')
+                    ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}>
+                <FiCreditCard size={20} className="mr-3 flex-shrink-0" />
+                Billing
+              </Link>
+            </li>
+          )}
           </ul>
           
           {/* Always show GitHub integration */}
@@ -168,7 +171,7 @@ export default function SettingsLayout({
               {pathname === '/settings/digest' && 'Digests'}
               {pathname === '/settings/repositories' && 'Repositories'}
               {pathname === '/settings/teams' && 'Teams'}
-              {pathname === '/settings/billing' && 'Billing'}
+              {paymentEnabled && pathname === '/settings/billing' && 'Billing'}
               {pathname === '/onboarding' && 'Setup Integrations'}
             </h2>
             <div className="flex items-center space-x-4">
