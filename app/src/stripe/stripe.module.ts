@@ -3,12 +3,13 @@ import { StripeService } from './services/stripe.service';
 import { EntitlementsService } from './services/entitlements.service';
 import { StripeWebhooksController } from './controllers/stripe-webhooks.controller';
 import { BillingController } from './controllers/billing.controller';
+import { EntitlementsController } from './controllers/entitlements.controller';
 import { EntitlementGuard } from './guards/entitlement.guard';
 import { DatabaseModule } from '@/database/database.module';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [StripeWebhooksController, BillingController],
+  controllers: [StripeWebhooksController, BillingController, EntitlementsController],
   providers: [StripeService, EntitlementsService, EntitlementGuard],
   exports: [StripeService, EntitlementsService, EntitlementGuard],
 })
