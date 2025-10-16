@@ -2,10 +2,13 @@
 
 - Next
    - Assets + prep for Slack marketplace
+   - Resend + password reset emails
+   - Google oauth
    - Better dark mode
    - Website updates
    - Slack / Github user connecting to @ in notifications
    - Default digest and notification profile for easier onboarding
+   - Default entitlements
 - Later
    - Email verifications
    - Utilizing labels/tags for filtering
