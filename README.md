@@ -1,6 +1,6 @@
-<img width="1024" height="409" alt="logo-full-dark" src="https://github.com/user-attachments/assets/b668d053-23c6-484b-98b3-d6c798126473" />
+<img width="512" height="205" alt="logo-full-dark" src="https://github.com/user-attachments/assets/b668d053-23c6-484b-98b3-d6c798126473" />
 
-> Note: this is still in early development so it may be buggy, please create a Github issue with feedback / bug reports and we will get them resolved!
+> Note: 🚧 this is still in early development so it may be buggy, please create a Github issue with feedback / bug reports and we will get them resolved!
 
 A Slack application that connects GitHub activity to your team's Slack workspace, delivering customizable notifications about Pull Requests, Issues, Discussions, etc. in near real-time.
 
