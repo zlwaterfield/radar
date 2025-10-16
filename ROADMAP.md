@@ -1,13 +1,14 @@
 ## 🎯 Roadmap
 
 - Next
-   - Billing and subscription management
+   - Assets + prep for Slack marketplace
+   - Website updates
    - Slack / Github user connecting to @ in notifications
    - Default digest and notification profile for easier onboarding
-   - Github Discussions support
 - Later
    - Utilizing labels/tags for filtering
    - Look into duplicate notifications from PR comments
+   - Github Discussions support
    - Better Slack homepage
    - Settings to filter digest by PR status
    - Better digest logic to find PRs (looking back more than just 100 PRs)

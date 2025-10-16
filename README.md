@@ -1,13 +1,17 @@
 <img width="1024" height="409" alt="logo-full-dark" src="https://github.com/user-attachments/assets/b668d053-23c6-484b-98b3-d6c798126473" />
 
+> Note: this is still in early development so it may be buggy, please create a Github issue with feedback / bug reports and we will get them resolved!
+
 A Slack application that connects GitHub activity to your team's Slack workspace, delivering customizable notifications about Pull Requests, Issues, Discussions, etc. in near real-time.
+
+Radar was built with inspiration from https://toast.ninja/. I've used the app for years and love it, but I always found there were missing features I wanted—so I rebuilt it from the ground up with a more configurable, feature-rich approach. I've also worked hard to make it near real-time so you get notified as soon as something happens.
 
 ## ✨ Features
 
 ### Core Functionality
-- **Intelligent Notifications**: Smart routing based on user roles (author, reviewer, assignee)
-- **Real-time Delivery**: Near-instantaneous notifications from GitHub webhooks to Slack
-- **Comprehensive Event Support**: PRs, issues, reviews, comments, discussions, and more
+- **Smart Notifications**: Routing based on user roles (author, reviewer, assignee)
+- **Real-time Delivery**: Fast notifications from GitHub webhooks to Slack
+- **Full Event Support**: PRs, issues, reviews, comments, discussions, and more
 - **Keyword-Based Notifications**: Smart keyword matching (using AI 👀)
 - **Digest Notifications**: Configurable scheduled summaries of pull requests activity
 - **Open Source Mode**: Run self-hosted with full features enabled (no billing required)
