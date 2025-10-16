@@ -4,7 +4,7 @@ import { DatabaseService } from '@/database/database.service';
 import { AuthGuard } from '@/auth/guards/auth.guard';
 import { AdminGuard } from '@/auth/guards/admin.guard';
 
-@Controller('api/entitlements')
+@Controller('entitlements')
 @UseGuards(AuthGuard, AdminGuard)
 export class EntitlementsController {
   private readonly logger = new Logger(EntitlementsController.name);
