@@ -8,7 +8,7 @@ export default function Support() {
 
   useEffect(() => {
     // Redirect to email with pre-filled subject
-    const email = 'support@radarlabs.app';
+    const email = 'support@radar.town';
     const subject = encodeURIComponent('Radar Support Request');
     const mailtoLink = `mailto:${email}?subject=${subject}`;
     
@@ -27,7 +27,7 @@ export default function Support() {
           Opening your email client...
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Redirecting to support@radarlabs.app
+          Redirecting to support@radar.town
         </p>
       </div>
     </div>
