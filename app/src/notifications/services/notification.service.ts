@@ -172,30 +172,46 @@ export class NotificationService {
         };
       }
 
-      // Extract content for keyword matching
-      const content = this.extractContentFromPayload(payload, eventType);
+      // Fetch keywords for this profile via junction table
+      const profileKeywords = await this.databaseService.profileKeyword.findMany({
+        where: { profileId: profile.id },
+        include: { keyword: true },
+      });
+
+      const enabledKeywords = profileKeywords
+        .map((pk) => pk.keyword)
+        .filter((k) => k.isEnabled);
 
       // Check keyword matches first (highest priority)
-      if (profile.keywords.length > 0) {
+      if (enabledKeywords.length > 0) {
+        // Extract content for keyword matching
+        const content = this.extractContentFromPayload(payload, eventType);
+
         let matchedKeywords: string[] = [];
         let matchDetails: Record<string, string> = {};
 
-        if (profile.keywordLLMEnabled) {
-          // Use AI-powered matching for Pro users
+        // Separate keywords by LLM enabled/disabled
+        const llmKeywords = enabledKeywords.filter((k) => k.llmEnabled);
+        const regexKeywords = enabledKeywords.filter((k) => !k.llmEnabled);
+
+        // Process LLM-enabled keywords (AI matching)
+        if (llmKeywords.length > 0) {
           const keywordResult =
             await this.llmAnalyzerService.matchKeywordsWithLLM(
               content,
-              profile.keywords,
+              llmKeywords.map((k) => k.term),
             );
-          matchedKeywords = keywordResult.matchedKeywords;
-          matchDetails = keywordResult.matchDetails;
-        } else {
-          // Use substring matching for Basic users
+          matchedKeywords.push(...keywordResult.matchedKeywords);
+          matchDetails = { ...matchDetails, ...keywordResult.matchDetails };
+        }
+
+        // Process regex keywords (substring matching)
+        if (regexKeywords.length > 0) {
           const lowerContent = content.toLowerCase();
-          for (const keyword of profile.keywords) {
-            if (lowerContent.includes(keyword.toLowerCase())) {
-              matchedKeywords.push(keyword);
-              matchDetails[keyword] = 'substring match';
+          for (const keyword of regexKeywords) {
+            if (lowerContent.includes(keyword.term.toLowerCase())) {
+              matchedKeywords.push(keyword.term);
+              matchDetails[keyword.term] = 'regex/substring match';
             }
           }
         }
@@ -209,7 +225,8 @@ export class NotificationService {
             context: {
               profileId: profile.id,
               profileName: profile.name,
-              matchType: profile.keywordLLMEnabled ? 'AI' : 'substring'
+              llmKeywordsCount: llmKeywords.length,
+              regexKeywordsCount: regexKeywords.length,
             },
           };
         }
@@ -669,8 +686,73 @@ export class NotificationService {
       return await this.checkTeamScope(profile, userId, payload);
     }
 
+    // Check user_and_teams scope - matches if user OR any of their teams is involved
+    if (profile.scopeType === 'user_and_teams') {
+      return await this.checkUserAndTeamsScope(userId, payload);
+    }
+
     // For 'user' scope, no additional checks needed
     return true;
+  }
+
+  /**
+   * Check if user or any of their teams are involved in the event
+   */
+  private async checkUserAndTeamsScope(
+    userId: string,
+    payload: any,
+  ): Promise<boolean> {
+    try {
+      // Get user data including teams
+      const user = await this.databaseService.user.findUnique({
+        where: { id: userId },
+        include: { teams: true },
+      });
+
+      if (!user) {
+        this.logger.warn(`User ${userId} not found for user_and_teams scope check`);
+        return false;
+      }
+
+      const mainObject = payload.pull_request || payload.issue || {};
+      const involvementLogins: string[] = [];
+
+      // Add the user themselves
+      if (user.githubLogin) {
+        involvementLogins.push(user.githubLogin);
+      }
+
+      // Add all team members from all user's teams
+      if (user.teams.length > 0 && user.githubAccessToken) {
+        for (const team of user.teams) {
+          try {
+            const teamMemberLogins = await this.githubService.getTeamMembers(
+              team.organization,
+              team.teamSlug,
+              user.githubAccessToken,
+            );
+            involvementLogins.push(...teamMemberLogins);
+          } catch (error) {
+            this.logger.warn(
+              `Error fetching members for team ${team.teamName}: ${error}`,
+            );
+            // Continue with other teams even if one fails
+          }
+        }
+      }
+
+      // Remove duplicates
+      const uniqueLogins = [...new Set(involvementLogins)];
+
+      // Check if any involved person is in the event
+      return this.isTeamInvolvedInEvent(payload, uniqueLogins);
+    } catch (error) {
+      this.logger.error(
+        `Error checking user_and_teams scope for user ${userId}:`,
+        error,
+      );
+      return false;
+    }
   }
 
   /**

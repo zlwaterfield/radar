@@ -42,7 +42,7 @@ export class CreateNotificationProfileDto {
   isEnabled: boolean;
 
   @IsString()
-  @IsEnum(['user', 'team'])
+  @IsEnum(['user', 'team', 'user_and_teams'])
   scopeType: DigestScopeType;
 
   @IsOptional()
@@ -65,12 +65,10 @@ export class CreateNotificationProfileDto {
   @IsObject()
   notificationPreferences: NotificationPreferences;
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  keywords: string[];
-
-  @IsBoolean()
-  keywordLLMEnabled: boolean;
+  keywordIds?: string[];
 
   @IsOptional()
   @IsInt()
@@ -96,7 +94,7 @@ export class UpdateNotificationProfileDto {
 
   @IsOptional()
   @IsString()
-  @IsEnum(['user', 'team'])
+  @IsEnum(['user', 'team', 'user_and_teams'])
   scopeType?: DigestScopeType;
 
   @IsOptional()
@@ -125,11 +123,7 @@ export class UpdateNotificationProfileDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  keywords?: string[];
-
-  @IsOptional()
-  @IsBoolean()
-  keywordLLMEnabled?: boolean;
+  keywordIds?: string[];
 
   @IsOptional()
   @IsInt()

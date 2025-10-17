@@ -1,4 +1,5 @@
 import type { DigestScopeType, DigestDeliveryType, RepositoryFilter } from './digest';
+import type { Keyword } from './keyword';
 
 export interface NotificationPreferences {
   // PR Activity
@@ -39,9 +40,9 @@ export interface NotificationProfile {
   deliveryType: DigestDeliveryType;
   deliveryTarget?: string;
   notificationPreferences: NotificationPreferences;
-  keywords: string[];
-  keywordLLMEnabled: boolean;
   priority: number;
+  keywords?: Keyword[]; // Populated keywords from backend
+  keywordIds?: string[]; // For form submission
   createdAt?: Date;
   updatedAt?: Date;
   userId?: string;
@@ -57,8 +58,7 @@ export interface CreateNotificationProfileRequest {
   deliveryType: DigestDeliveryType;
   deliveryTarget?: string;
   notificationPreferences: NotificationPreferences;
-  keywords: string[];
-  keywordLLMEnabled: boolean;
+  keywordIds?: string[];
   priority?: number;
 }
 
@@ -72,8 +72,7 @@ export interface UpdateNotificationProfileRequest {
   deliveryType?: DigestDeliveryType;
   deliveryTarget?: string;
   notificationPreferences?: NotificationPreferences;
-  keywords?: string[];
-  keywordLLMEnabled?: boolean;
+  keywordIds?: string[];
   priority?: number;
 }
 

@@ -187,8 +187,7 @@ export class AuthService {
                 mute_bot_comments: true,
                 mute_draft_pull_requests: true,
               },
-              keywords: [],
-              keywordLLMEnabled: false,
+              keywordIds: [],
               priority: 0,
             },
           );

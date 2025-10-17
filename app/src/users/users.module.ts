@@ -9,9 +9,15 @@ import { UserRepositoriesController } from './controllers/user-repositories.cont
 import { UserTeamsController } from './controllers/user-teams.controller';
 import { RadarAuthModule } from '../auth/auth.module';
 import { GitHubModule } from '../github/github.module';
+import { StripeModule } from '../stripe/stripe.module';
 
 @Module({
-  imports: [ConfigModule, forwardRef(() => RadarAuthModule), GitHubModule],
+  imports: [
+    ConfigModule,
+    forwardRef(() => RadarAuthModule),
+    GitHubModule,
+    StripeModule,
+  ],
   controllers: [
     UsersController,
     UserRepositoriesController,

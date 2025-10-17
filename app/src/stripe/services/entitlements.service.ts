@@ -67,19 +67,14 @@ export class EntitlementsService {
             value: '3',
           },
           {
-            featureLookupKey: 'github_team_support',
-            featureName: 'GitHub Team Support',
-            value: 'false',
-          },
-          {
-            featureLookupKey: 'keyword_matching',
-            featureName: 'Keyword Matching',
-            value: 'true',
+            featureLookupKey: 'keyword_limit',
+            featureName: 'Keyword Limit',
+            value: '2',
           },
           {
             featureLookupKey: 'ai_keyword_matching',
             featureName: 'AI Keyword Matching',
-            value: 'false',
+            value: 'true',
           },
         ];
         break;
@@ -89,36 +84,26 @@ export class EntitlementsService {
           {
             featureLookupKey: 'repository_limit',
             featureName: 'Repository Limit',
-            value: '-1',
+            value: '-1', // unlimited
           },
           {
             featureLookupKey: 'notification_profiles',
             featureName: 'Notification Profiles',
-            value: '-1',
+            value: '-1', // unlimited
           },
           {
             featureLookupKey: 'digest_configs',
             featureName: 'Digest Configs',
-            value: '-1',
+            value: '-1', // unlimited
           },
           {
-            featureLookupKey: 'github_team_support',
-            featureName: 'GitHub Team Support',
-            value: 'true',
-          },
-          {
-            featureLookupKey: 'keyword_matching',
-            featureName: 'Keyword Matching',
-            value: 'true',
+            featureLookupKey: 'keyword_limit',
+            featureName: 'Keyword Limit',
+            value: '-1', // unlimited
           },
           {
             featureLookupKey: 'ai_keyword_matching',
             featureName: 'AI Keyword Matching',
-            value: 'true',
-          },
-          {
-            featureLookupKey: 'priority_support',
-            featureName: 'Priority Support',
             value: 'true',
           },
         ];
@@ -244,14 +229,9 @@ export class EntitlementsService {
         value: '1',
       },
       {
-        featureLookupKey: 'github_team_support',
-        featureName: 'GitHub Team Support',
-        value: 'false',
-      },
-      {
-        featureLookupKey: 'keyword_matching',
-        featureName: 'Keyword Matching',
-        value: 'false',
+        featureLookupKey: 'keyword_limit',
+        featureName: 'Keyword Limit',
+        value: '1',
       },
       {
         featureLookupKey: 'ai_keyword_matching',
@@ -274,7 +254,7 @@ export class EntitlementsService {
   private async setOpenSourceEntitlements(userId: string) {
     await this.db.featureEntitlement.deleteMany({ where: { userId } });
 
-    // Grant full pro-level entitlements for open-source mode
+    // Grant full entitlements for open-source mode
     const openSourceEntitlements = [
       {
         featureLookupKey: 'repository_limit',
@@ -292,14 +272,9 @@ export class EntitlementsService {
         value: '-1',
       },
       {
-        featureLookupKey: 'github_team_support',
-        featureName: 'GitHub Team Support',
-        value: 'true',
-      },
-      {
-        featureLookupKey: 'keyword_matching',
-        featureName: 'Keyword Matching',
-        value: 'true',
+        featureLookupKey: 'keyword_limit',
+        featureName: 'Keyword Limit',
+        value: '-1',
       },
       {
         featureLookupKey: 'ai_keyword_matching',

@@ -75,8 +75,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
  */
 export const NOTIFICATION_UI_GROUPS = {
   DIRECT_ACTIONS: {
-    title: 'Direct Actions',
-    description: 'Things requiring your attention',
+    title: 'Direct actions requiring your attention',
+    description: 'Review requests, assignments, and @mentions',
     sections: {
       PULL_REQUESTS: {
         title: 'Pull Requests',
@@ -96,8 +96,8 @@ export const NOTIFICATION_UI_GROUPS = {
     }
   },
   ACTIVITY_UPDATES: {
-    title: 'Activity Updates',
-    description: 'Updates on PRs and issues you\'re involved with',
+    title: 'Activity on your PRs and issues',
+    description: 'Includes PRs/issues you created, are assigned to, requested to review, or have commented on',
     sections: {
       PULL_REQUESTS: {
         title: 'Pull Requests',

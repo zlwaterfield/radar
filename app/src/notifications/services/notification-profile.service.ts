@@ -8,6 +8,7 @@ import {
 import { DatabaseService } from '../../database/database.service';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { EntitlementsService } from '../../stripe/services/entitlements.service';
+import { KeywordService } from '../../keywords/services/keyword.service';
 import {
   CreateNotificationProfileDto,
   UpdateNotificationProfileDto,
@@ -28,6 +29,7 @@ export class NotificationProfileService {
     private readonly databaseService: DatabaseService,
     private readonly analyticsService: AnalyticsService,
     private readonly entitlementsService: EntitlementsService,
+    private readonly keywordService: KeywordService,
   ) {}
 
   /**
@@ -40,6 +42,13 @@ export class NotificationProfileService {
       const profiles = await this.databaseService.notificationProfile.findMany({
         where: { userId },
         orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+        include: {
+          profileKeywords: {
+            include: {
+              keyword: true,
+            },
+          },
+        },
       });
 
       return profiles.map((profile) => ({
@@ -51,6 +60,8 @@ export class NotificationProfileService {
         notificationPreferences:
           profile.notificationPreferences as NotificationPreferences,
         description: profile.description,
+        keywords: profile.profileKeywords.map((pk) => pk.keyword),
+        profileKeywords: undefined, // Remove junction table data from response
       }));
     } catch (error) {
       this.logger.error(
@@ -103,11 +114,18 @@ export class NotificationProfileService {
     userId: string,
   ): Promise<NotificationProfileWithMeta> {
     try {
-      const profile = await this.databaseService.notificationProfile.findUnique(
+      const profile = await this.databaseService.notificationProfile.findFirst(
         {
           where: {
             id: profileId,
             userId, // Ensure user can only access their own profiles
+          },
+          include: {
+            profileKeywords: {
+              include: {
+                keyword: true,
+              },
+            },
           },
         },
       );
@@ -125,6 +143,7 @@ export class NotificationProfileService {
         notificationPreferences:
           profile.notificationPreferences as NotificationPreferences,
         description: profile.description,
+        keywords: profile.profileKeywords.map((pk) => pk.keyword),
       };
     } catch (error) {
       this.logger.error(
@@ -163,19 +182,6 @@ export class NotificationProfileService {
       // Validate scope and delivery settings
       await this.validateScopeAndDelivery(userId, data);
 
-      // Validate AI keyword matching entitlement
-      if (data.keywordLLMEnabled) {
-        const hasAiKeywords = await this.entitlementsService.getFeatureValue(
-          userId,
-          'ai_keyword_matching',
-        );
-        if (!hasAiKeywords) {
-          throw new ForbiddenException(
-            'AI keyword matching requires a Pro plan. Upgrade to use this feature.',
-          );
-        }
-      }
-
       const profile = await this.databaseService.notificationProfile.create({
         data: {
           userId,
@@ -188,11 +194,18 @@ export class NotificationProfileService {
           deliveryType: data.deliveryType,
           deliveryTarget: data.deliveryTarget,
           notificationPreferences: data.notificationPreferences as any,
-          keywords: data.keywords,
-          keywordLLMEnabled: data.keywordLLMEnabled,
           priority: data.priority || 0,
         },
       });
+
+      // Sync keywords if provided
+      if (data.keywordIds && data.keywordIds.length > 0) {
+        await this.keywordService.syncKeywordsForProfile(
+          userId,
+          profile.id,
+          data.keywordIds,
+        );
+      }
 
       this.logger.log(
         `Created notification profile ${profile.id} for user ${userId}`,
@@ -205,23 +218,14 @@ export class NotificationProfileService {
         isEnabled: profile.isEnabled,
         scopeType: profile.scopeType,
         deliveryType: profile.deliveryType,
-        hasKeywords: profile.keywords.length > 0,
-        keywordCount: profile.keywords.length,
-        keywordLLMEnabled: profile.keywordLLMEnabled,
+        hasKeywords: data.keywordIds && data.keywordIds.length > 0,
+        keywordCount: data.keywordIds?.length || 0,
         repositoryFilterType: (profile.repositoryFilter as any)?.type,
         priority: profile.priority,
       });
 
-      return {
-        ...profile,
-        repositoryFilter:
-          profile.repositoryFilter as unknown as RepositoryFilter,
-        scopeType: profile.scopeType as any,
-        deliveryType: profile.deliveryType as any,
-        notificationPreferences:
-          profile.notificationPreferences as NotificationPreferences,
-        description: profile.description,
-      };
+      // Fetch the profile with keywords to return
+      return this.getNotificationProfile(profile.id, userId);
     } catch (error) {
       this.logger.error(
         `Error creating notification profile for user ${userId}:`,
@@ -253,19 +257,6 @@ export class NotificationProfileService {
         await this.validateScopeAndDelivery(userId, data as any);
       }
 
-      // Validate AI keyword matching entitlement if trying to enable it
-      if (data.keywordLLMEnabled === true) {
-        const hasAiKeywords = await this.entitlementsService.getFeatureValue(
-          userId,
-          'ai_keyword_matching',
-        );
-        if (!hasAiKeywords) {
-          throw new ForbiddenException(
-            'AI keyword matching requires a Pro plan. Upgrade to use this feature.',
-          );
-        }
-      }
-
       const updateData: any = {};
       if (data.name !== undefined) updateData.name = data.name;
       if (data.description !== undefined)
@@ -282,30 +273,28 @@ export class NotificationProfileService {
         updateData.deliveryTarget = data.deliveryTarget;
       if (data.notificationPreferences !== undefined)
         updateData.notificationPreferences = data.notificationPreferences;
-      if (data.keywords !== undefined) updateData.keywords = data.keywords;
-      if (data.keywordLLMEnabled !== undefined)
-        updateData.keywordLLMEnabled = data.keywordLLMEnabled;
       if (data.priority !== undefined) updateData.priority = data.priority;
 
-      const profile = await this.databaseService.notificationProfile.update({
+      await this.databaseService.notificationProfile.update({
         where: { id: profileId },
         data: updateData,
       });
+
+      // Sync keywords if provided
+      if (data.keywordIds !== undefined) {
+        await this.keywordService.syncKeywordsForProfile(
+          userId,
+          profileId,
+          data.keywordIds,
+        );
+      }
 
       this.logger.log(
         `Updated notification profile ${profileId} for user ${userId}`,
       );
 
-      return {
-        ...profile,
-        repositoryFilter:
-          profile.repositoryFilter as unknown as RepositoryFilter,
-        scopeType: profile.scopeType as any,
-        deliveryType: profile.deliveryType as any,
-        notificationPreferences:
-          profile.notificationPreferences as NotificationPreferences,
-        description: profile.description,
-      };
+      // Fetch the profile with keywords to return
+      return this.getNotificationProfile(profileId, userId);
     } catch (error) {
       this.logger.error(
         `Error updating notification profile ${profileId}:`,

@@ -14,7 +14,7 @@ export interface DigestStats {
 }
 
 // New types for multiple digest configurations
-export type DigestScopeType = 'user' | 'team';
+export type DigestScopeType = 'user' | 'team' | 'user_and_teams';
 export type DigestDeliveryType = 'dm' | 'channel';
 
 export interface RepositoryFilter {

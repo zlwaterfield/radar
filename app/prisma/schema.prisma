@@ -55,6 +55,7 @@ model User {
   teams               UserTeam[]
   subscription        Subscription?
   featureEntitlements FeatureEntitlement[]
+  keywords            Keyword[]
 
   @@map("user")
 }
@@ -210,14 +211,13 @@ model NotificationProfile {
   
   // Notification preferences (moved from UserSettings)
   notificationPreferences Json @default("{}") @map("notification_preferences")
-  
-  // Keywords for this profile
-  keywords          String[] @default([])
-  keywordLLMEnabled Boolean  @default(true) @map("keyword_llm_enabled")
-  
+
   // Priority for processing order (higher = processed first)
   priority Int @default(0)
-  
+
+  // Relations
+  profileKeywords ProfileKeyword[]
+
   @@map("notification_profile")
 }
 
@@ -371,4 +371,47 @@ model FeatureEntitlement {
 
   @@unique([userId, featureLookupKey])
   @@map("feature_entitlement")
+}
+
+// Keywords - reusable keyword entities for notification matching
+
+model Keyword {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Keyword configuration
+  term        String  // The actual keyword/phrase
+  llmEnabled  Boolean @default(true) @map("llm_enabled") // AI matching per keyword
+  isEnabled   Boolean @default(true) @map("is_enabled")
+
+  // Metadata
+  description String? // Optional user note about why this keyword matters
+
+  // Relations
+  profileKeywords ProfileKeyword[]
+
+  @@map("keyword")
+  @@index([userId])
+}
+
+// Junction table for many-to-many relationship between profiles and keywords
+
+model ProfileKeyword {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  profileId String              @map("profile_id")
+  profile   NotificationProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  keywordId String  @map("keyword_id")
+  keyword   Keyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, keywordId])
+  @@map("profile_keyword")
+  @@index([profileId])
+  @@index([keywordId])
 }

@@ -4,6 +4,7 @@ import type {
   RepositoryFilter,
 } from './digest.types';
 import type { NotificationPreferences } from './user.types';
+import type { KeywordWithMeta } from './keyword.types';
 
 export interface NotificationProfileData {
   id?: string;
@@ -16,9 +17,8 @@ export interface NotificationProfileData {
   deliveryType: DigestDeliveryType;
   deliveryTarget?: string | null; // null for DM, channelId for channel
   notificationPreferences: NotificationPreferences;
-  keywords: string[];
-  keywordLLMEnabled: boolean;
   priority: number;
+  keywordIds?: string[]; // For creating/updating profile-keyword associations
 }
 
 export interface NotificationProfileWithMeta extends NotificationProfileData {
@@ -26,6 +26,7 @@ export interface NotificationProfileWithMeta extends NotificationProfileData {
   createdAt: Date;
   updatedAt: Date;
   userId: string;
+  keywords?: KeywordWithMeta[]; // Populated keywords via relation
 }
 
 export interface NotificationProfileMatch {

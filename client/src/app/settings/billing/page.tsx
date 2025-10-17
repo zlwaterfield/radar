@@ -25,51 +25,47 @@ const PLANS = [
       '2 repositories',
       '1 notification profile',
       '1 digest configuration',
+      '1 keyword (regex matching)',
     ],
     notIncluded: [
-      'GitHub team support',
       'AI keyword matching',
-      'Priority support',
     ],
   },
   {
     id: 'basic',
     name: 'Basic',
-    price: '$10',
+    price: '$6',
     billing: 'per month',
-    annualPrice: '$100',
+    annualPrice: '$60',
     annualBilling: 'per year',
-    savings: 'Save $20/year',
+    savings: 'Save $12/year',
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY_PRICE_ID,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL_PRICE_ID,
     features: [
       '5 repositories',
       '3 notification profiles',
       '3 digest configurations',
-      'Keyword matching',
-    ],
-    notIncluded: [
-      'GitHub team support',
+      '2 keywords',
       'AI keyword matching',
-      'Priority support',
     ],
+    notIncluded: [],
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: '$25',
+    price: '$15',
     billing: 'per month',
-    annualPrice: '$250',
+    annualPrice: '$150',
     annualBilling: 'per year',
-    savings: 'Save $50/year',
+    savings: 'Save $30/year',
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
     features: [
       'Unlimited repositories',
-      'Unlimited profiles & digests',
-      'GitHub team support',
+      'Unlimited notification profiles',
+      'Unlimited digest configurations',
+      'Unlimited keywords',
       'AI keyword matching',
-      'Priority support',
     ],
     notIncluded: [],
   },
@@ -227,7 +223,7 @@ export default function BillingPage() {
       </div>
 
       {/* Pricing Table */}
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
         {PLANS.map((plan) => (
           <div
             key={plan.id}

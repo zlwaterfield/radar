@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Get, UseGuards, Logger, Query } from '@nestjs/common';
 import { EntitlementsService } from '../services/entitlements.service';
 import { DatabaseService } from '@/database/database.service';
 import { AuthGuard } from '@/auth/guards/auth.guard';
@@ -15,8 +15,9 @@ export class EntitlementsController {
   ) {}
 
   @Get('backfill')
-  async backfillEntitlements() {
-    this.logger.log('Starting entitlements backfill...');
+  async backfillEntitlements(@Query('force') force?: string) {
+    const forceReset = force === 'true';
+    this.logger.log(`Starting entitlements backfill... (force reset: ${forceReset})`);
 
     try {
       // Get all users
@@ -42,13 +43,17 @@ export class EntitlementsController {
             where: { userId: user.id },
           });
 
-          if (existingEntitlements > 0) {
+          if (existingEntitlements > 0 && !forceReset) {
             this.logger.log(`User ${user.id} (${user.email}) already has ${existingEntitlements} entitlements - skipping`);
             skipCount++;
             continue;
           }
 
-          // Sync entitlements for this user
+          if (existingEntitlements > 0 && forceReset) {
+            this.logger.log(`User ${user.id} (${user.email}) has ${existingEntitlements} entitlements - forcing reset`);
+          }
+
+          // Sync entitlements for this user (this will delete and recreate)
           await this.entitlementsService.syncUserEntitlements(user.id);
 
           // Verify entitlements were created
@@ -56,11 +61,11 @@ export class EntitlementsController {
             where: { userId: user.id },
           });
 
-          this.logger.log(`✓ Created ${newEntitlements} entitlements for user ${user.id} (${user.email})`);
+          this.logger.log(`✓ ${forceReset && existingEntitlements > 0 ? 'Reset' : 'Created'} ${newEntitlements} entitlements for user ${user.id} (${user.email})`);
           successCount++;
 
         } catch (error) {
-          this.logger.error(`✗ Failed to create entitlements for user ${user.id} (${user.email}):`, error);
+          this.logger.error(`✗ Failed to ${forceReset ? 'reset' : 'create'} entitlements for user ${user.id} (${user.email}):`, error);
           errorCount++;
           errors.push({
             userId: user.id,
@@ -75,19 +80,21 @@ export class EntitlementsController {
         successCount,
         skipCount,
         errorCount,
+        forceReset,
         errors: errors.length > 0 ? errors : undefined,
       };
 
       this.logger.log('\n=== Backfill Summary ===');
+      this.logger.log(`Mode: ${forceReset ? 'FORCE RESET' : 'Normal (skip existing)'}`);
       this.logger.log(`Total users: ${summary.totalUsers}`);
-      this.logger.log(`Successfully created: ${summary.successCount}`);
+      this.logger.log(`Successfully ${forceReset ? 'reset/created' : 'created'}: ${summary.successCount}`);
       this.logger.log(`Skipped (already exists): ${summary.skipCount}`);
       this.logger.log(`Errors: ${summary.errorCount}`);
       this.logger.log('========================\n');
 
       return {
         success: true,
-        message: 'Backfill completed',
+        message: `Backfill completed${forceReset ? ' (force reset mode)' : ''}`,
         summary,
       };
 

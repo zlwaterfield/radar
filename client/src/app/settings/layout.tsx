@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
-import { FiBell, FiCalendar, FiGitBranch, FiUsers, FiSearch, FiGithub, FiLogOut, FiMessageSquare, FiCreditCard } from 'react-icons/fi';
+import { FiBell, FiCalendar, FiGitBranch, FiUsers, FiSearch, FiGithub, FiLogOut, FiMessageSquare, FiCreditCard, FiHash } from 'react-icons/fi';
 import { useSurvey } from '@/hooks/useSurvey';
 
 export default function SettingsLayout({
@@ -69,6 +69,17 @@ export default function SettingsLayout({
               }`}>
               <FiCalendar size={20} className="mr-3 flex-shrink-0" />
               Digests
+            </Link>
+          </li>
+          <li>
+            <Link href="/settings/keywords"
+              className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
+                isActive('/settings/keywords')
+                  ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}>
+              <FiHash size={20} className="mr-3 flex-shrink-0" />
+              Keywords
             </Link>
           </li>
           <li>
@@ -169,6 +180,7 @@ export default function SettingsLayout({
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               {pathname === '/settings/notifications' && 'Notifications'}
               {pathname === '/settings/digest' && 'Digests'}
+              {pathname === '/settings/keywords' && 'Keywords'}
               {pathname === '/settings/repositories' && 'Repositories'}
               {pathname === '/settings/teams' && 'Teams'}
               {paymentEnabled && pathname === '/settings/billing' && 'Billing'}

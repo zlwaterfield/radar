@@ -22,6 +22,7 @@ import { AuthGuard } from '../../auth/guards/auth.guard';
 import { GetUser } from '../../auth/decorators/user.decorator';
 import type { User } from '@prisma/client';
 import { nullToUndefined } from '../../common/utils/json-validation.util';
+import { EntitlementsService } from '../../stripe/services/entitlements.service';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -30,7 +31,10 @@ import { nullToUndefined } from '../../common/utils/json-validation.util';
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly entitlementsService: EntitlementsService,
+  ) {}
 
   /**
    * Get current user profile
@@ -62,6 +66,19 @@ export class UsersController {
       createdAt: userProfile.createdAt,
       updatedAt: userProfile.updatedAt,
     };
+  }
+
+  /**
+   * Get current user entitlements
+   */
+  @Get('me/entitlements')
+  @ApiOperation({ summary: 'Get current user entitlements' })
+  @ApiResponse({
+    status: 200,
+    description: 'User entitlements',
+  })
+  async getCurrentUserEntitlements(@GetUser() user: User) {
+    return this.entitlementsService.getUserEntitlements(user.id);
   }
 
   /**
