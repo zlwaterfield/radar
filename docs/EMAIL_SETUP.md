@@ -60,13 +60,29 @@ Once verified, you can send from any email address on that domain (e.g., `norepl
 
 ### Password Reset Flow
 
-The password reset functionality is automatically integrated with Better Auth:
+The complete password reset flow includes both frontend and backend:
 
-1. **User Requests Reset**: User calls the Better Auth `requestPasswordReset` API
-2. **Token Generated**: Better Auth creates a secure reset token
-3. **Email Sent**: Our `EmailService` sends a beautiful password reset email
-4. **User Clicks Link**: User receives email and clicks the reset link
-5. **Password Updated**: User completes the password reset flow
+**Frontend Pages:**
+1. **Forgot Password** (`/auth/forgot-password`):
+   - User enters their email address
+   - Calls `authClient.forgetPassword()` from Better Auth
+   - Shows success message with instructions
+
+2. **Reset Password** (`/auth/reset-password`):
+   - User lands here from email link (with token in URL)
+   - Enters new password (must be 8+ characters)
+   - Confirms password matches
+   - Calls `authClient.resetPassword()` with token
+   - Redirects to sign in on success
+
+3. **Sign In** (`/auth/signin`):
+   - Updated with "Forgot your password?" link
+
+**Backend Integration:**
+1. **User Requests Reset**: Better Auth generates secure reset token
+2. **Email Sent**: Our `EmailService` sends password reset email via Resend
+3. **User Clicks Link**: Email contains link to `/auth/reset-password?token=...`
+4. **Password Updated**: Better Auth validates token and updates password
 
 ### Email Service API
 
@@ -309,12 +325,29 @@ Better Auth Password Reset Request
 
 ## File Structure
 
+### Backend
+
 ```
 app/src/email/
 ├── email.module.ts              # NestJS module
 ├── email.service.ts             # Email service with Resend integration
 └── templates/
     └── password-reset.tsx       # Password reset email template
+
+app/src/auth/
+└── auth.config.ts               # Better Auth config with email integration
+```
+
+### Frontend
+
+```
+client/src/app/auth/
+├── forgot-password/
+│   └── page.tsx                 # Password reset request page
+├── reset-password/
+│   └── page.tsx                 # New password entry page
+└── signin/
+    └── page.tsx                 # Login page with "Forgot password?" link
 ```
 
 ## Next Steps

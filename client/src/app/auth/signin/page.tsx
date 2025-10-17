@@ -176,6 +176,14 @@ export default function SignInPage() {
             </div>
           </div>
 
+          <div className="flex items-center justify-end">
+            <div className="text-sm">
+              <Link href="/auth/forgot-password" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300">
+                Forgot your password?
+              </Link>
+            </div>
+          </div>
+
           {error && (
             <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded">
               {error}
