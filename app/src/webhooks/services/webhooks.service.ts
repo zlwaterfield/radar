@@ -4,6 +4,7 @@ import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { UserTeamsSyncService } from '../../users/services/user-teams-sync.service';
+import { tasks } from '@trigger.dev/sdk/v3';
 import type {
   GitHubWebhookPayload,
   WebhookProcessResult,
@@ -300,6 +301,20 @@ export class WebhooksService {
 
           // Trigger full sync of repos and teams
           await this.userTeamsSyncService.syncUserGitHubData(user.id);
+
+          // Trigger PR backfill in background
+          try {
+            await tasks.trigger('backfill-pull-requests', { userId: user.id, daysBack: 30 });
+            this.logger.log(
+              `Triggered PR backfill task for user ${user.id}`,
+            );
+          } catch (backfillError) {
+            this.logger.error(
+              `Error triggering PR backfill for user ${user.id}:`,
+              backfillError,
+            );
+            // Don't fail the webhook processing if backfill trigger fails
+          }
 
           this.logger.log(
             `Completed auto-sync for user ${user.id} after app installation`,

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { GitHubTokenService } from '../../github/services/github-token.service';
 import { UserTeamsSyncService } from '../../users/services/user-teams-sync.service';
+import { tasks } from '@trigger.dev/sdk/v3';
 
 @Injectable()
 export class GitHubIntegrationService {
@@ -97,6 +98,20 @@ export class GitHubIntegrationService {
         // Don't fail the connection if sync fails
       }
 
+      // Trigger PR backfill in background
+      try {
+        await tasks.trigger('backfill-pull-requests', { userId, daysBack: 30 });
+        this.logger.log(
+          `Triggered PR backfill task for user ${userId}`,
+        );
+      } catch (backfillError) {
+        this.logger.error(
+          `Error triggering PR backfill for user ${userId}:`,
+          backfillError,
+        );
+        // Don't fail the connection if backfill trigger fails
+      }
+
       this.logger.log(`GitHub connected for user ${userId}`);
     } catch (error) {
       this.logger.error('Error connecting GitHub for user:', error);
@@ -172,6 +187,20 @@ export class GitHubIntegrationService {
           syncError,
         );
         // Don't fail the installation if sync fails
+      }
+
+      // Trigger PR backfill in background
+      try {
+        await tasks.trigger('backfill-pull-requests', { userId, daysBack: 30 });
+        this.logger.log(
+          `Triggered PR backfill task for user ${userId}`,
+        );
+      } catch (backfillError) {
+        this.logger.error(
+          `Error triggering PR backfill for user ${userId}:`,
+          backfillError,
+        );
+        // Don't fail the installation if backfill trigger fails
       }
 
       this.logger.log(

@@ -318,6 +318,94 @@ export class GitHubService {
   }
 
   /**
+   * Get pull requests with pagination and date filtering
+   * Fetches PRs page by page until all matching PRs are retrieved
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param options - Fetch options
+   * @returns Array of pull requests matching criteria
+   */
+  async getPullRequestsPaginated(
+    owner: string,
+    repo: string,
+    options: {
+      state?: 'open' | 'closed' | 'all';
+      since?: Date; // Only fetch PRs created/updated after this date
+      accessToken?: string;
+      maxPages?: number; // Limit number of pages to fetch (default: unlimited)
+    } = {},
+  ): Promise<GitHubPullRequest[]> {
+    const { state = 'all', since, accessToken, maxPages } = options;
+
+    try {
+      const octokit = accessToken
+        ? this.createUserClient(accessToken)
+        : this.createAppClient();
+
+      const allPullRequests: GitHubPullRequest[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore && (!maxPages || page <= maxPages)) {
+        const { data: pullRequests } = await octokit.pulls.list({
+          owner,
+          repo,
+          state,
+          sort: 'updated',
+          direction: 'desc', // Most recently updated first
+          per_page: 100,
+          page,
+        });
+
+        // If no results, we're done
+        if (pullRequests.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        // Filter by date if provided
+        if (since) {
+          const filtered = pullRequests.filter((pr: any) => {
+            const updatedAt = new Date(pr.updated_at);
+            const createdAt = new Date(pr.created_at);
+            // Include if created or updated after the 'since' date
+            return updatedAt >= since || createdAt >= since;
+          });
+
+          allPullRequests.push(...(filtered as any[]));
+
+          // If we found PRs older than our cutoff, we can stop
+          if (filtered.length < pullRequests.length) {
+            hasMore = false;
+            break;
+          }
+        } else {
+          allPullRequests.push(...(pullRequests as any[]));
+        }
+
+        // Check if there are more pages
+        if (pullRequests.length < 100) {
+          hasMore = false;
+        }
+
+        page++;
+      }
+
+      this.logger.log(
+        `Retrieved ${allPullRequests.length} PRs for ${owner}/${repo} (${page - 1} pages)`,
+      );
+
+      return allPullRequests;
+    } catch (error) {
+      this.logger.error(
+        `Error fetching paginated pull requests for ${owner}/${repo}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Get issues for a repository
    */
   async getIssues(

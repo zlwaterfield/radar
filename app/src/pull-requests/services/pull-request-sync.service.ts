@@ -572,4 +572,155 @@ export class PullRequestSyncService {
 
     return stateMap[githubState] || 'pending';
   }
+
+  /**
+   * Backfill pull requests for a user's repositories
+   * Fetches PRs from the last 30 days for all repositories with access
+   * @param userId - User ID to backfill PRs for
+   * @param accessToken - GitHub access token
+   * @param daysBack - Number of days to look back (default: 30)
+   * @returns Summary of backfill operation
+   */
+  async backfillUserPullRequests(
+    userId: string,
+    accessToken: string,
+    daysBack: number = 30,
+  ): Promise<{
+    repositories: number;
+    pullRequestsProcessed: number;
+    pullRequestsCreated: number;
+    pullRequestsUpdated: number;
+    errors: string[];
+  }> {
+    const startTime = Date.now();
+    const since = new Date();
+    since.setDate(since.getDate() - daysBack);
+
+    this.logger.log(
+      `Starting PR backfill for user ${userId}: ${daysBack} days back (since ${since.toISOString()})`,
+    );
+
+    const result = {
+      repositories: 0,
+      pullRequestsProcessed: 0,
+      pullRequestsCreated: 0,
+      pullRequestsUpdated: 0,
+      errors: [] as string[],
+    };
+
+    try {
+      // Get user's repositories from database
+      const userRepositories = await this.databaseService.userRepository.findMany({
+        where: {
+          userId,
+          enabled: true,
+          isActive: true,
+        },
+      });
+
+      this.logger.log(
+        `Found ${userRepositories.length} enabled repositories for user ${userId}`,
+      );
+
+      // Process each repository
+      for (const userRepo of userRepositories) {
+        try {
+          // Parse owner and repo from full_name (e.g., "owner/repo")
+          const [owner, repo] = userRepo.fullName.split('/');
+          if (!owner || !repo) {
+            this.logger.warn(`Invalid repository full name: ${userRepo.fullName}`);
+            continue;
+          }
+
+          this.logger.log(
+            `Fetching PRs for ${userRepo.fullName} (since ${since.toISOString()})`,
+          );
+
+          // Fetch PRs with pagination
+          const pullRequests = await this.githubService.getPullRequestsPaginated(
+            owner,
+            repo,
+            {
+              state: 'all',
+              since,
+              accessToken,
+              maxPages: 10, // Limit to 10 pages (1000 PRs) per repo to avoid excessive API calls
+            },
+          );
+
+          this.logger.log(
+            `Found ${pullRequests.length} PRs for ${userRepo.fullName}`,
+          );
+
+          // Sync each PR
+          for (const pr of pullRequests) {
+            try {
+              const githubId = pr.id.toString();
+              const existingPR = await this.databaseService.pullRequest.findUnique({
+                where: { githubId },
+              });
+
+              if (!existingPR) {
+                // Create new PR
+                await this.createPullRequest(
+                  pr as any,
+                  userRepo.githubId,
+                  userRepo.fullName,
+                );
+                result.pullRequestsCreated++;
+              } else {
+                // Update existing PR
+                await this.updatePullRequest(existingPR.id, pr as any);
+                result.pullRequestsUpdated++;
+              }
+
+              // Sync related data
+              await this.syncReviewers(githubId, pr as any);
+              await this.syncLabels(githubId, pr as any);
+              await this.syncAssignees(githubId, pr as any);
+
+              // Sync checks if we have an access token
+              if (accessToken) {
+                await this.syncChecksFromAPI(
+                  owner,
+                  repo,
+                  pr.number,
+                  githubId,
+                  accessToken,
+                );
+              }
+
+              result.pullRequestsProcessed++;
+            } catch (prError) {
+              const errorMsg = `Error syncing PR #${pr.number} in ${userRepo.fullName}: ${prError instanceof Error ? prError.message : String(prError)}`;
+              this.logger.error(errorMsg);
+              result.errors.push(errorMsg);
+            }
+          }
+
+          result.repositories++;
+        } catch (repoError) {
+          const errorMsg = `Error processing repository ${userRepo.fullName}: ${repoError instanceof Error ? repoError.message : String(repoError)}`;
+          this.logger.error(errorMsg);
+          result.errors.push(errorMsg);
+          // Continue with next repository
+        }
+      }
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      this.logger.log(
+        `Completed PR backfill for user ${userId} in ${duration}s: ` +
+        `${result.repositories} repos, ${result.pullRequestsProcessed} PRs ` +
+        `(${result.pullRequestsCreated} created, ${result.pullRequestsUpdated} updated), ` +
+        `${result.errors.length} errors`,
+      );
+
+      return result;
+    } catch (error) {
+      const errorMsg = `Fatal error in PR backfill for user ${userId}: ${error instanceof Error ? error.message : String(error)}`;
+      this.logger.error(errorMsg);
+      result.errors.push(errorMsg);
+      throw error;
+    }
+  }
 }
