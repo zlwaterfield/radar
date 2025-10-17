@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import Button from '@/components/Button';
@@ -25,6 +25,7 @@ interface IntegrationStatus {
 
 function OnboardingContent() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus>({
     slack: { connected: false },
@@ -100,6 +101,13 @@ function OnboardingContent() {
       refreshIntegrationStatus();
     }
   }, [user, loading, refreshIntegrationStatus]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth/signin');
+    }
+  }, [loading, user, router]);
 
   const connectSlack = () => {
     window.location.href = '/api/integrations/slack/connect';

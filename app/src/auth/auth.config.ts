@@ -9,8 +9,16 @@ export const auth = betterAuth({
     provider: 'postgresql',
   }),
 
+  baseURL: process.env.API_URL,
+
   emailAndPassword: {
     enabled: true,
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      redirectURI: `${process.env.API_URL}/api/auth/callback/google`,
+    },
   },
 
   logger: {
