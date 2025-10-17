@@ -127,6 +127,15 @@ export default function SettingsLayout({
           </ul>
         </nav>
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center mb-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-marian-blue-600 to-federal-blue-700 text-white flex items-center justify-center mr-2 shadow-md">
+              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="flex-1 truncate">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{user?.name || 'User'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
+            </div>
+          </div>
           {isReady && surveyId && (
             <Button
               id="general-feedback-button"
@@ -140,15 +149,6 @@ export default function SettingsLayout({
               Give Feedback
             </Button>
           )}
-          <div className="flex items-center mb-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-marian-blue-600 to-federal-blue-700 text-white flex items-center justify-center mr-2 shadow-md">
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div className="flex-1 truncate">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
-            </div>
-          </div>
           <Button
             onClick={signOut}
             variant="ghost"

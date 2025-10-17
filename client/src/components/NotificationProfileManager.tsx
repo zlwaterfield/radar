@@ -48,14 +48,14 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     return (
       <div className={`space-y-4 ${className}`}>
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
             <FiBell className="h-5 w-5" />
             Notification profiles
           </h2>
         </div>
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 bg-gray-100 rounded-lg animate-pulse" />
+            <div key={i} className="h-24 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
           ))}
         </div>
       </div>
@@ -65,12 +65,12 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
   if (error) {
     return (
       <div className={`space-y-4 ${className}`}>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
+        <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
           <FiBell className="h-5 w-5" />
           Notification profiles
         </h2>
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600">{error}</p>
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
+          <p className="text-red-600 dark:text-red-300">{error}</p>
         </div>
       </div>
     );
@@ -168,11 +168,11 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     <div className={className}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
             <FiBell className="h-5 w-5" />
             Notification profiles
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Create multiple notification configurations for different scenarios
           </p>
         </div>
@@ -214,9 +214,9 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                 <div className="flex items-start gap-3 flex-1">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-4">
-                      <h3 className="font-medium text-gray-900">{profile.name}</h3>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{profile.name}</h3>
                       {profile.priority > 0 && (
-                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
                           Priority {profile.priority}
                         </span>
                       )}
@@ -226,9 +226,9 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                         label={profile.isEnabled ? 'Enabled' : 'Disabled'}
                       />
                     </div>
-                    
+
                     {profile.description && (
-                      <p className="text-sm text-gray-600 mb-3">{profile.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{profile.description}</p>
                     )}
                     
                     <div className="flex flex-col gap-2 text-sm">
@@ -277,40 +277,40 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                     {/* Keywords display */}
                     {profile.keywords.length > 0 && (
                       <div className="mt-3">
-                        <div className="text-xs text-gray-500 mb-1">Keywords:</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Keywords:</div>
                         <div className="flex flex-wrap gap-1">
                           {profile.keywords.slice(0, 5).map((keyword) => (
                             <span
                               key={keyword}
-                              className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded"
                             >
                               {keyword}
                             </span>
                           ))}
                           {profile.keywords.length > 5 && (
-                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                            <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
                               +{profile.keywords.length - 5} more
                             </span>
                           )}
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Event preferences display */}
                     {getEnabledPreferences(profile.notificationPreferences).length > 0 && (
                       <div className="mt-3">
-                        <div className="text-xs text-gray-500 mb-1">Enabled events:</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Enabled events:</div>
                         <div className="flex flex-wrap gap-1">
                           {getEnabledPreferences(profile.notificationPreferences).slice(0, 6).map((eventLabel) => (
                             <span
                               key={eventLabel}
-                              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
+                              className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded"
                             >
                               {eventLabel}
                             </span>
                           ))}
                           {getEnabledPreferences(profile.notificationPreferences).length > 6 && (
-                            <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                            <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">
                               +{getEnabledPreferences(profile.notificationPreferences).length - 6} more
                             </span>
                           )}

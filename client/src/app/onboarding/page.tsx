@@ -118,8 +118,8 @@ function OnboardingContent() {
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">Loading...</p>
           </div>
         </div>
       </Layout>
@@ -131,8 +131,8 @@ function OnboardingContent() {
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Please sign in first</h1>
-            <p className="text-gray-600">You need to be signed in to complete onboarding.</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Please sign in first</h1>
+            <p className="text-gray-600 dark:text-gray-400">You need to be signed in to complete onboarding.</p>
           </div>
         </div>
       </Layout>
@@ -141,11 +141,11 @@ function OnboardingContent() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold text-gray-900">Welcome to Radar!</h1>
-            <p className="mt-4 text-lg text-gray-600">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome to Radar!</h1>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
               Let&apos;s connect your integrations to get you started with GitHub activity notifications.
             </p>
           </div>
@@ -153,8 +153,8 @@ function OnboardingContent() {
           {message && (
             <div className={`mb-6 p-4 rounded-md ${
               message.includes('failed') || message.includes('error')
-                ? 'bg-red-50 text-red-700'
-                : 'bg-green-50 text-green-700'
+                ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700'
+                : 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700'
             }`}>
               {message}
             </div>
@@ -162,20 +162,20 @@ function OnboardingContent() {
 
           <div className="space-y-6">
             {/* Step 1: Slack Integration */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-purple-600 dark:bg-purple-700 rounded-lg flex items-center justify-center">
                     <FiSlack size={24} className="text-white" />
                   </div>
                   <div>
-                    <div className="inline-block mb-1 bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 1</div>
-                    <h3 className="text-lg font-semibold text-gray-900">Slack</h3>
-                    <p className="text-gray-600">
+                    <div className="inline-block mb-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 1</div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Slack</h3>
+                    <p className="text-gray-600 dark:text-gray-400">
                       Receive notifications directly in your Slack workspace
                     </p>
                     {integrationStatus.slack.connected && (
-                      <p className="text-sm text-green-600 mt-1">
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
                         Connected to {integrationStatus.slack.teamName}
                       </p>
                     )}
@@ -202,20 +202,20 @@ function OnboardingContent() {
             </div>
 
             {/* Step 2: GitHub Integration */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gray-900 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                     <FiGithub size={24} className="text-white" />
                   </div>
                   <div>
-                    <div className="inline-block mb-1 bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 2</div>
-                    <h3 className="text-lg font-semibold text-gray-900">GitHub Account</h3>
-                    <p className="text-gray-600">
+                    <div className="inline-block mb-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 2</div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">GitHub Account</h3>
+                    <p className="text-gray-600 dark:text-gray-400">
                       Connect your GitHub account to track repository activity
                     </p>
                     {integrationStatus.github.connected && (
-                      <p className="text-sm text-green-600 mt-1">
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
                         Connected as {integrationStatus.github.githubLogin}
                       </p>
                     )}
@@ -242,20 +242,20 @@ function OnboardingContent() {
             </div>
 
             {/* Step 3: GitHub App Installation */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center">
                     <FiGrid size={24} className="text-white" />
                   </div>
                   <div>
-                    <div className="inline-block mb-1 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 3</div>
-                    <h3 className="text-lg font-semibold text-gray-900">GitHub App</h3>
-                    <p className="text-gray-600">
+                    <div className="inline-block mb-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Step 3</div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">GitHub App</h3>
+                    <p className="text-gray-600 dark:text-gray-400">
                       Install the GitHub App to enable repository access and webhooks
                     </p>
                     {integrationStatus.github.appInstalled && (
-                      <p className="text-sm text-green-600 mt-1">
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
                         ✓ GitHub App installed successfully
                       </p>
                     )}
@@ -307,8 +307,8 @@ export default function OnboardingPage() {
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">Loading...</p>
           </div>
         </div>
       </Layout>
