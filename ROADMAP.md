@@ -1,11 +1,12 @@
 ## 🎯 Roadmap
 
 - Next
+   - Make sure default entitlements are working
+   - Make sure default digest and notification profile are generated
+   - PR state management
    - Assets + prep for Slack marketplace
-   - Slack / Github user connecting to @ in notifications
-   - Default digest and notification profile for easier onboarding
-   - Default entitlements
 - Later
+   - Slack / Github user connecting to @ in notifications
    - Email verifications
    - Utilizing labels/tags for filtering
    - Look into duplicate notifications from PR comments
