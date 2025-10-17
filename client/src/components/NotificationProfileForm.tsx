@@ -52,7 +52,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
     deliveryTarget: '',
     notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
     keywords: [] as string[],
-    keywordLLMEnabled: true,
+    keywordLLMEnabled: false,
   });
 
   const [newKeyword, setNewKeyword] = useState('');
