@@ -198,7 +198,7 @@ export class EntitlementsService {
   }
 
   async getUserEntitlements(userId: string) {
-    return this.db.featureEntitlement.findMany({
+    const entitlements = await this.db.featureEntitlement.findMany({
       where: { userId, isActive: true },
       select: {
         featureLookupKey: true,
@@ -207,6 +207,25 @@ export class EntitlementsService {
         isActive: true,
       },
     });
+
+    // Backfill entitlements if user has none
+    if (entitlements.length === 0) {
+      this.logger.log(`Backfilling entitlements for user ${userId}`);
+      await this.syncUserEntitlements(userId);
+
+      // Fetch the newly created entitlements
+      return this.db.featureEntitlement.findMany({
+        where: { userId, isActive: true },
+        select: {
+          featureLookupKey: true,
+          featureName: true,
+          value: true,
+          isActive: true,
+        },
+      });
+    }
+
+    return entitlements;
   }
 
   private async setFreeEntitlements(userId: string) {

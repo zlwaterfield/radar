@@ -1,7 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { CreateUserDto, UpdateUserDto } from '../dto/users.dto';
+import { EntitlementsService } from '../../stripe/services/entitlements.service';
 import type { User } from '@prisma/client';
 
 @Injectable()
@@ -11,6 +12,8 @@ export class UsersService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => EntitlementsService))
+    private readonly entitlementsService: EntitlementsService,
   ) {}
 
   /**
@@ -107,6 +110,18 @@ export class UsersService {
       });
 
       this.logger.log(`Created user ${user.id} with name ${user.name}`);
+
+      // Initialize feature entitlements for the new user
+      try {
+        await this.entitlementsService.syncUserEntitlements(user.id);
+        this.logger.log(`Initialized feature entitlements for new user ${user.id}`);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to initialize feature entitlements for user ${user.id}:`,
+          error,
+        );
+      }
+
       return user;
     } catch (error) {
       this.logger.error('Error creating user:', error);
