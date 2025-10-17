@@ -231,7 +231,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{profile.description}</p>
                     )}
                     
-                    <div className="flex flex-col gap-2 text-sm">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                       <div>
                         <span className="text-gray-500 dark:text-gray-400">🎯 Scope:</span>
                         <span className="ml-1 text-gray-900 dark:text-white">

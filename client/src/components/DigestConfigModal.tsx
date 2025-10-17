@@ -52,7 +52,7 @@ export default function DigestConfigModal({
               </label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                 placeholder="e.g., Morning Team Updates"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -64,7 +64,7 @@ export default function DigestConfigModal({
                 Description
               </label>
               <textarea
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                 rows={2}
                 placeholder="Optional description for this digest"
                 value={formData.description}
@@ -81,7 +81,7 @@ export default function DigestConfigModal({
               </p>
               <div className="flex gap-3">
                 <select
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                   value={formData.digestTime}
                   onChange={(e) => setFormData({...formData, digestTime: e.target.value})}
                 >
@@ -98,7 +98,7 @@ export default function DigestConfigModal({
                   })}
                 </select>
                 <select
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                   value={formData.timezone}
                   onChange={(e) => setFormData({...formData, timezone: e.target.value})}
                 >
@@ -264,7 +264,7 @@ export default function DigestConfigModal({
               {formData.scopeType === 'team' && (
                 <div className="mt-2">
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                     value={formData.scopeValue || ''}
                     onChange={(e) => setFormData({...formData, scopeValue: e.target.value})}
                   >
@@ -384,7 +384,7 @@ export default function DigestConfigModal({
                 <div className="mt-2">
                   <input
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                     placeholder="Channel ID (e.g., C1234567890)"
                     value={formData.deliveryTarget || ''}
                     onChange={(e) => setFormData({...formData, deliveryTarget: e.target.value})}

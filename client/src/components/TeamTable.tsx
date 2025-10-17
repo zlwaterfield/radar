@@ -21,7 +21,6 @@ const TeamTable: React.FC<TeamTableProps> = ({ teams }) => {
           <tr>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Team</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Organization</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Permission</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -42,11 +41,6 @@ const TeamTable: React.FC<TeamTableProps> = ({ teams }) => {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {team.organization}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
-                  {team.permission}
-                </span>
               </td>
             </tr>
           ))}

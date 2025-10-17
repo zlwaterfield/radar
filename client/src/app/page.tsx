@@ -66,7 +66,7 @@ export default function Home() {
           <div className="w-full border border-gray-200 dark:border-gray-700 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-16 mt-12 text-center shadow-xl hover:shadow-2xl transition-shadow duration-300">
             <div className="space-y-8">
               <h1 className="text-6xl md:text-7xl font-extrabold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent tracking-tight leading-tight">
-                Never Miss a Beat
+                Stay in Sync with Your Pull Requests
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto font-medium">
                 Smart GitHub notifications for your Slack workspace. Stay informed without the noise.

@@ -88,28 +88,11 @@ export class UserTeamsService {
           },
         });
 
-        // Map GitHub permissions to simpler values
-        const mapPermission = (githubPermission: string) => {
-          switch (githubPermission) {
-            case 'admin':
-              return 'admin';
-            case 'maintain':
-              return 'maintainer';
-            case 'push':
-              return 'member';
-            case 'pull':
-              return 'member';
-            default:
-              return 'member';
-          }
-        };
-
         const teamData = {
           teamId: team.id.toString(),
           teamSlug: team.slug,
           teamName: team.name,
           organization: team.organization.login,
-          permission: mapPermission(team.permission || 'pull'),
         };
 
         if (existingTeam) {

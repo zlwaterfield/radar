@@ -198,7 +198,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                 placeholder="e.g., Security Alerts"
                 required
               />
@@ -211,7 +211,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                 rows={2}
                 placeholder="Optional description for this profile"
               />
@@ -258,7 +258,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
               {formData.scopeType === 'team' && (
                 <div className="mt-2">
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                     value={formData.scopeValue || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, scopeValue: e.target.value }))}
                   >
@@ -378,7 +378,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                 <div className="mt-2">
                   <input
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                     placeholder="Channel ID (e.g., C1234567890)"
                     value={formData.deliveryTarget || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, deliveryTarget: e.target.value }))}
@@ -480,7 +480,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                       handleAddKeyword();
                     }
                   }}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
                   placeholder="Add a keyword..."
                 />
                 <button
