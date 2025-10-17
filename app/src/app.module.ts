@@ -22,6 +22,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { DigestModule } from './digest/digest.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { StripeModule } from './stripe/stripe.module';
+import { EmailModule } from './email/email.module';
 
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -61,6 +62,7 @@ import { ErrorTrackingInterceptor } from './common/interceptors/error-tracking.i
     DigestModule,
     AnalyticsModule,
     StripeModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [
