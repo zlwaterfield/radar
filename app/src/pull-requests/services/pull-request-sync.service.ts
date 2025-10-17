@@ -623,7 +623,8 @@ export class PullRequestSyncService {
       );
 
       // Process each repository
-      for (const userRepo of userRepositories) {
+      for (let i = 0; i < userRepositories.length; i++) {
+        const userRepo = userRepositories[i];
         try {
           // Parse owner and repo from full_name (e.g., "owner/repo")
           const [owner, repo] = userRepo.fullName.split('/');
@@ -633,7 +634,7 @@ export class PullRequestSyncService {
           }
 
           this.logger.log(
-            `Fetching PRs for ${userRepo.fullName} (since ${since.toISOString()})`,
+            `[${i + 1}/${userRepositories.length}] Fetching PRs for ${userRepo.fullName} (since ${since.toISOString()})`,
           );
 
           // Fetch PRs with pagination
@@ -644,22 +645,24 @@ export class PullRequestSyncService {
               state: 'all',
               since,
               accessToken,
-              maxPages: 10, // Limit to 10 pages (1000 PRs) per repo to avoid excessive API calls
+              maxPages: 5, // Limit to 5 pages (500 PRs) per repo to avoid excessive API calls
             },
           );
 
           this.logger.log(
-            `Found ${pullRequests.length} PRs for ${userRepo.fullName}`,
+            `[${i + 1}/${userRepositories.length}] Found ${pullRequests.length} PRs for ${userRepo.fullName}`,
           );
 
           // Sync each PR
-          for (const pr of pullRequests) {
+          for (let prIndex = 0; prIndex < pullRequests.length; prIndex++) {
+            const pr = pullRequests[prIndex];
             try {
               const githubId = pr.id.toString();
               const existingPR = await this.databaseService.pullRequest.findUnique({
                 where: { githubId },
               });
 
+              let action = 'updated';
               if (!existingPR) {
                 // Create new PR
                 await this.createPullRequest(
@@ -668,6 +671,7 @@ export class PullRequestSyncService {
                   userRepo.fullName,
                 );
                 result.pullRequestsCreated++;
+                action = 'created';
               } else {
                 // Update existing PR
                 await this.updatePullRequest(existingPR.id, pr as any);
@@ -691,6 +695,13 @@ export class PullRequestSyncService {
               }
 
               result.pullRequestsProcessed++;
+
+              // Log progress every 10 PRs or on the last PR
+              if ((prIndex + 1) % 10 === 0 || prIndex === pullRequests.length - 1) {
+                this.logger.log(
+                  `  Progress: ${prIndex + 1}/${pullRequests.length} PRs synced for ${userRepo.fullName}`,
+                );
+              }
             } catch (prError) {
               const errorMsg = `Error syncing PR #${pr.number} in ${userRepo.fullName}: ${prError instanceof Error ? prError.message : String(prError)}`;
               this.logger.error(errorMsg);
@@ -699,6 +710,9 @@ export class PullRequestSyncService {
           }
 
           result.repositories++;
+          this.logger.log(
+            `[${i + 1}/${userRepositories.length}] Completed ${userRepo.fullName}: ${pullRequests.length} PRs synced`,
+          );
         } catch (repoError) {
           const errorMsg = `Error processing repository ${userRepo.fullName}: ${repoError instanceof Error ? repoError.message : String(repoError)}`;
           this.logger.error(errorMsg);
