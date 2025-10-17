@@ -172,7 +172,7 @@ export const pullRequestsApi = {
    * List pull requests with filtering
    */
   async list(params?: ListPullRequestsParams): Promise<ListPullRequestsResponse> {
-    const response = await axios.get<ListPullRequestsResponseDto>(`${API_URL}/api/pull-requests`, { params });
+    const response = await axios.get<ListPullRequestsResponseDto>('/api/pull-requests', { params });
 
     // Transform backend DTOs to frontend-friendly format
     return {
@@ -185,7 +185,7 @@ export const pullRequestsApi = {
    * Get pull request statistics
    */
   async getStats(): Promise<PullRequestStats> {
-    const response = await axios.get(`${API_URL}/api/pull-requests/stats`);
+    const response = await axios.get('/api/pull-requests/stats');
     return response.data;
   },
 
@@ -193,7 +193,7 @@ export const pullRequestsApi = {
    * Get a single pull request by ID
    */
   async getById(id: string): Promise<PullRequest> {
-    const response = await axios.get(`${API_URL}/api/pull-requests/${id}`);
+    const response = await axios.get('/api/pull-requests/${id}');
     return response.data;
   },
 
@@ -201,7 +201,7 @@ export const pullRequestsApi = {
    * Force sync a pull request from GitHub
    */
   async sync(id: string): Promise<PullRequest> {
-    const response = await axios.post(`${API_URL}/api/pull-requests/${id}/sync`);
+    const response = await axios.post('/api/pull-requests/${id}/sync');
     return response.data;
   },
 };
