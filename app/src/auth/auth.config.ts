@@ -40,6 +40,10 @@ export const auth = betterAuth({
     },
   },
 
+  advanced: {
+    useSecureCookies: true,
+  },
+
   logger: {
     level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
   },
