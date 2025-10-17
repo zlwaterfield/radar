@@ -1,4 +1,4 @@
-import { schedules, wait, task } from "@trigger.dev/sdk";
+import { schedules, wait, task, logger } from "@trigger.dev/sdk";
 import { PrismaClient } from "@prisma/client";
 import { DigestService } from "../src/digest/digest.service";
 import { DigestConfigService } from "../src/digest/digest-config.service";
@@ -60,17 +60,17 @@ export const dailyDigest = schedules.task({
     const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService, analyticsService, pullRequestService);
     
     try {
-      console.log("Starting multiple digest processing...");
+      logger.info("Starting multiple digest processing");
 
       // Get all users with enabled digest configurations
       const users = await digestConfigService.getUsersWithEnabledDigests();
-      
+
       if (users.length === 0) {
-        console.log("No users have digest configurations enabled, skipping");
+        logger.info("No users have digest configurations enabled, skipping");
         return { success: true, message: "No users to process" };
       }
 
-      console.log(`Processing digest configs for ${users.length} users`);
+      logger.info("Processing digest configs", { userCount: users.length });
 
       let totalConfigs = 0;
       let successCount = 0;
@@ -79,17 +79,30 @@ export const dailyDigest = schedules.task({
       // Process each user's digest configurations
       for (const userData of users) {
         try {
-          console.log(`Processing ${userData.digestConfigs.length} digest configs for user ${userData.userId} (${userData.userGithubLogin})`);
+          logger.info("Processing user digest configs", {
+            userId: userData.userId,
+            userGithubLogin: userData.userGithubLogin,
+            configCount: userData.digestConfigs.length
+          });
 
           for (const config of userData.digestConfigs) {
             totalConfigs++;
             try {
-              console.log(`Processing digest config "${config.name}" (${config.id}) for user ${userData.userId}`);
+              logger.info("Processing digest config", {
+                configId: config.id,
+                configName: config.name,
+                userId: userData.userId
+              });
 
               // Check if it's time to send this digest
               const now = new Date();
               if (!digestService.isDigestTimeMatched(config.digestTime, config.timezone, config.daysOfWeek, now)) {
-                console.log(`Config ${config.id} scheduled for ${config.digestTime} (${config.timezone}), current time ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}, skipping`);
+                logger.debug("Skipping config (not scheduled time)", {
+                  configId: config.id,
+                  scheduledTime: config.digestTime,
+                  timezone: config.timezone,
+                  currentTime: `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`
+                });
                 successCount++; // Count as success since it's not time yet
                 continue;
               }
@@ -97,18 +110,18 @@ export const dailyDigest = schedules.task({
               // Check if digest was already sent today for this config
               const alreadySent = await digestService.wasDigestSentToday(config.id, config.timezone);
               if (alreadySent) {
-                console.log(`Digest already sent today for config ${config.id}, skipping`);
+                logger.debug("Skipping config (already sent today)", { configId: config.id });
                 successCount++; // Count as success since already sent
                 continue;
               }
 
-              console.log(`Time matches for config ${config.id}, processing digest`);
+              logger.info("Time matches, processing digest", { configId: config.id });
 
               // Get execution data for this config
               const executionData = await digestConfigService.getDigestExecutionData(config.id);
 
               // Generate digest content
-              console.log(`Generating digest content for config ${config.id}`);
+              logger.info("Generating digest content", { configId: config.id });
               const digest = await digestService.generateDigestForConfig(executionData);
 
               // Send digest using the configured delivery method
@@ -121,31 +134,48 @@ export const dailyDigest = schedules.task({
                 const sent = await digestService.sendDigestForConfig(executionData, digest);
                 if (sent) {
                   successCount++;
-                  console.log(`Successfully sent digest for config ${config.id} (${config.name})`);
+                  logger.info("Successfully sent digest", {
+                    configId: config.id,
+                    configName: config.name,
+                    totalPRs
+                  });
                 } else {
                   errorCount++;
-                  console.log(`Failed to send digest for config ${config.id} (${config.name})`);
+                  logger.error("Failed to send digest", {
+                    configId: config.id,
+                    configName: config.name
+                  });
                 }
               } else {
-                console.log(`No PRs to report for config ${config.id}, skipping`);
+                logger.debug("No PRs to report, skipping", { configId: config.id });
                 successCount++; // Count as success since there was nothing to send
               }
 
             } catch (configError) {
               errorCount++;
-              console.error(`Error processing config ${config.id}:`, configError);
+              logger.error("Error processing config", {
+                configId: config.id,
+                error: configError
+              });
               // Continue with next config even if this one fails
             }
           }
 
         } catch (userError) {
           errorCount++;
-          console.error(`Error processing configs for user ${userData.userId}:`, userError);
+          logger.error("Error processing user configs", {
+            userId: userData.userId,
+            error: userError
+          });
           // Continue with next user even if this one fails
         }
       }
 
-      console.log(`Multiple digest processing complete: ${successCount} successful, ${errorCount} errors out of ${totalConfigs} total configs`);
+      logger.info("Multiple digest processing complete", {
+        totalConfigs,
+        successful: successCount,
+        errors: errorCount
+      });
 
       return {
         success: true,
@@ -159,7 +189,7 @@ export const dailyDigest = schedules.task({
       };
 
     } catch (error) {
-      console.error("Error in digest task:", error);
+      logger.error("Error in digest task", { error });
       throw error;
     } finally {
       await prisma.$disconnect();
@@ -171,21 +201,30 @@ export const dailyDigest = schedules.task({
 export const testDigestConfig = task({
   id: "test-digest-config",
   run: async (payload: { configId: string }) => {
-    console.log('Initializing SlackService in testDigestConfig task...');
+    logger.info("Initializing services for test digest");
     const slackService = new SlackService(configService, databaseService, pullRequestService);
-    console.log('SlackService initialized successfully in testDigestConfig task');
+    logger.info("SlackService initialized successfully");
 
     const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService, analyticsService, pullRequestService);
-    
+
     try {
       const { configId } = payload;
-      
+
+      logger.info("Getting execution data for test digest", { configId });
+
       // Get execution data for this config
       const executionData = await digestConfigService.getDigestExecutionData(configId);
 
       // Generate and send digest immediately (no waiting)
       const digest = await digestService.generateDigestForConfig(executionData);
       const sent = await digestService.sendDigestForConfig(executionData, digest);
+
+      logger.info("Test digest completed", {
+        configId,
+        configName: executionData.config.name,
+        sent,
+        totalPRs: digest.waitingOnUser.length + digest.approvedReadyToMerge.length + digest.userOpenPRs.length
+      });
 
       return {
         success: sent,
@@ -199,7 +238,7 @@ export const testDigestConfig = task({
       };
 
     } catch (error) {
-      console.error("Error in test digest config:", error);
+      logger.error("Error in test digest config", { error });
       throw error;
     } finally {
       await prisma.$disconnect();

@@ -1,4 +1,4 @@
-import { task, schedules } from "@trigger.dev/sdk";
+import { task, schedules, logger } from "@trigger.dev/sdk";
 import { PrismaClient } from "@prisma/client";
 import { DatabaseService } from "../src/database/database.service";
 import { GitHubService } from "../src/github/services/github.service";
@@ -30,12 +30,12 @@ export const syncPullRequestState = schedules.task({
   cron: "*/30 * * * *",
   run: async () => {
     try {
-      console.log('Starting PR state sync task');
+      logger.info("Starting PR state sync task");
 
       // Get open PRs that haven't been synced in 30+ minutes
       const stalePRs = await pullRequestService.getStaleOpenPRs(30, 50);
 
-      console.log(`Found ${stalePRs.length} stale PRs to sync`);
+      logger.info("Found stale PRs to sync", { count: stalePRs.length });
 
       if (stalePRs.length === 0) {
         return {
@@ -53,7 +53,10 @@ export const syncPullRequestState = schedules.task({
         try {
           const [owner, repo] = pr.repositoryName.split('/');
 
-          console.log(`Syncing PR ${pr.repositoryName}#${pr.number}`);
+          logger.info("Syncing PR", {
+            repositoryName: pr.repositoryName,
+            prNumber: pr.number
+          });
 
           // Sync from GitHub API
           // Note: This uses installation token, so it works without user tokens
@@ -64,12 +67,20 @@ export const syncPullRequestState = schedules.task({
 
           successCount++;
         } catch (error) {
-          console.error(`Error syncing PR ${pr.repositoryName}#${pr.number}:`, error);
+          logger.error("Error syncing PR", {
+            repositoryName: pr.repositoryName,
+            prNumber: pr.number,
+            error
+          });
           errorCount++;
         }
       }
 
-      console.log(`PR sync task completed: ${successCount} synced, ${errorCount} errors`);
+      logger.info("PR sync task completed", {
+        synced: successCount,
+        errors: errorCount,
+        total: stalePRs.length
+      });
 
       return {
         success: true,
@@ -79,7 +90,7 @@ export const syncPullRequestState = schedules.task({
         total: stalePRs.length,
       };
     } catch (error) {
-      console.error('Error in PR sync task:', error);
+      logger.error("Error in PR sync task", { error });
       throw error;
     } finally {
       await prisma.$disconnect();

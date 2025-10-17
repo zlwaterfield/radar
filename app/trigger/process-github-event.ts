@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk";
+import { task, logger } from "@trigger.dev/sdk";
 import { PrismaClient } from "@prisma/client";
 import { WebClient } from "@slack/web-api";
 import { NotificationService } from "../src/notifications/services/notification.service";
@@ -65,7 +65,7 @@ export const processGitHubEvent = task({
       }
 
       if (event.processed) {
-        console.log(`Event ${payload.eventId} already processed, skipping`);
+        logger.info("Event already processed, skipping", { eventId: payload.eventId });
         return { success: true, message: "Event already processed" };
       }
 
@@ -83,7 +83,10 @@ export const processGitHubEvent = task({
           },
         });
 
-        console.log(`Successfully processed event ${payload.eventId}`);
+        logger.info("Successfully processed event", {
+          eventId: payload.eventId,
+          eventType: payload.eventType
+        });
         return {
           success: true,
           message: `Successfully processed ${payload.eventType} event`,
@@ -93,7 +96,10 @@ export const processGitHubEvent = task({
         throw new Error(`Failed to process event ${payload.eventId}`);
       }
     } catch (error) {
-      console.error(`Error processing event ${payload.eventId}:`, error);
+      logger.error("Error processing event", {
+        eventId: payload.eventId,
+        error
+      });
       throw error;
     } finally {
       await prisma.$disconnect();
@@ -106,8 +112,11 @@ export const processGitHubEvent = task({
  */
 async function processEventNotifications(event: any): Promise<boolean> {
   try {
-    console.log(`Processing notifications for event ${event.id} (${event.eventType})`);
-    
+    logger.info("Processing event notifications", {
+      eventId: event.id,
+      eventType: event.eventType
+    });
+
     const { eventType, action, payload, repositoryName } = event;
     
     // Track webhook event
@@ -121,13 +130,17 @@ async function processEventNotifications(event: any): Promise<boolean> {
     const relevantUsers = await getRelevantUsers(repositoryName, payload);
     
     if (relevantUsers.length === 0) {
-      console.log(`No relevant users found for ${eventType} in ${repositoryName}`);
+      logger.debug("No relevant users found", { eventType, repositoryName });
       return true;
     }
 
     // Create notifications for each relevant user
     let notificationCount = 0;
-    console.log(`Processing notifications for ${relevantUsers.length} users for ${eventType} in ${repositoryName}`);
+    logger.info("Processing notifications for users", {
+      userCount: relevantUsers.length,
+      eventType,
+      repositoryName
+    });
     
     for (const user of relevantUsers) {
       const startTime = Date.now();
@@ -136,13 +149,17 @@ async function processEventNotifications(event: any): Promise<boolean> {
       let matchDetails = {};
       let reason: string | undefined;
       let context: any | undefined;
-      
-      console.log(`\n--- Processing user ${user.id} (${user.githubLogin}) for ${eventType} ---`);
-      
+
+      logger.debug("Processing user for event", {
+        userId: user.id,
+        userGithubLogin: user.githubLogin,
+        eventType
+      });
+
       // Use the profile-based notification service
       const eventTypeMap = {
         'pull_request': 'pull_request' as const,
-        'issue_comment': 'issue_comment' as const, 
+        'issue_comment': 'issue_comment' as const,
         'issues': 'issue' as const,
         'pull_request_review': 'pull_request_review' as const,
         'pull_request_review_comment': 'pull_request_review_comment' as const,
@@ -159,38 +176,54 @@ async function processEventNotifications(event: any): Promise<boolean> {
         context = decision.context;
       } else {
         // For other event types, use the legacy shouldNotifyUser for now
-        console.log(`Using legacy notification logic for ${eventType}`);
+        logger.debug("Using legacy notification logic", { eventType });
         shouldNotify = await shouldNotifyUser(user, eventType, action, payload);
         reason = shouldNotify ? 'LEGACY_LOGIC' : 'LEGACY_SKIP';
         context = { eventType, action, legacyLogic: true };
       }
-      
+
       const processingTime = Date.now() - startTime;
-      console.log(`Decision: ${shouldNotify ? 'NOTIFY' : 'SKIP'} - Reason: ${reason} (${processingTime}ms)`);
+      logger.info("Notification decision made", {
+        decision: shouldNotify ? 'NOTIFY' : 'SKIP',
+        reason,
+        processingTimeMs: processingTime,
+        userId: user.id
+      });
       
       if (shouldNotify) {
         // Create and send the actual notification
         const notification = await createNotification(user, event, eventType, action, payload, repositoryName, reason, context, decision);
         if (notification) {
           notificationCount++;
-          console.log(`✅ Successfully created notification ${notification.id} for user ${user.githubLogin}`);
-          
-          // Log keyword matches if any
-          if (matchedKeywords.length > 0) {
-            console.log(`🔍 Keywords matched: ${matchedKeywords.join(', ')}`);
-          }
+          logger.info("Successfully created notification", {
+            notificationId: notification.id,
+            userId: user.id,
+            userGithubLogin: user.githubLogin,
+            matchedKeywords: matchedKeywords.length > 0 ? matchedKeywords : undefined
+          });
         } else {
-          console.error(`❌ Failed to create notification for user ${user.githubLogin}`);
+          logger.error("Failed to create notification", {
+            userId: user.id,
+            userGithubLogin: user.githubLogin
+          });
         }
       } else {
-        console.log(`⏭️ Skipped notification for user ${user.githubLogin} - ${reason}`);
+        logger.debug("Skipped notification for user", {
+          userId: user.id,
+          userGithubLogin: user.githubLogin,
+          reason
+        });
       }
     }
 
-    console.log(`Created ${notificationCount} notifications for ${eventType} in ${repositoryName}`);
+    logger.info("Event notification processing complete", {
+      notificationCount,
+      eventType,
+      repositoryName
+    });
     return true;
   } catch (error) {
-    console.error('Error processing event notifications:', error);
+    logger.error("Error processing event notifications", { error });
     return false;
   }
 }
@@ -229,7 +262,7 @@ async function getRelevantUsers(repositoryName: string, payload: any): Promise<a
 
     return users;
   } catch (error) {
-    console.error('Error getting relevant users:', error);
+    logger.error("Error getting relevant users", { error });
     return [];
   }
 }
@@ -260,7 +293,7 @@ async function shouldNotifyUser(user: any, eventType: string, action: string, pa
 
     return true;
   } catch (error) {
-    console.error('Error checking if user should be notified:', error);
+    logger.error("Error checking if user should be notified", { error });
     return true; // Default to sending notification on error
   }
 }
@@ -320,14 +353,21 @@ async function createNotification(
         where: { id: notification.id },
         data: { messageTs: slackResult.messageTs }
       });
-      console.log(`Successfully sent Slack notification ${notification.id} for user ${user.id} (ts: ${slackResult.messageTs})`);
+      logger.info("Successfully sent Slack notification", {
+        notificationId: notification.id,
+        userId: user.id,
+        messageTs: slackResult.messageTs
+      });
     } else {
-      console.warn(`Failed to send Slack notification ${notification.id} for user ${user.id}`);
+      logger.warn("Failed to send Slack notification", {
+        notificationId: notification.id,
+        userId: user.id
+      });
     }
-    
+
     return notification;
   } catch (error) {
-    console.error('Error creating notification:', error);
+    logger.error("Error creating notification", { error });
     return null;
   }
 }
@@ -338,73 +378,93 @@ async function createNotification(
 async function sendSlackNotificationWithResult(user: any, notificationData: any, notificationDecision?: any): Promise<{ success: boolean; messageTs?: string }> {
   try {
     if (!user.slackId || !user.slackBotToken) {
-      console.warn(`User ${user.id} missing Slack credentials`);
+      logger.warn("User missing Slack credentials", { userId: user.id });
       return { success: false };
     }
 
     // Initialize Slack client with user's bot token
     const slack = new WebClient(user.slackBotToken);
     const slackMessage = await createSlackMessage(notificationData, notificationDecision);
-    
+
     // Determine delivery target based on notification profile
     let targetChannel: string;
     let deliveryType = 'dm'; // Default to DM if no profile match
-    
+
     // Check if we have a notification decision with profile information
     if (notificationDecision?.primaryProfile?.profile) {
       const profile = notificationDecision.primaryProfile.profile;
       deliveryType = profile.deliveryType;
-      
+
       if (profile.deliveryType === 'channel' && profile.deliveryTarget) {
         // Send to specified channel
         targetChannel = profile.deliveryTarget;
-        console.log(`Routing notification to channel ${targetChannel} based on profile "${profile.name}"`);
+        logger.info("Routing notification to channel", {
+          channel: targetChannel,
+          profileName: profile.name,
+          userId: user.id
+        });
       } else {
         // Send to DM (deliveryType is 'dm' or no deliveryTarget specified)
         const dmResponse = await slack.conversations.open({
           users: user.slackId
         });
-        
+
         if (!dmResponse.ok || !dmResponse.channel?.id) {
-          console.error(`Failed to open DM channel for user ${user.id}:`, dmResponse.error);
+          logger.error("Failed to open DM channel", {
+            userId: user.id,
+            error: dmResponse.error
+          });
           return { success: false };
         }
-        
+
         targetChannel = dmResponse.channel.id;
-        console.log(`Routing notification to DM based on profile "${profile.name}"`);
+        logger.info("Routing notification to DM", {
+          profileName: profile.name,
+          userId: user.id
+        });
       }
     } else {
       // Fallback to DM if no profile information available
       const dmResponse = await slack.conversations.open({
         users: user.slackId
       });
-      
+
       if (!dmResponse.ok || !dmResponse.channel?.id) {
-        console.error(`Failed to open DM channel for user ${user.id}:`, dmResponse.error);
+        logger.error("Failed to open DM channel (fallback)", {
+          userId: user.id,
+          error: dmResponse.error
+        });
         return { success: false };
       }
-      
+
       targetChannel = dmResponse.channel.id;
-      console.log(`Routing notification to DM (fallback - no profile match)`);
+      logger.info("Routing notification to DM (fallback)", { userId: user.id });
     }
-    
+
     // Send message to the determined target
     const messageResponse = await slack.chat.postMessage({
       channel: targetChannel,
       ...slackMessage
     });
-    
+
     if (messageResponse.ok && messageResponse.ts) {
       const deliveryLocation = deliveryType === 'channel' ? `channel ${targetChannel}` : 'DM';
-      console.log(`Successfully sent Slack notification to user ${user.id} via ${deliveryLocation} (ts: ${messageResponse.ts})`);
+      logger.info("Successfully sent Slack message", {
+        userId: user.id,
+        deliveryLocation,
+        messageTs: messageResponse.ts
+      });
       return { success: true, messageTs: messageResponse.ts };
     } else {
-      console.error(`Failed to send Slack message to user ${user.id}:`, messageResponse.error);
+      logger.error("Failed to send Slack message", {
+        userId: user.id,
+        error: messageResponse.error
+      });
       return { success: false };
     }
-    
+
   } catch (error) {
-    console.error('Error sending Slack notification:', error);
+    logger.error("Error sending Slack notification", { error });
     return { success: false };
   }
 }
@@ -509,7 +569,7 @@ async function fetchPRState(repositoryName: string, prNumber: number): Promise<a
 
     return pr;
   } catch (error) {
-    console.error('Error fetching PR state:', error);
+    logger.error("Error fetching PR state", { error, repositoryName, prNumber });
     return null;
   }
 }
@@ -1260,11 +1320,11 @@ async function syncPullRequestState(event: any): Promise<void> {
   }
 
   try {
-    console.log(`Syncing PR state for ${eventType} event`);
+    logger.info("Syncing PR state from webhook", { eventType });
     await pullRequestSyncService.syncFromWebhook(payload);
-    console.log(`Successfully synced PR state for ${eventType} event`);
+    logger.info("Successfully synced PR state", { eventType });
   } catch (error) {
-    console.error(`Error syncing PR state for ${eventType}:`, error);
+    logger.error("Error syncing PR state", { eventType, error });
     // Don't throw - we don't want to fail the entire event processing if PR sync fails
   }
 }
