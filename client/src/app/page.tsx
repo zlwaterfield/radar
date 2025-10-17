@@ -200,7 +200,7 @@ export default function Home() {
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Daily Digests</h2>
                   </div>
                   <p className="text-lg text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                    Schedule personalized digest summaries of GitHub activity. Multiple configurations for different teams, repositories, and time zones. Never lose track of what's happening.
+                    Schedule personalized digest summaries of GitHub activity. Multiple configurations for different teams, repositories, and time zones. Never lose track of what&apos;s happening.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <span className="text-xs font-mono px-3 py-1.5 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 font-semibold">Scheduled</span>
