@@ -4,21 +4,22 @@ import { AuthService } from './services/auth.service';
 import { AuthController } from './controllers/auth.controller';
 import { AuthGuard } from './guards/auth.guard';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { DigestModule } from '../digest/digest.module';
+import { DigestConfigService } from '../digest/digest-config.service';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { StripeModule } from '../stripe/stripe.module';
+import { DatabaseModule } from '../database/database.module';
 import { auth } from './auth.config';
 
 @Module({
   imports: [
     BetterAuthModule.forRoot(auth),
     forwardRef(() => NotificationsModule),
-    forwardRef(() => DigestModule),
+    DatabaseModule,
     AnalyticsModule,
     StripeModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthGuard],
+  providers: [AuthService, AuthGuard, DigestConfigService],
   exports: [AuthService, AuthGuard],
 })
 export class RadarAuthModule {}
