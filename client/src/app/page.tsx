@@ -42,7 +42,7 @@ export default function Home() {
             <GitHubStarButton repo="zlwaterfield/radar" />
             {isAuthenticated ? (
               <Button
-                onClick={() => router.push('/settings/notifications')}
+                onClick={() => router.push('/dashboard')}
                 variant="secondary"
                 icon={<FiArrowRight size={18} />}
                 iconPosition="right"

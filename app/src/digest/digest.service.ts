@@ -5,6 +5,7 @@ import { SlackService } from '../slack/services/slack.service';
 import { DigestConfigService } from './digest-config.service';
 import { GitHubIntegrationService } from '../integrations/services/github-integration.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { PullRequestService, PullRequestWithRelations } from '../pull-requests/services/pull-request.service';
 import type { GitHubPullRequest } from '../common/types/github.types';
 import type {
   DigestPRCategory,
@@ -23,7 +24,101 @@ export class DigestService {
     private readonly digestConfigService: DigestConfigService,
     private readonly githubIntegrationService: GitHubIntegrationService,
     private readonly analyticsService: AnalyticsService,
+    private readonly pullRequestService: PullRequestService,
   ) {}
+
+  /**
+   * Map database PR to GitHub PR format
+   */
+  private mapDatabasePRToGitHub(pr: PullRequestWithRelations): GitHubPullRequest {
+    // Extract owner and repo from repositoryName (format: "owner/repo")
+    const [owner, repo] = pr.repositoryName.split('/');
+
+    return {
+      id: parseInt(pr.githubId),
+      number: pr.number,
+      title: pr.title,
+      body: pr.body || '',
+      html_url: pr.url,
+      state: pr.state as 'open' | 'closed',
+      draft: pr.isDraft,
+      merged: pr.isMerged,
+      mergeable: undefined, // Not stored in DB
+      mergeable_state: undefined,
+      user: {
+        id: parseInt(pr.authorGithubId),
+        login: pr.authorLogin,
+        avatar_url: pr.authorAvatarUrl || '',
+        html_url: `https://github.com/${pr.authorLogin}`,
+      },
+      requested_reviewers: (pr.reviewers || [])
+        .filter((r: any) => r.reviewState === 'pending')
+        .map((r: any) => ({
+          id: parseInt(r.githubId),
+          login: r.login,
+          avatar_url: r.avatarUrl || '',
+          html_url: `https://github.com/${r.login}`,
+        })),
+      assignees: (pr.assignees || []).map((a: any) => ({
+        id: parseInt(a.githubId),
+        login: a.login,
+        avatar_url: a.avatarUrl || '',
+        html_url: `https://github.com/${a.login}`,
+      })),
+      base: {
+        ref: pr.baseBranch,
+        sha: '', // Not stored in DB
+        repo: {
+          id: parseInt(pr.repositoryId),
+          full_name: pr.repositoryName,
+          name: repo,
+          html_url: `https://github.com/${pr.repositoryName}`,
+          private: false, // Not stored in DB
+          fork: false, // Not stored in DB
+          created_at: '', // Not stored in DB
+          updated_at: '', // Not stored in DB
+          default_branch: 'main', // Not stored in DB
+          owner: {
+            id: 0, // Not stored in DB
+            login: owner,
+            avatar_url: '',
+            html_url: `https://github.com/${owner}`,
+          },
+        },
+      },
+      head: {
+        ref: pr.headBranch,
+        sha: '', // Not stored in DB
+        repo: {
+          id: parseInt(pr.repositoryId),
+          full_name: pr.repositoryName,
+          name: repo,
+          html_url: `https://github.com/${pr.repositoryName}`,
+          private: false,
+          fork: false,
+          created_at: '',
+          updated_at: '',
+          default_branch: 'main', // Not stored in DB
+          owner: {
+            id: 0,
+            login: owner,
+            avatar_url: '',
+            html_url: `https://github.com/${owner}`,
+          },
+        },
+      },
+      created_at: pr.createdAt.toISOString(),
+      updated_at: pr.updatedAt.toISOString(),
+      closed_at: pr.closedAt?.toISOString(),
+      merged_at: pr.mergedAt?.toISOString(),
+      comments: 0, // Not stored in DB
+      review_comments: 0, // Not stored in DB
+      commits: 0, // Not stored in DB
+      additions: pr.additions,
+      deletions: pr.deletions,
+      changed_files: pr.changedFiles,
+    };
+  }
 
   /**
    * Check if PR is waiting on user for review
@@ -33,6 +128,54 @@ export class DigestService {
     return pr.requested_reviewers.some(
       (reviewer: any) => reviewer.login === userLogin,
     );
+  }
+
+  /**
+   * Check if PR is waiting on user (database version)
+   */
+  private isPRWaitingOnUserDB(pr: PullRequestWithRelations, userGithubId: string): boolean {
+    // Check if user has pending review
+    return (pr.reviewers || []).some(
+      (reviewer: any) => reviewer.githubId === userGithubId && reviewer.reviewState === 'pending',
+    );
+  }
+
+  /**
+   * Check if user's PR is approved by others and ready to merge (database version)
+   */
+  private async isPRApprovedByOthersAndReadyDB(
+    pr: PullRequestWithRelations,
+    userGithubId: string,
+    userLogin: string,
+  ): Promise<boolean> {
+    try {
+      // Must be user's own PR
+      if (pr.authorGithubId !== userGithubId) {
+        return false;
+      }
+
+      // Check if PR is not a draft
+      if (pr.isDraft) {
+        this.logger.debug(`PR #${pr.number} is draft, not ready to merge`);
+        return false;
+      }
+
+      // Check if there are any approvals from other users (not the PR author)
+      const otherApprovals = (pr.reviewers || []).filter(
+        (reviewer: any) =>
+          reviewer.githubId !== userGithubId &&
+          reviewer.reviewState === 'approved'
+      );
+
+      this.logger.debug(
+        `PR #${pr.number} has ${otherApprovals.length} approvals from others`,
+      );
+
+      return otherApprovals.length > 0;
+    } catch (error) {
+      this.logger.warn(`Error checking PR approval status: ${error}`);
+      return false;
+    }
   }
 
   /**
@@ -835,7 +978,7 @@ export class DigestService {
   }
 
   /**
-   * Process a single repository for digest generation
+   * Process a single repository for digest generation (database version)
    */
   private async processRepositoryForDigest(
     repo: { owner: string; repo: string; githubId: string },
@@ -844,19 +987,38 @@ export class DigestService {
     accessToken: string,
     teamMemberLogins: string[] = [],
   ): Promise<void> {
-    // Get open PRs for this repository
-    const openPRs = await this.githubService.getPullRequests(
-      repo.owner,
-      repo.repo,
-      'open',
-      accessToken,
-    );
+    // Get user details for GitHub ID lookups
+    const user = await this.databaseService.user.findUnique({
+      where: { id: executionData.userId },
+      select: { githubId: true },
+    });
+
+    if (!user?.githubId) {
+      this.logger.warn(`User ${executionData.userId} has no GitHub ID`);
+      return;
+    }
+
+    const userGithubId = user.githubId;
+
+    // Get open PRs from database for this repository
+    const openPRs = await this.pullRequestService.listPullRequests({
+      state: 'open',
+      repositoryIds: [repo.githubId],
+      includeReviewers: true,
+      includeLabels: true,
+      includeChecks: true,
+      includeAssignees: true,
+      limit: 200, // Higher limit for digest
+    });
 
     this.logger.log(
-      `[Digest Debug] Found ${openPRs.length} open PRs in ${repo.owner}/${repo.repo}`,
+      `[Digest Debug] Found ${openPRs.length} open PRs in ${repo.owner}/${repo.repo} from database`,
     );
 
-    for (const pr of openPRs) {
+    for (const dbPR of openPRs) {
+      // Map database PR to GitHub format for existing logic
+      const pr = this.mapDatabasePRToGitHub(dbPR);
+
       this.logger.log(
         `[Digest Debug] Processing PR #${pr.number}: "${pr.title}" by ${pr.user.login}, draft: ${pr.draft}, state: ${pr.state}`,
       );
@@ -880,7 +1042,7 @@ export class DigestService {
 
       // Check if this is the user's own PR first
       const isUsersPR = pr.user.login === executionData.userGithubLogin;
-      const isWaitingOnUser = this.isPRWaitingOnUser(pr, executionData.userGithubLogin);
+      const isWaitingOnUser = this.isPRWaitingOnUserDB(dbPR, userGithubId);
 
       this.logger.log(
         `[CATEGORIZATION] PR #${pr.number}: isUsersPR=${isUsersPR}, isWaitingOnUser=${isWaitingOnUser}, scopeType=${executionData.config.scopeType}, teamMembersCount=${teamMemberLogins.length}`,
@@ -892,12 +1054,10 @@ export class DigestService {
         );
 
         // Category 2: User's PRs approved by others and ready to merge
-        const isApprovedAndReady = await this.isPRApprovedByOthersAndReady(
-          pr,
-          repo.owner,
-          repo.repo,
+        const isApprovedAndReady = await this.isPRApprovedByOthersAndReadyDB(
+          dbPR,
+          userGithubId,
           executionData.userGithubLogin,
-          accessToken,
         );
 
         if (isApprovedAndReady) {

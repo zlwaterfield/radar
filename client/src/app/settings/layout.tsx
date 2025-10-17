@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
-import { FiBell, FiCalendar, FiGitBranch, FiUsers, FiSearch, FiGithub, FiLogOut, FiMessageSquare, FiCreditCard, FiHash } from 'react-icons/fi';
+import { FiBell, FiCalendar, FiGitBranch, FiUsers, FiSearch, FiGithub, FiLogOut, FiMessageSquare, FiCreditCard, FiHash, FiHome } from 'react-icons/fi';
 import { useSurvey } from '@/hooks/useSurvey';
 
 export default function SettingsLayout({
@@ -49,6 +49,17 @@ export default function SettingsLayout({
         </div>
         <nav className="mt-4 flex-grow px-2">
           <ul className="space-y-1">
+          <li>
+            <Link href="/dashboard"
+              className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
+                isActive('/dashboard')
+                  ? 'bg-gradient-to-r from-marian-blue-600 to-federal-blue-700 text-white font-medium shadow-md'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}>
+              <FiHome size={20} className="mr-3 flex-shrink-0" />
+              Dashboard
+            </Link>
+          </li>
           <li>
             <Link href="/settings/notifications"
               className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
@@ -178,6 +189,7 @@ export default function SettingsLayout({
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+              {pathname === '/dashboard' && 'Dashboard'}
               {pathname === '/settings/notifications' && 'Notifications'}
               {pathname === '/settings/digest' && 'Digests'}
               {pathname === '/settings/keywords' && 'Keywords'}

@@ -10,7 +10,8 @@ import { GitHubTokenService } from "../src/github/services/github-token.service"
 import { GitHubIntegrationService } from "../src/integrations/services/github-integration.service";
 import { AnalyticsService } from "../src/analytics/analytics.service";
 import { EntitlementsService } from "../src/stripe/services/entitlements.service";
-import { KeywordService } from "../src/keywords/services/keyword.service";
+import { PullRequestSyncService } from "../src/pull-requests/services/pull-request-sync.service";
+import { PullRequestService } from "../src/pull-requests/services/pull-request.service";
 import { ConfigService } from "@nestjs/config";
 
 // Initialize Prisma client for the task
@@ -25,9 +26,10 @@ const githubTokenService = new GitHubTokenService(configService, databaseService
 const githubService = new GitHubService(configService, databaseService, analyticsService, githubTokenService);
 const llmAnalyzerService = new LLMAnalyzerService(configService, databaseService);
 const entitlementsService = new EntitlementsService(databaseService, configService);
-const keywordService = new KeywordService(databaseService, entitlementsService);
+const pullRequestSyncService = new PullRequestSyncService(databaseService, githubService);
+const pullRequestService = new PullRequestService(databaseService);
 // Initialize all services properly
-const notificationProfileService = new NotificationProfileService(databaseService, analyticsService, entitlementsService, keywordService);
+const notificationProfileService = new NotificationProfileService(databaseService, analyticsService, entitlementsService);
 const notificationService = new NotificationService(databaseService, githubService, githubTokenService, llmAnalyzerService, notificationProfileService, analyticsService);
 
 // Event processing task payload
@@ -66,6 +68,9 @@ export const processGitHubEvent = task({
         console.log(`Event ${payload.eventId} already processed, skipping`);
         return { success: true, message: "Event already processed" };
       }
+
+      // Sync PR state if this is a PR-related event
+      await syncPullRequestState(event);
 
       const success = await processEventNotifications(event);
 
@@ -339,7 +344,7 @@ async function sendSlackNotificationWithResult(user: any, notificationData: any,
 
     // Initialize Slack client with user's bot token
     const slack = new WebClient(user.slackBotToken);
-    const slackMessage = createSlackMessage(notificationData, notificationDecision);
+    const slackMessage = await createSlackMessage(notificationData, notificationDecision);
     
     // Determine delivery target based on notification profile
     let targetChannel: string;
@@ -433,19 +438,19 @@ const EVENT_COLORS: Record<string, string> = {
 /**
  * Create Slack message structure with proper formatting
  */
-function createSlackMessage(data: any, notificationDecision?: any) {
+async function createSlackMessage(data: any, notificationDecision?: any) {
   const { eventType } = data;
-  
+
   if (eventType === 'pull_request') {
-    return createPRSlackMessage(data, notificationDecision);
+    return await createPRSlackMessage(data, notificationDecision);
   } else if (eventType === 'issues') {
     return createIssueSlackMessage(data, notificationDecision);
   } else if (eventType === 'pull_request_review') {
-    return createPRReviewSlackMessage(data, notificationDecision);
+    return await createPRReviewSlackMessage(data, notificationDecision);
   } else if (eventType === 'pull_request_review_comment') {
-    return createPRReviewCommentSlackMessage(data, notificationDecision);
+    return await createPRReviewCommentSlackMessage(data, notificationDecision);
   } else if (eventType === 'issue_comment') {
-    return createIssueCommentSlackMessage(data, notificationDecision);
+    return await createIssueCommentSlackMessage(data, notificationDecision);
   } else {
     throw new Error(`Unknown event type: ${eventType}`);
   }
@@ -461,20 +466,17 @@ function createKeywordMatchBlock(notificationDecision?: any): any[] {
 
   const matchedKeywords = notificationDecision.primaryProfile.matchedKeywords;
   const matchDetails = notificationDecision.primaryProfile.matchDetails || {};
-  const profileName = notificationDecision.primaryProfile.profile?.name;
 
-  const keywordText = matchedKeywords.length === 1 
+  const keywordText = matchedKeywords.length === 1
     ? `🎯 *Keyword Match*: ${matchedKeywords[0]}`
     : `🎯 *Keywords Matched*: ${matchedKeywords.join(', ')}`;
-
-  const profileText = profileName ? `\n_From profile: "${profileName}"_` : '';
 
   return [
     {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `${keywordText}${profileText}`
+        text: keywordText
       }
     },
     {
@@ -484,14 +486,132 @@ function createKeywordMatchBlock(notificationDecision?: any): any[] {
 }
 
 /**
+ * Fetch PR state from database
+ */
+async function fetchPRState(repositoryName: string, prNumber: number): Promise<any | null> {
+  try {
+    const repository = await prisma.userRepository.findFirst({
+      where: {
+        fullName: repositoryName
+      },
+      select: { githubId: true },
+    });
+
+    if (!repository?.githubId) {
+      return null;
+    }
+
+    const pr = await pullRequestService.findByRepoAndNumber(
+      repository.githubId,
+      prNumber,
+      true, // include relations
+    );
+
+    return pr;
+  } catch (error) {
+    console.error('Error fetching PR state:', error);
+    return null;
+  }
+}
+
+/**
+ * Format PR state blocks for Slack
+ */
+function createPRStateBlocks(prState: any): any[] {
+  if (!prState) return [];
+
+  const blocks: any[] = [];
+
+  // Reviewers section
+  if (prState.reviewers && prState.reviewers.length > 0) {
+    const reviewerText = prState.reviewers
+      .map((r: any) => {
+        let icon = '⏳'; // Pending
+        if (r.reviewState === 'approved') icon = '✅';
+        else if (r.reviewState === 'changes_requested') icon = '❌';
+        else if (r.reviewState === 'commented') icon = '💬';
+        else if (r.reviewState === 'dismissed') icon = '🚫';
+        return `${icon} @${r.login}`;
+      })
+      .join(', ');
+
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `👥 *Reviewers:* ${reviewerText}`,
+        },
+      ],
+    });
+  }
+
+  // Labels section
+  if (prState.labels && prState.labels.length > 0) {
+    const labelsText = prState.labels
+      .map((l: any) => `\`${l.name}\``)
+      .join(' ');
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `🏷️ ${labelsText}`,
+        },
+      ],
+    });
+  }
+
+  // CI/CD checks section
+  if (prState.checks && prState.checks.length > 0) {
+    const passing = prState.checks.filter(
+      (c: any) => c.status === 'completed' && c.conclusion === 'success'
+    ).length;
+    const failing = prState.checks.filter(
+      (c: any) => c.status === 'completed' && c.conclusion === 'failure'
+    ).length;
+    const pending = prState.checks.filter((c: any) => c.status !== 'completed').length;
+    const total = prState.checks.length;
+
+    let icon = '✅';
+    let text = `${passing}/${total} checks passing`;
+
+    if (failing > 0) {
+      icon = '❌';
+      text = `${passing}/${total} checks passing, ${failing} failing`;
+    } else if (pending > 0) {
+      icon = '⏳';
+      text = `${passing}/${total} checks completed`;
+    }
+
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `🔧 *CI:* ${icon} ${text}`,
+        },
+      ],
+    });
+  }
+
+  return blocks;
+}
+
+/**
  * Create Slack message for pull request notifications
  */
-function createPRSlackMessage(data: any, notificationDecision?: any) {
+async function createPRSlackMessage(data: any, notificationDecision?: any) {
   const { action, repositoryName, title, url, payload } = data;
+  const prNumber = payload.pull_request?.number;
+
+  // Fetch PR state from database
+  const prState = prNumber ? await fetchPRState(repositoryName, prNumber) : null;
+
   // Determine actual action for merged PRs
   const actualAction = (action === "closed" && payload.pull_request?.merged) ? "merged" : action;
   const color = EVENT_COLORS[actualAction] || EVENT_COLORS.default;
-  
+
   // Create icon based on action
   let icon = "🔄";  // Default icon
   if (action === "opened") icon = "🆕";
@@ -500,11 +620,11 @@ function createPRSlackMessage(data: any, notificationDecision?: any) {
   else if (action === "merged") icon = "🔀";
   else if (action === "review_requested") icon = "👀";
   else if (action === "assigned") icon = "👤";
-  
+
   // Create GitHub user link
   const user = payload.pull_request?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
-  
+
   // Create contextual text based on action
   let contextText;
   if (action === "opened") {
@@ -526,7 +646,7 @@ function createPRSlackMessage(data: any, notificationDecision?: any) {
   } else {
     contextText = `${githubUserLink} ${action} a PR in *${repositoryName}*`;
   }
-  
+
   // Create blocks with attachment styling, putting PR title in main message
   const blocks = [
     {
@@ -558,6 +678,12 @@ function createPRSlackMessage(data: any, notificationDecision?: any) {
   // Add keyword match information if this was triggered by keywords
   const keywordBlocks = createKeywordMatchBlock(notificationDecision);
   blocks.push(...keywordBlocks);
+
+  // Add PR state blocks (reviewers, labels, CI checks)
+  if (prState) {
+    const prStateBlocks = createPRStateBlocks(prState);
+    blocks.push(...prStateBlocks);
+  }
 
   // Add PR statistics for opened and review_requested actions
   if (action === "opened" || action === "review_requested") {
@@ -713,27 +839,31 @@ function createIssueSlackMessage(data: any, notificationDecision?: any) {
 /**
  * Create Slack message for pull request review notifications
  */
-function createPRReviewSlackMessage(data: any, notificationDecision?: any) {
+async function createPRReviewSlackMessage(data: any, notificationDecision?: any) {
   const { action, repositoryName, title, message, url, payload } = data;
-  
+  const prNumber = payload.pull_request?.number;
+
+  // Fetch PR state from database
+  const prState = prNumber ? await fetchPRState(repositoryName, prNumber) : null;
+
   // Map review state to color
   const reviewState = payload.review?.state || action;
   const color = EVENT_COLORS[reviewState] || EVENT_COLORS.default;
-  
+
   // Create icon based on review state
   let icon = "💬";  // Default icon
   if (reviewState === "approved") icon = "✅";
   else if (reviewState === "changes_requested") icon = "❌";
   else if (reviewState === "commented") icon = "💬";
   else if (reviewState === "dismissed") icon = "🚫";
-  
+
   // Create GitHub user link
   const user = payload.review?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
 
   let reviewStateText = reviewState;
   if (reviewState === "changes_requested") reviewStateText = "requested changes";
-  
+
   // Create blocks with PR title prominently displayed
   const blocks = [
     {
@@ -765,7 +895,13 @@ function createPRReviewSlackMessage(data: any, notificationDecision?: any) {
   // Add keyword match information if this was triggered by keywords
   const keywordBlocks = createKeywordMatchBlock(notificationDecision);
   blocks.push(...keywordBlocks);
-  
+
+  // Add PR state blocks (reviewers, labels, CI checks)
+  if (prState) {
+    const prStateBlocks = createPRStateBlocks(prState);
+    blocks.push(...prStateBlocks);
+  }
+
   // Add review comment if present
   if (payload.review?.body) {
     blocks.push({
@@ -801,15 +937,19 @@ function createPRReviewSlackMessage(data: any, notificationDecision?: any) {
 /**
  * Create Slack message for pull request comment notifications
  */
-function createPRReviewCommentSlackMessage(data: any, notificationDecision?: any) {
+async function createPRReviewCommentSlackMessage(data: any, notificationDecision?: any) {
   const { repositoryName, title, message, url, payload } = data;
+  const prNumber = payload.pull_request?.number;
   const color = EVENT_COLORS.commented;
-  
+
+  // Fetch PR state from database
+  const prState = prNumber ? await fetchPRState(repositoryName, prNumber) : null;
+
   // Create GitHub user link
   const user = payload.comment?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
-  
-  // Create blocks with PR title prominently displayed  
+
+  // Create blocks with PR title prominently displayed
   const blocks = [
     {
       type: 'section',
@@ -840,6 +980,12 @@ function createPRReviewCommentSlackMessage(data: any, notificationDecision?: any
   // Add keyword match information if this was triggered by keywords
   const keywordBlocks = createKeywordMatchBlock(notificationDecision);
   blocks.push(...keywordBlocks);
+
+  // Add PR state blocks (reviewers, labels, CI checks)
+  if (prState) {
+    const prStateBlocks = createPRStateBlocks(prState);
+    blocks.push(...prStateBlocks);
+  }
 
   blocks.push(
     {
@@ -874,17 +1020,21 @@ function createPRReviewCommentSlackMessage(data: any, notificationDecision?: any
 /**
  * Create Slack message for issue comment notifications
  */
-function createIssueCommentSlackMessage(data: any, notificationDecision?: any) {
+async function createIssueCommentSlackMessage(data: any, notificationDecision?: any) {
   const { repositoryName, title, url, payload } = data;
   const color = EVENT_COLORS.issue_commented;
-  
+
+  // Check if this is a pull request by examining the URL or payload
+  const isPullRequest = url.includes('/pull/') || payload.issue?.pull_request;
+  const prNumber = isPullRequest ? payload.issue?.number : null;
+
+  // Fetch PR state from database if this is a PR comment
+  const prState = (isPullRequest && prNumber) ? await fetchPRState(repositoryName, prNumber) : null;
+
   // Create GitHub user link
   const user = payload.comment?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
-  
-  // Check if this is a pull request by examining the URL
-  const isPullRequest = url.includes('/pull/');
-  
+
   // Set the appropriate title and context based on whether it's a PR or issue
   let contextText, viewText;
   if (isPullRequest) {
@@ -894,7 +1044,7 @@ function createIssueCommentSlackMessage(data: any, notificationDecision?: any) {
     contextText = `${githubUserLink} commented on an issue in *${repositoryName}*`;
     viewText = "View Issue";
   }
-  
+
   // Create blocks with issue/PR title prominently displayed
   const blocks = [
     {
@@ -926,7 +1076,13 @@ function createIssueCommentSlackMessage(data: any, notificationDecision?: any) {
   // Add keyword match information if this was triggered by keywords
   const keywordBlocks = createKeywordMatchBlock(notificationDecision);
   blocks.push(...keywordBlocks);
-  
+
+  // Add PR state blocks if this is a PR comment (reviewers, labels, CI checks)
+  if (prState) {
+    const prStateBlocks = createPRStateBlocks(prState);
+    blocks.push(...prStateBlocks);
+  }
+
   // Add comment content if available
   if (payload.comment?.body) {
     blocks.push({
@@ -1080,6 +1236,35 @@ function generateNotificationMessage(eventType: string, action: string, payload:
   } else if (eventType === 'pull_request_review') {
     return payload.review?.body?.substring(0, 200) || 'Pull request reviewed';
   }
-  
+
   return 'GitHub activity update';
+}
+
+/**
+ * Sync pull request state from GitHub webhook
+ */
+async function syncPullRequestState(event: any): Promise<void> {
+  const { eventType, payload } = event;
+
+  // Check if this is a PR-related event
+  const prEvents = [
+    'pull_request',
+    'pull_request_review',
+    'pull_request_review_comment',
+    'check_run',
+    'check_suite'
+  ];
+
+  if (!prEvents.includes(eventType)) {
+    return;
+  }
+
+  try {
+    console.log(`Syncing PR state for ${eventType} event`);
+    await pullRequestSyncService.syncFromWebhook(payload);
+    console.log(`Successfully synced PR state for ${eventType} event`);
+  } catch (error) {
+    console.error(`Error syncing PR state for ${eventType}:`, error);
+    // Don't throw - we don't want to fail the entire event processing if PR sync fails
+  }
 }

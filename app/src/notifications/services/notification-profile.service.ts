@@ -8,7 +8,6 @@ import {
 import { DatabaseService } from '../../database/database.service';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { EntitlementsService } from '../../stripe/services/entitlements.service';
-import { KeywordService } from '../../keywords/services/keyword.service';
 import {
   CreateNotificationProfileDto,
   UpdateNotificationProfileDto,
@@ -29,7 +28,6 @@ export class NotificationProfileService {
     private readonly databaseService: DatabaseService,
     private readonly analyticsService: AnalyticsService,
     private readonly entitlementsService: EntitlementsService,
-    private readonly keywordService: KeywordService,
   ) {}
 
   /**
@@ -42,13 +40,6 @@ export class NotificationProfileService {
       const profiles = await this.databaseService.notificationProfile.findMany({
         where: { userId },
         orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
-        include: {
-          profileKeywords: {
-            include: {
-              keyword: true,
-            },
-          },
-        },
       });
 
       return profiles.map((profile) => ({
@@ -60,8 +51,6 @@ export class NotificationProfileService {
         notificationPreferences:
           profile.notificationPreferences as NotificationPreferences,
         description: profile.description,
-        keywords: profile.profileKeywords.map((pk) => pk.keyword),
-        profileKeywords: undefined, // Remove junction table data from response
       }));
     } catch (error) {
       this.logger.error(
@@ -120,13 +109,6 @@ export class NotificationProfileService {
             id: profileId,
             userId, // Ensure user can only access their own profiles
           },
-          include: {
-            profileKeywords: {
-              include: {
-                keyword: true,
-              },
-            },
-          },
         },
       );
 
@@ -143,7 +125,6 @@ export class NotificationProfileService {
         notificationPreferences:
           profile.notificationPreferences as NotificationPreferences,
         description: profile.description,
-        keywords: profile.profileKeywords.map((pk) => pk.keyword),
       };
     } catch (error) {
       this.logger.error(
@@ -198,15 +179,6 @@ export class NotificationProfileService {
         },
       });
 
-      // Sync keywords if provided
-      if (data.keywordIds && data.keywordIds.length > 0) {
-        await this.keywordService.syncKeywordsForProfile(
-          userId,
-          profile.id,
-          data.keywordIds,
-        );
-      }
-
       this.logger.log(
         `Created notification profile ${profile.id} for user ${userId}`,
       );
@@ -218,13 +190,11 @@ export class NotificationProfileService {
         isEnabled: profile.isEnabled,
         scopeType: profile.scopeType,
         deliveryType: profile.deliveryType,
-        hasKeywords: data.keywordIds && data.keywordIds.length > 0,
-        keywordCount: data.keywordIds?.length || 0,
         repositoryFilterType: (profile.repositoryFilter as any)?.type,
         priority: profile.priority,
       });
 
-      // Fetch the profile with keywords to return
+      // Fetch the profile to return
       return this.getNotificationProfile(profile.id, userId);
     } catch (error) {
       this.logger.error(
@@ -280,20 +250,11 @@ export class NotificationProfileService {
         data: updateData,
       });
 
-      // Sync keywords if provided
-      if (data.keywordIds !== undefined) {
-        await this.keywordService.syncKeywordsForProfile(
-          userId,
-          profileId,
-          data.keywordIds,
-        );
-      }
-
       this.logger.log(
         `Updated notification profile ${profileId} for user ${userId}`,
       );
 
-      // Fetch the profile with keywords to return
+      // Fetch the profile to return
       return this.getNotificationProfile(profileId, userId);
     } catch (error) {
       this.logger.error(

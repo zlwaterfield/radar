@@ -8,6 +8,7 @@ import { GitHubModule } from '../github/github.module';
 import { SlackModule } from '../slack/slack.module';
 import { RadarAuthModule } from '../auth/auth.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
+import { PullRequestsModule } from '../pull-requests/pull-requests.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { IntegrationsModule } from '../integrations/integrations.module';
     SlackModule,
     RadarAuthModule,
     IntegrationsModule,
+    PullRequestsModule,
   ],
   controllers: [DigestController, DigestConfigController],
   providers: [DigestService, DigestConfigService],

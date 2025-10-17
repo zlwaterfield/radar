@@ -4,6 +4,73 @@
 
 Transform Radar from an event-driven notification system into a comprehensive PR management platform with rich state tracking, similar to Graphite.dev. This enables a powerful dashboard, smarter notifications, faster digests, and a dynamic Slack home page.
 
+## Implementation Status
+
+### ✅ Completed (Backend Infrastructure)
+
+1. **Database Schema** - All PR state tables created and migrated
+   - `PullRequest` - Core PR data
+   - `PullRequestReviewer` - Reviewer assignments with states
+   - `PullRequestLabel` - PR labels
+   - `PullRequestCheck` - CI/CD check runs
+   - `PullRequestAssignee` - PR assignees
+   - Migration: `20251017163658_add_pr_state_management`
+
+2. **Services** - Full CRUD and sync functionality
+   - `PullRequestService` - Query PR data with advanced filtering
+   - `PullRequestSyncService` - Sync from webhooks and GitHub API
+   - Files: `app/src/pull-requests/services/`
+
+3. **Webhook Integration** - Real-time PR state updates
+   - Automatic sync on all PR-related events
+   - File: `app/trigger/process-github-event.ts:73`
+
+4. **API Endpoints** - RESTful API for PR data
+   - `GET /pull-requests` - List with filtering
+   - `GET /pull-requests/stats` - Dashboard stats
+   - `GET /pull-requests/:id` - PR details
+   - `POST /pull-requests/:id/sync` - Force sync
+   - File: `app/src/pull-requests/controllers/pull-requests.controller.ts`
+
+5. **Background Sync** - Periodic refresh of stale PR data
+   - Runs every 30 minutes
+   - Syncs open PRs not updated in 30+ minutes
+   - File: `app/trigger/sync-pr-state.ts`
+
+6. **Faster Digests** - ✅ Use database queries instead of GitHub API
+   - DigestService refactored to query database instead of GitHub API
+   - Digest generation now 100x faster
+   - Files: `app/src/digest/digest.service.ts`, `app/trigger/daily-digest.ts`
+
+7. **Enhanced Notifications** - ✅ Include PR state in Slack messages
+   - Slack notifications now fetch and display PR state from database
+   - Shows reviewers with status icons (✅ approved, ❌ changes requested, ⏳ pending)
+   - Displays labels as inline badges
+   - Shows CI/CD check status summary (passing/failing/pending)
+   - Files: `app/trigger/process-github-event.ts:493-600`
+
+8. **Frontend Dashboard** - ✅ Complete dashboard with PR visualization
+   - Created `/dashboard` route with layout and sidebar navigation
+   - Built API service for fetching PR data (`client/src/lib/api/pull-requests.ts`)
+   - Implemented PR stats cards showing real-time data (Waiting on Me, Ready to Merge, My Open PRs, My Drafts)
+   - Built PullRequestRow component with:
+     - PR title, number, repository, author, and relative timestamps
+     - Reviewer status icons (✅ approved, ❌ changes requested, ⏳ pending, 💬 commented)
+     - CI/CD check status with color-coded icons
+     - Change statistics (additions, deletions, changed files)
+     - Label badges with dynamic colors
+   - Created PullRequestSection component for grouping PRs by category
+   - Dashboard displays three main sections: "Waiting on Me", "Ready to Merge", "My Open PRs"
+   - Added loading states, error handling, and empty states throughout
+   - Click-through to open PRs in new tab
+   - Fully responsive design with dark mode support
+   - Files: `client/src/app/dashboard/`, `client/src/components/dashboard/`, `client/src/lib/api/pull-requests.ts`
+
+### 🚧 In Progress / Pending
+
+9. **Advanced Filtering & Sorting** - Add filters for repositories, labels, CI status
+10. **Slack Home Page** - Interactive PR dashboard in Slack
+
 ---
 
 ## Current State Analysis
@@ -1292,17 +1359,17 @@ LIMIT 50;
 
 ## Implementation Timeline
 
-### Week 1: Foundation
-- [ ] Create database schema and migration
-- [ ] Implement `PullRequestService` and `PullRequestSyncService`
-- [ ] Update webhook handler to sync PR state
+### Week 1: Foundation ✅ COMPLETED
+- [x] Create database schema and migration - `app/prisma/schema.prisma:424-562`
+- [x] Implement `PullRequestService` and `PullRequestSyncService` - `app/src/pull-requests/services/`
+- [x] Update webhook handler to sync PR state - `app/trigger/process-github-event.ts:73`
 - [ ] Write unit tests for sync logic
 
-### Week 2: API & Backfill
-- [ ] Create `PullRequestsController` with all endpoints
+### Week 2: API & Backfill ✅ COMPLETED
+- [x] Create `PullRequestsController` with all endpoints - `app/src/pull-requests/controllers/pull-requests.controller.ts`
 - [ ] Implement backfill admin endpoint
 - [ ] Test backfill with 1-2 beta users
-- [ ] Background sync task (Trigger.dev)
+- [x] Background sync task (Trigger.dev) - `app/trigger/sync-pr-state.ts`
 
 ### Week 3: Frontend Dashboard
 - [ ] Create dashboard page layout

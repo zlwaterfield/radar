@@ -117,7 +117,10 @@ model Event {
   userId        String?        @map("user_id")
   user          User?          @relation(fields: [userId], references: [id])
   notifications Notification[]
+  pullRequestId String?        @map("pull_request_id")
+  pullRequest   PullRequest?   @relation(fields: [pullRequestId], references: [id], onDelete: SetNull)
 
+  @@index([pullRequestId])
   @@map("event")
 }
 
@@ -214,9 +217,6 @@ model NotificationProfile {
 
   // Priority for processing order (higher = processed first)
   priority Int @default(0)
-
-  // Relations
-  profileKeywords ProfileKeyword[]
 
   @@map("notification_profile")
 }
@@ -391,27 +391,148 @@ model Keyword {
   // Metadata
   description String? // Optional user note about why this keyword matters
 
-  // Relations
-  profileKeywords ProfileKeyword[]
-
   @@map("keyword")
   @@index([userId])
 }
 
-// Junction table for many-to-many relationship between profiles and keywords
+// Pull request state management
 
-model ProfileKeyword {
+model PullRequest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // GitHub identifiers
+  githubId       String @unique @map("github_id")
+  number         Int
+  repositoryId   String @map("repository_id")
+  repositoryName String @map("repository_name")
+
+  // Core PR data
+  title    String
+  body     String? @db.Text
+  url      String
+  state    String  // "open", "closed"
+  isDraft  Boolean @default(false) @map("is_draft")
+  isMerged Boolean @default(false) @map("is_merged")
+
+  // Timestamps
+  openedAt DateTime  @map("opened_at")
+  closedAt DateTime? @map("closed_at")
+  mergedAt DateTime? @map("merged_at")
+
+  // Author information
+  authorGithubId  String @map("author_github_id")
+  authorLogin     String @map("author_login")
+  authorAvatarUrl String @map("author_avatar_url")
+
+  // Branch information
+  baseBranch String @map("base_branch")
+  headBranch String @map("head_branch")
+
+  // Statistics
+  additions    Int @default(0)
+  deletions    Int @default(0)
+  changedFiles Int @default(0) @map("changed_files")
+
+  // Sync tracking
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  // Relations
+  reviewers PullRequestReviewer[]
+  labels    PullRequestLabel[]
+  checks    PullRequestCheck[]
+  assignees PullRequestAssignee[]
+  events    Event[]
+
+  @@unique([repositoryId, number])
+  @@index([repositoryId, state])
+  @@index([authorGithubId])
+  @@index([state, updatedAt])
+  @@map("pull_request")
+}
+
+model PullRequestReviewer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pullRequestId String      @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+
+  // Reviewer identity
+  githubId  String @map("github_id")
+  login     String
+  avatarUrl String @map("avatar_url")
+
+  // Review state
+  reviewState String    @map("review_state") // "pending", "approved", "changes_requested", "commented", "dismissed"
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewUrl   String?   @map("review_url")
+
+  // Team review support
+  isTeamReview Boolean @default(false) @map("is_team_review")
+  teamSlug     String? @map("team_slug")
+
+  @@unique([pullRequestId, githubId])
+  @@index([pullRequestId])
+  @@index([githubId])
+  @@map("pull_request_reviewer")
+}
+
+model PullRequestLabel {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now()) @map("created_at")
 
-  profileId String              @map("profile_id")
-  profile   NotificationProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  pullRequestId String      @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
 
-  keywordId String  @map("keyword_id")
-  keyword   Keyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  name        String
+  color       String  // Hex color (e.g., "ff0000")
+  description String?
 
-  @@unique([profileId, keywordId])
-  @@map("profile_keyword")
-  @@index([profileId])
-  @@index([keywordId])
+  @@unique([pullRequestId, name])
+  @@index([pullRequestId])
+  @@map("pull_request_label")
+}
+
+model PullRequestCheck {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pullRequestId String      @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+
+  // Check run details
+  githubCheckId String  @unique @map("github_check_id")
+  name          String
+  status        String  // "queued", "in_progress", "completed"
+  conclusion    String? // "success", "failure", "neutral", "cancelled", "skipped", "timed_out", "action_required"
+  detailsUrl    String? @map("details_url")
+
+  // Timestamps
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  @@index([pullRequestId])
+  @@index([pullRequestId, status])
+  @@map("pull_request_check")
+}
+
+model PullRequestAssignee {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pullRequestId String      @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+
+  githubId  String @map("github_id")
+  login     String
+  avatarUrl String @map("avatar_url")
+
+  @@unique([pullRequestId, githubId])
+  @@index([pullRequestId])
+  @@index([githubId])
+  @@map("pull_request_assignee")
 }

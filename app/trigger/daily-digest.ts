@@ -9,6 +9,7 @@ import { SlackService } from "../src/slack/services/slack.service";
 import { GitHubIntegrationService } from "../src/integrations/services/github-integration.service";
 import { UserTeamsSyncService } from "../src/users/services/user-teams-sync.service";
 import { UserRepositoriesService } from "../src/users/services/user-repositories.service";
+import { PullRequestService } from "../src/pull-requests/services/pull-request.service";
 import { ConfigService } from "@nestjs/config";
 import { AnalyticsService } from "../src/analytics/analytics.service";
 import appConfig from "../src/config/app.config";
@@ -36,6 +37,7 @@ const databaseService = new DatabaseService();
 const githubTokenService = new GitHubTokenService(configService, databaseService);
 const githubService = new GitHubService(configService, databaseService, analyticsService, githubTokenService);
 const digestConfigService = new DigestConfigService(databaseService, analyticsService);
+const pullRequestService = new PullRequestService(databaseService);
 
 const userRepositoriesService = new UserRepositoriesService(databaseService, githubService, githubTokenService);
 const userTeamsSyncService = new UserTeamsSyncService(databaseService, githubService, githubTokenService, userRepositoriesService);
@@ -54,8 +56,8 @@ export const dailyDigest = schedules.task({
     maxTimeoutInMs: 30000,
   },
   run: async (payload, { ctx }) => {
-    const slackService = new SlackService(configService, databaseService);
-    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService, analyticsService);
+    const slackService = new SlackService(configService, databaseService, pullRequestService);
+    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService, analyticsService, pullRequestService);
     
     try {
       console.log("Starting multiple digest processing...");
@@ -170,10 +172,10 @@ export const testDigestConfig = task({
   id: "test-digest-config",
   run: async (payload: { configId: string }) => {
     console.log('Initializing SlackService in testDigestConfig task...');
-    const slackService = new SlackService(configService, databaseService);
+    const slackService = new SlackService(configService, databaseService, pullRequestService);
     console.log('SlackService initialized successfully in testDigestConfig task');
 
-    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService, analyticsService);
+    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService, analyticsService, pullRequestService);
     
     try {
       const { configId } = payload;

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WebClient } from '@slack/web-api';
 import { DatabaseService } from '../../database/database.service';
+import { PullRequestService } from '../../pull-requests/services/pull-request.service';
 import type {
   SlackMessage,
   SlackUser,
@@ -18,6 +19,7 @@ export class SlackService {
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
+    private readonly pullRequestService: PullRequestService,
   ) {
     const botToken = this.configService.get('slack.botToken');
     const signingSecret = this.configService.get('slack.signingSecret');
@@ -420,7 +422,7 @@ export class SlackService {
       this.logger.log(`[handleAppHomeOpened] User found in DB: ${!!user}, user slackId: ${user?.slackId}, has bot token: ${!!user?.slackBotToken}`);
 
       const blocks = user
-        ? this.createAuthenticatedHomeView(user)
+        ? await this.createAuthenticatedHomeView(user)
         : this.createUnauthenticatedHomeView();
 
       this.logger.log(`[handleAppHomeOpened] Created ${user ? 'authenticated' : 'unauthenticated'} view with ${blocks?.length} blocks`);
@@ -447,47 +449,319 @@ export class SlackService {
   /**
    * Create home view for authenticated users
    */
-  private createAuthenticatedHomeView(user: any): any[] {
-    return [
+  private async createAuthenticatedHomeView(user: any): Promise<any[]> {
+    const blocks: any[] = [
       {
         type: 'header',
         text: {
           type: 'plain_text',
-          text: '🎯 Welcome to Radar!',
+          text: '🎯 Pull Request Dashboard',
           emoji: true,
         },
       },
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*Hello, ${user.name || 'there'}!* Your Radar account is connected and active.`,
-        },
-      },
-      {
-        type: 'actions',
+        type: 'context',
         elements: [
           {
-            type: 'button',
-            text: {
-              type: 'plain_text',
-              text: '⚙️ Manage Settings',
-            },
-            url: `${this.configService.get('app.frontendUrl')}/settings`,
-            action_id: 'manage_settings',
-          },
-          {
-            type: 'button',
-            text: {
-              type: 'plain_text',
-              text: '🔗 Manage Repositories',
-            },
-            url: `${this.configService.get('app.frontendUrl')}/settings/repositories`,
-            action_id: 'connect_repos',
+            type: 'mrkdwn',
+            text: `Hello ${user.name || 'there'}! Here's your PR overview`,
           },
         ],
       },
     ];
+
+    // Check if user has GitHub connected
+    if (!user.githubId) {
+      blocks.push(
+        {
+          type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: 'Connect your GitHub account to see your pull requests.',
+          },
+        },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: '🔗 Connect GitHub',
+              },
+              url: `${this.configService.get('app.frontendUrl')}/settings`,
+              action_id: 'connect_github',
+              style: 'primary',
+            },
+          ],
+        },
+      );
+      return blocks;
+    }
+
+    try {
+      // Fetch PR stats
+      const stats = await this.pullRequestService.getPullRequestStats(user.githubId);
+
+      // Add divider before stats
+      blocks.push({
+        type: 'divider',
+      });
+
+      // Add stats cards section
+      blocks.push(...this.createStatsBlocks(stats));
+
+      // Fetch and add PR lists if there are any PRs
+      if (stats.waitingOnMe > 0 || stats.myOpenPRs > 0) {
+        // Fetch PRs waiting on me
+        if (stats.waitingOnMe > 0) {
+          blocks.push({
+            type: 'divider',
+          });
+
+          const waitingOnMe = await this.pullRequestService.listPullRequests({
+            reviewerGithubId: user.githubId,
+            state: 'open',
+            limit: 3,
+            includeReviewers: true,
+            includeLabels: true,
+            includeChecks: true,
+          });
+
+          blocks.push(...this.createPRListBlocks('🚨 Waiting on Me', waitingOnMe, stats.waitingOnMe));
+        }
+
+        // Fetch my open PRs
+        if (stats.myOpenPRs > 0) {
+          blocks.push({
+            type: 'divider',
+          });
+
+          const myOpenPRs = await this.pullRequestService.listPullRequests({
+            authorGithubId: user.githubId,
+            state: 'open',
+            isDraft: false,
+            limit: 3,
+            includeReviewers: true,
+            includeLabels: true,
+            includeChecks: true,
+          });
+
+          if (myOpenPRs.length > 0) {
+            blocks.push(...this.createPRListBlocks('📝 My Open PRs', myOpenPRs, stats.myOpenPRs));
+          }
+        }
+      } else {
+        // Empty state
+        blocks.push(
+          {
+            type: 'divider',
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: '✨ _No pull requests at the moment. You\'re all caught up!_',
+            },
+          },
+        );
+      }
+
+      // Add action buttons at the bottom
+      blocks.push(
+        {
+          type: 'divider',
+        },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: '📊 View Full Dashboard',
+              },
+              url: `${this.configService.get('app.frontendUrl')}/dashboard`,
+              action_id: 'view_dashboard',
+              style: 'primary',
+            },
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: '⚙️ Settings',
+              },
+              url: `${this.configService.get('app.frontendUrl')}/settings`,
+              action_id: 'manage_settings',
+            },
+          ],
+        },
+      );
+    } catch (error) {
+      this.logger.error('[createAuthenticatedHomeView] Error fetching PR data:', error);
+      // Fallback to basic view
+      blocks.push(
+        {
+          type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: '⚠️ Unable to load PR data at the moment. Please try again later.',
+          },
+        },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: '📊 View Dashboard',
+              },
+              url: `${this.configService.get('app.frontendUrl')}/dashboard`,
+              action_id: 'view_dashboard',
+            },
+          ],
+        },
+      );
+    }
+
+    return blocks;
+  }
+
+  /**
+   * Create stats blocks for Slack home view
+   */
+  private createStatsBlocks(stats: any): any[] {
+    return [
+      {
+        type: 'section',
+        fields: [
+          {
+            type: 'mrkdwn',
+            text: `🔴 *Waiting on Me*\n${stats.waitingOnMe} PRs`,
+          },
+          {
+            type: 'mrkdwn',
+            text: `🟢 *Ready to Merge*\n${stats.approvedReadyToMerge} PRs`,
+          },
+        ],
+      },
+      {
+        type: 'section',
+        fields: [
+          {
+            type: 'mrkdwn',
+            text: `🔵 *My Open PRs*\n${stats.myOpenPRs} PRs`,
+          },
+          {
+            type: 'mrkdwn',
+            text: `⚫ *My Drafts*\n${stats.myDraftPRs} PRs`,
+          },
+        ],
+      },
+    ];
+  }
+
+  /**
+   * Create PR list blocks for Slack home view
+   */
+  private createPRListBlocks(title: string, prs: any[], totalCount?: number): any[] {
+    const blocks: any[] = [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*${title}*`,
+        },
+      },
+    ];
+
+    prs.slice(0, 3).forEach((pr) => {
+      blocks.push(this.createPRCardBlock(pr));
+    });
+
+    // Add "View all" link if there are more PRs
+    if (totalCount && totalCount > prs.length) {
+      blocks.push({
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `<${this.configService.get('app.frontendUrl')}/dashboard|View all ${totalCount} PRs →>`,
+          },
+        ],
+      });
+    }
+
+    return blocks;
+  }
+
+  /**
+   * Create a single PR card block
+   */
+  private createPRCardBlock(pr: any): any {
+    const reviewers = pr.reviewers || [];
+    const checks = pr.checks || [];
+
+    // Calculate check status
+    const passing = checks.filter((c: any) => c.status === 'completed' && c.conclusion === 'success').length;
+    const failing = checks.filter((c: any) => c.status === 'completed' && c.conclusion === 'failure').length;
+    const pending = checks.filter((c: any) => c.status !== 'completed').length;
+
+    // Build status line with icons
+    const statusParts: string[] = [];
+
+    // Add reviewer status (compact)
+    if (reviewers.length > 0) {
+      const approved = reviewers.filter((r: any) => r.reviewState === 'approved').length;
+      const changesRequested = reviewers.filter((r: any) => r.reviewState === 'changes_requested').length;
+
+      if (approved > 0) {
+        statusParts.push(`✅ ${approved}`);
+      }
+      if (changesRequested > 0) {
+        statusParts.push(`❌ ${changesRequested}`);
+      }
+      if (approved === 0 && changesRequested === 0) {
+        statusParts.push(`⏳ ${reviewers.length}`);
+      }
+    }
+
+    // Add check status (compact)
+    if (checks.length > 0) {
+      if (failing > 0) {
+        statusParts.push(`🔴 ${failing} failing`);
+      } else if (pending > 0) {
+        statusParts.push(`🟡 ${pending} pending`);
+      } else if (passing > 0) {
+        statusParts.push(`🟢 ${passing} passing`);
+      }
+    }
+
+    // Add change stats (compact)
+    statusParts.push(`+${pr.additions} -${pr.deletions}`);
+
+    const statusLine = statusParts.length > 0 ? `\n${statusParts.join(' • ')}` : '';
+
+    // Build labels (compact, max 2)
+    const labels = pr.labels || [];
+    const labelText = labels.length > 0
+      ? `\n🏷 ${labels.slice(0, 2).map((l: any) => `\`${l.name}\``).join(' ')}${labels.length > 2 ? ` +${labels.length - 2}` : ''}`
+      : '';
+
+    return {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `<${pr.url}|*${pr.title}*>\n\`#${pr.number}\` in ${pr.repositoryName}${statusLine}${labelText}`,
+      },
+    };
   }
 
   /**

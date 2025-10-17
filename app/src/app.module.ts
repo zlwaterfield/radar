@@ -24,6 +24,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { StripeModule } from './stripe/stripe.module';
 import { EmailModule } from './email/email.module';
 import { KeywordsModule } from './keywords/keywords.module';
+import { PullRequestsModule } from './pull-requests/pull-requests.module';
 
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -65,6 +66,7 @@ import { ErrorTrackingInterceptor } from './common/interceptors/error-tracking.i
     StripeModule,
     EmailModule,
     KeywordsModule,
+    PullRequestsModule,
   ],
   controllers: [AppController],
   providers: [

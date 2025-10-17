@@ -172,20 +172,26 @@ export class NotificationService {
         };
       }
 
-      // Fetch keywords for this profile via junction table
-      const profileKeywords = await this.databaseService.profileKeyword.findMany({
-        where: { profileId: profile.id },
-        include: { keyword: true },
+      // Fetch all enabled keywords for this user (keywords are user-level, not profile-specific)
+      const enabledKeywords = await this.databaseService.keyword.findMany({
+        where: {
+          userId,
+          isEnabled: true,
+        },
       });
 
-      const enabledKeywords = profileKeywords
-        .map((pk) => pk.keyword)
-        .filter((k) => k.isEnabled);
+      this.logger.log(
+        `[KEYWORD_CHECK] User has ${enabledKeywords.length} enabled keywords`,
+      );
 
       // Check keyword matches first (highest priority)
       if (enabledKeywords.length > 0) {
         // Extract content for keyword matching
         const content = this.extractContentFromPayload(payload, eventType);
+
+        this.logger.log(
+          `[KEYWORD_CHECK] Extracted content (${content.length} chars): ${content.substring(0, 200)}...`,
+        );
 
         let matchedKeywords: string[] = [];
         let matchDetails: Record<string, string> = {};
@@ -194,8 +200,15 @@ export class NotificationService {
         const llmKeywords = enabledKeywords.filter((k) => k.llmEnabled);
         const regexKeywords = enabledKeywords.filter((k) => !k.llmEnabled);
 
+        this.logger.log(
+          `[KEYWORD_CHECK] LLM keywords: ${llmKeywords.map((k) => k.term).join(', ')}, Regex keywords: ${regexKeywords.map((k) => k.term).join(', ')}`,
+        );
+
         // Process LLM-enabled keywords (AI matching)
         if (llmKeywords.length > 0) {
+          this.logger.log(
+            `[KEYWORD_CHECK] Checking ${llmKeywords.length} LLM keywords...`,
+          );
           const keywordResult =
             await this.llmAnalyzerService.matchKeywordsWithLLM(
               content,
@@ -203,20 +216,36 @@ export class NotificationService {
             );
           matchedKeywords.push(...keywordResult.matchedKeywords);
           matchDetails = { ...matchDetails, ...keywordResult.matchDetails };
+          this.logger.log(
+            `[KEYWORD_CHECK] LLM matched: ${keywordResult.matchedKeywords.join(', ') || 'none'}`,
+          );
         }
 
         // Process regex keywords (substring matching)
         if (regexKeywords.length > 0) {
+          this.logger.log(
+            `[KEYWORD_CHECK] Checking ${regexKeywords.length} regex keywords...`,
+          );
           const lowerContent = content.toLowerCase();
           for (const keyword of regexKeywords) {
             if (lowerContent.includes(keyword.term.toLowerCase())) {
               matchedKeywords.push(keyword.term);
               matchDetails[keyword.term] = 'regex/substring match';
+              this.logger.log(
+                `[KEYWORD_CHECK] ✅ Regex matched: "${keyword.term}"`,
+              );
+            } else {
+              this.logger.log(
+                `[KEYWORD_CHECK] ❌ Regex no match: "${keyword.term}"`,
+              );
             }
           }
         }
 
         if (matchedKeywords.length > 0) {
+          this.logger.log(
+            `[KEYWORD_CHECK] 🎯 KEYWORD MATCH! Matched: ${matchedKeywords.join(', ')} - Returning KEYWORD_MATCH`,
+          );
           return {
             shouldMatch: true,
             matchedKeywords,
@@ -229,6 +258,10 @@ export class NotificationService {
               regexKeywordsCount: regexKeywords.length,
             },
           };
+        } else {
+          this.logger.log(
+            `[KEYWORD_CHECK] No keywords matched for profile "${profile.name}"`,
+          );
         }
       }
 
