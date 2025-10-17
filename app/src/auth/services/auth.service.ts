@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { NotificationProfileService } from '../../notifications/services/notification-profile.service';
+import { DigestConfigService } from '../../digest/digest-config.service';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { EntitlementsService } from '../../stripe/services/entitlements.service';
 import { auth } from '../auth.config';
@@ -15,6 +16,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
     private readonly notificationProfileService: NotificationProfileService,
+    private readonly digestConfigService: DigestConfigService,
     private readonly analyticsService: AnalyticsService,
     private readonly entitlementsService: EntitlementsService,
   ) {}
@@ -198,6 +200,30 @@ export class AuthService {
         } catch (error) {
           this.logger.warn(
             `Failed to create default notification profile for user ${user.id}:`,
+            error,
+          );
+        }
+
+        // Create default digest config
+        try {
+          await this.digestConfigService.createDigestConfig(user.id, {
+            name: 'Daily Digest',
+            description: 'Daily summary of GitHub activity',
+            isEnabled: false, // Disabled by default - user can enable when ready
+            digestTime: '09:00',
+            timezone: 'UTC',
+            daysOfWeek: [1, 2, 3, 4, 5], // Monday-Friday
+            scopeType: 'user',
+            repositoryFilter: { type: 'all' },
+            deliveryType: 'dm',
+          });
+
+          this.logger.log(
+            `Created default digest config for new user ${user.id}`,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Failed to create default digest config for user ${user.id}:`,
             error,
           );
         }
