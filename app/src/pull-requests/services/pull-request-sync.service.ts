@@ -596,7 +596,7 @@ export class PullRequestSyncService {
     const since = new Date();
     since.setDate(since.getDate() - daysBack);
 
-    this.logger.log(
+    console.log(
       `Starting PR backfill for user ${userId}: ${daysBack} days back (since ${since.toISOString()})`,
     );
 
@@ -618,7 +618,7 @@ export class PullRequestSyncService {
         },
       });
 
-      this.logger.log(
+      console.log(
         `Found ${userRepositories.length} enabled repositories for user ${userId}`,
       );
 
@@ -633,7 +633,7 @@ export class PullRequestSyncService {
             continue;
           }
 
-          this.logger.log(
+          console.log(
             `[${i + 1}/${userRepositories.length}] Fetching PRs for ${userRepo.fullName} (since ${since.toISOString()})`,
           );
 
@@ -645,11 +645,11 @@ export class PullRequestSyncService {
               state: 'all',
               since,
               accessToken,
-              maxPages: 5, // Limit to 5 pages (500 PRs) per repo to avoid excessive API calls
+              maxPages: 2, // Limit to 2 pages (200 PRs) per repo for faster backfill
             },
           );
 
-          this.logger.log(
+          console.log(
             `[${i + 1}/${userRepositories.length}] Found ${pullRequests.length} PRs for ${userRepo.fullName}`,
           );
 
@@ -683,46 +683,42 @@ export class PullRequestSyncService {
               await this.syncLabels(githubId, pr as any);
               await this.syncAssignees(githubId, pr as any);
 
-              // Sync checks if we have an access token
-              if (accessToken) {
-                await this.syncChecksFromAPI(
-                  owner,
-                  repo,
-                  pr.number,
-                  githubId,
-                  accessToken,
-                );
-              }
+              // Skip checks during backfill for performance
+              // Checks will be synced via webhooks for active PRs
+              // Note: If you want checks, only sync for open PRs:
+              // if (accessToken && pr.state === 'open') {
+              //   await this.syncChecksFromAPI(owner, repo, pr.number, githubId, accessToken);
+              // }
 
               result.pullRequestsProcessed++;
 
               // Log progress every 10 PRs or on the last PR
               if ((prIndex + 1) % 10 === 0 || prIndex === pullRequests.length - 1) {
-                this.logger.log(
+                console.log(
                   `  Progress: ${prIndex + 1}/${pullRequests.length} PRs synced for ${userRepo.fullName}`,
                 );
               }
             } catch (prError) {
               const errorMsg = `Error syncing PR #${pr.number} in ${userRepo.fullName}: ${prError instanceof Error ? prError.message : String(prError)}`;
-              this.logger.error(errorMsg);
+              console.error(errorMsg);
               result.errors.push(errorMsg);
             }
           }
 
           result.repositories++;
-          this.logger.log(
+          console.log(
             `[${i + 1}/${userRepositories.length}] Completed ${userRepo.fullName}: ${pullRequests.length} PRs synced`,
           );
         } catch (repoError) {
           const errorMsg = `Error processing repository ${userRepo.fullName}: ${repoError instanceof Error ? repoError.message : String(repoError)}`;
-          this.logger.error(errorMsg);
+          console.error(errorMsg);
           result.errors.push(errorMsg);
           // Continue with next repository
         }
       }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-      this.logger.log(
+      console.log(
         `Completed PR backfill for user ${userId} in ${duration}s: ` +
         `${result.repositories} repos, ${result.pullRequestsProcessed} PRs ` +
         `(${result.pullRequestsCreated} created, ${result.pullRequestsUpdated} updated), ` +
@@ -732,7 +728,7 @@ export class PullRequestSyncService {
       return result;
     } catch (error) {
       const errorMsg = `Fatal error in PR backfill for user ${userId}: ${error instanceof Error ? error.message : String(error)}`;
-      this.logger.error(errorMsg);
+      console.error(errorMsg);
       result.errors.push(errorMsg);
       throw error;
     }
