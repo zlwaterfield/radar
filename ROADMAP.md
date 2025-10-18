@@ -1,11 +1,7 @@
 ## 🎯 Roadmap
 
 - Next
-   - Make sure default entitlements are working
-   - Make sure default digest and notification profile are generated
-   - "Ready to Merge" detection (all reviewers approved + all checks passing)
    - Assets + prep for Slack marketplace
-   - Review Github Permissions for latest PR state management
 
 - Later
    - Slack / Github user connecting to @ in notifications
@@ -18,3 +14,4 @@
    - More sources than just Github
    - User/team stats
    - Team support?
+   - Pull request checks
