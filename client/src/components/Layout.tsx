@@ -83,18 +83,6 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'Radar', showBackButt
                 Logout
               </Button>
             </div>
-
-            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-center space-x-4 text-xs">
-                <Link href="/terms" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                  Terms
-                </Link>
-                <span className="text-gray-400 dark:text-gray-600">·</span>
-                <Link href="/privacy" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                  Privacy
-                </Link>
-              </div>
-            </div>
           </aside>
 
           {/* Main content area */}

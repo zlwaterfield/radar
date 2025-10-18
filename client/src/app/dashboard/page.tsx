@@ -144,7 +144,7 @@ export default function DashboardPage() {
         <StatCard
           title="Ready to Merge"
           count={stats?.approvedReadyToMerge || 0}
-          subtitle="Approved & checks pass"
+          subtitle="Approved"
           color="green"
         />
         <StatCard

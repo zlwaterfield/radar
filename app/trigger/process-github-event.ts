@@ -814,11 +814,11 @@ function createIssueSlackMessage(data: any, notificationDecision?: any) {
   else if (action === "closed") icon = "🚫";
   else if (action === "reopened") icon = "🔄";
   else if (action === "assigned") icon = "👤";
-  
+
   // Create GitHub user link
   const user = payload.issue?.user?.login || payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
-  
+
   // Create contextual text based on action
   let contextText;
   if (action === "opened") {

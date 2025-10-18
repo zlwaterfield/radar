@@ -1045,16 +1045,16 @@ export class NotificationService {
                (preferences.pull_request_review_requested ?? true);
         
       case NotificationTrigger.OPENED:
-        return isIssue 
+        return isIssue
           ? (preferences.issue_opened ?? true)
           : (preferences.pull_request_opened ?? true);
-        
+
       case NotificationTrigger.CHECK_FAILED:
         return preferences.check_failures ?? false;
-        
+
       case NotificationTrigger.CHECK_SUCCEEDED:
         return preferences.check_successes ?? false;
-        
+
       default:
         return false;
     }

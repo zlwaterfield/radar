@@ -1,12 +1,24 @@
 'use client'
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
 import { FiBell, FiCalendar, FiGitBranch, FiUsers, FiSearch, FiGithub, FiLogOut, FiMessageSquare, FiCreditCard, FiHash, FiHome } from 'react-icons/fi';
 import { useSurvey } from '@/hooks/useSurvey';
+
+// Page title lookup
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/settings/notifications': 'Notifications',
+  '/settings/digest': 'Digests',
+  '/settings/keywords': 'Keywords',
+  '/settings/repositories': 'Repositories',
+  '/settings/teams': 'Teams',
+  '/settings/billing': 'Billing',
+  '/onboarding': 'Setup Integrations',
+};
 
 export default function SettingsLayout({
   children,
@@ -22,6 +34,15 @@ export default function SettingsLayout({
   const isActive = (path: string) => {
     return pathname === path;
   };
+
+  // Set page title based on current pathname
+  useEffect(() => {
+    let pageTitle = PAGE_TITLES[pathname];
+
+    if (pageTitle) {
+      document.title = `${pageTitle} - Radar`;
+    }
+  }, [pathname, paymentEnabled]);
 
   // If not authenticated, this would be handled by the page components
   // redirecting to the login page
@@ -158,7 +179,7 @@ export default function SettingsLayout({
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
             </div>
           </div>
-          {isReady && surveyId && (
+          {/* {isReady && surveyId && (
             <Button
               id="general-feedback-button"
               onClick={showSurvey}
@@ -170,7 +191,7 @@ export default function SettingsLayout({
             >
               Give Feedback
             </Button>
-          )}
+          )} */}
           <Button
             onClick={signOut}
             variant="ghost"
@@ -189,18 +210,8 @@ export default function SettingsLayout({
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-              {pathname === '/dashboard' && 'Dashboard'}
-              {pathname === '/settings/notifications' && 'Notifications'}
-              {pathname === '/settings/digest' && 'Digests'}
-              {pathname === '/settings/keywords' && 'Keywords'}
-              {pathname === '/settings/repositories' && 'Repositories'}
-              {pathname === '/settings/teams' && 'Teams'}
-              {paymentEnabled && pathname === '/settings/billing' && 'Billing'}
-              {pathname === '/onboarding' && 'Setup Integrations'}
+              {PAGE_TITLES[pathname]}
             </h2>
-            <div className="flex items-center space-x-4">
-              {/* Add header actions here if needed */}
-            </div>
           </div>
         </header>
         

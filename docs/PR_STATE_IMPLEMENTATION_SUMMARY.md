@@ -110,7 +110,7 @@ The foundation was already in place:
 **StatCard** (in `page.tsx`):
 - Colorful stat cards for:
   - 🔴 Waiting on Me (review requested)
-  - 🟢 Ready to Merge (approved & checks pass)
+  - 🟢 Ready to Merge (approved)
   - 🔵 My Open PRs (active pull requests)
   - ⚫ My Drafts (draft pull requests)
 

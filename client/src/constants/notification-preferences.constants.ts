@@ -6,7 +6,7 @@
 export const NOTIFICATION_PREFERENCE_FIELDS = {
   PR_ACTIVITY: [
     'pull_request_opened',
-    'pull_request_closed', 
+    'pull_request_closed',
     'pull_request_merged',
     'pull_request_reviewed',
     'pull_request_commented',
@@ -17,7 +17,7 @@ export const NOTIFICATION_PREFERENCE_FIELDS = {
   ISSUE_ACTIVITY: [
     'issue_opened',
     'issue_closed',
-    'issue_commented', 
+    'issue_commented',
     'issue_assigned',
     'mention_in_issue'
   ],
