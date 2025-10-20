@@ -66,12 +66,12 @@ export class CreateDigestConfigDto {
   repositoryFilter: RepositoryFilter;
 
   @IsString()
-  @IsEnum(['dm', 'channel'])
+  @IsEnum(['dm', 'channel', 'email'])
   deliveryType: DigestDeliveryType;
 
   @IsOptional()
   @IsString()
-  deliveryTarget?: string; // null for DM, channelId for channel
+  deliveryTarget?: string; // null for DM/email, channelId for channel
 }
 
 export class UpdateDigestConfigDto {
@@ -121,10 +121,10 @@ export class UpdateDigestConfigDto {
 
   @IsOptional()
   @IsString()
-  @IsEnum(['dm', 'channel'])
+  @IsEnum(['dm', 'channel', 'email'])
   deliveryType?: DigestDeliveryType;
 
   @IsOptional()
   @IsString()
-  deliveryTarget?: string; // null for DM, channelId for channel
+  deliveryTarget?: string; // null for DM/email, channelId for channel
 }

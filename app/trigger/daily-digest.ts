@@ -6,6 +6,7 @@ import { DatabaseService } from "../src/database/database.service";
 import { GitHubService } from "../src/github/services/github.service";
 import { GitHubTokenService } from "../src/github/services/github-token.service";
 import { SlackService } from "../src/slack/services/slack.service";
+import { EmailService } from "../src/email/email.service";
 import { GitHubIntegrationService } from "../src/integrations/services/github-integration.service";
 import { UserTeamsSyncService } from "../src/users/services/user-teams-sync.service";
 import { UserRepositoriesService } from "../src/users/services/user-repositories.service";
@@ -57,7 +58,8 @@ export const dailyDigest = schedules.task({
   },
   run: async (payload, { ctx }) => {
     const slackService = new SlackService(configService, databaseService, pullRequestService);
-    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService, analyticsService, pullRequestService);
+    const emailService = new EmailService();
+    const digestService = new DigestService(databaseService, githubService, slackService, emailService, digestConfigService, githubIntegrationService, analyticsService, pullRequestService);
     
     try {
       logger.info("Starting multiple digest processing");
@@ -203,9 +205,10 @@ export const testDigestConfig = task({
   run: async (payload: { configId: string }) => {
     logger.info("Initializing services for test digest");
     const slackService = new SlackService(configService, databaseService, pullRequestService);
-    logger.info("SlackService initialized successfully");
+    const emailService = new EmailService();
+    logger.info("SlackService and EmailService initialized successfully");
 
-    const digestService = new DigestService(databaseService, githubService, slackService, digestConfigService, githubIntegrationService, analyticsService, pullRequestService);
+    const digestService = new DigestService(databaseService, githubService, slackService, emailService, digestConfigService, githubIntegrationService, analyticsService, pullRequestService);
 
     try {
       const { configId } = payload;

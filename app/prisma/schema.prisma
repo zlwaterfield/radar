@@ -178,8 +178,8 @@ model DigestConfig {
   repositoryFilter Json @default("{}") @map("repository_filter") // {type: "all" | "selected", repoIds?: string[]}
   
   // Delivery settings
-  deliveryType String @map("delivery_type") // "dm" | "channel"
-  deliveryTarget String? @map("delivery_target") // null for DM, channelId for channel
+  deliveryType String @map("delivery_type") // "dm" | "channel" | "email"
+  deliveryTarget String? @map("delivery_target") // null for DM, channelId for channel, null for email
   
   // Relations
   digestHistory UserDigest[]
@@ -240,7 +240,7 @@ model UserDigest {
   issueCount       Int      @default(0) @map("issue_count")
   
   // Delivery info
-  deliveryType   String  @map("delivery_type") // "dm" | "channel"
+  deliveryType   String  @map("delivery_type") // "dm" | "channel" | "email"
   deliveryTarget String? @map("delivery_target")
 
   @@map("user_digest")

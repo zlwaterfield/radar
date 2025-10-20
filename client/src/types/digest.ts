@@ -1,6 +1,6 @@
 // Frontend types for multiple digest configurations
 export type DigestScopeType = 'user' | 'team' | 'user_and_teams';
-export type DigestDeliveryType = 'dm' | 'channel';
+export type DigestDeliveryType = 'dm' | 'channel' | 'email';
 
 export interface RepositoryFilter {
   type: 'all' | 'selected';

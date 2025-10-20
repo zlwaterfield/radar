@@ -6,6 +6,7 @@ import { DigestConfigController } from './digest-config.controller';
 import { DatabaseModule } from '../database/database.module';
 import { GitHubModule } from '../github/github.module';
 import { SlackModule } from '../slack/slack.module';
+import { EmailModule } from '../email/email.module';
 import { RadarAuthModule } from '../auth/auth.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { PullRequestsModule } from '../pull-requests/pull-requests.module';
@@ -15,6 +16,7 @@ import { PullRequestsModule } from '../pull-requests/pull-requests.module';
     DatabaseModule,
     GitHubModule,
     SlackModule,
+    EmailModule,
     RadarAuthModule,
     IntegrationsModule,
     PullRequestsModule,

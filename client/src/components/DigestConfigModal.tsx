@@ -349,7 +349,7 @@ export default function DigestConfigModal({
           {/* Delivery Settings */}
           <div className="space-y-4">
             <h4 className="font-medium text-gray-900 dark:text-white">Delivery</h4>
-            
+
             <div>
               <div className="space-y-2">
                 <label className="flex items-center">
@@ -362,7 +362,7 @@ export default function DigestConfigModal({
                     className="mr-2"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Direct Message
+                    Slack Direct Message
                   </span>
                 </label>
                 <label className="flex items-center">
@@ -378,8 +378,21 @@ export default function DigestConfigModal({
                     Slack Channel
                   </span>
                 </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="deliveryType"
+                    value="email"
+                    checked={formData.deliveryType === 'email'}
+                    onChange={(e) => setFormData({...formData, deliveryType: e.target.value as DigestDeliveryType, deliveryTarget: undefined})}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Email
+                  </span>
+                </label>
               </div>
-              
+
               {formData.deliveryType === 'channel' && (
                 <div className="mt-2">
                   <input
@@ -391,6 +404,13 @@ export default function DigestConfigModal({
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     You can find the channel ID in Slack by right-clicking on the channel name
+                  </p>
+                </div>
+              )}
+              {formData.deliveryType === 'email' && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Digest will be sent to your account email address
                   </p>
                 </div>
               )}

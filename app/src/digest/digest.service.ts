@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { GitHubService } from '../github/services/github.service';
 import { SlackService } from '../slack/services/slack.service';
+import { EmailService } from '../email/email.service';
 import { DigestConfigService } from './digest-config.service';
 import { GitHubIntegrationService } from '../integrations/services/github-integration.service';
 import { AnalyticsService } from '../analytics/analytics.service';
@@ -21,6 +22,7 @@ export class DigestService {
     private readonly databaseService: DatabaseService,
     private readonly githubService: GitHubService,
     private readonly slackService: SlackService,
+    private readonly emailService: EmailService,
     private readonly digestConfigService: DigestConfigService,
     private readonly githubIntegrationService: GitHubIntegrationService,
     private readonly analyticsService: AnalyticsService,
@@ -495,11 +497,40 @@ export class DigestService {
           deliveryInfo.target,
           message,
         );
+      } else if (deliveryInfo.type === 'email') {
+        // Get user email
+        const user = await this.databaseService.user.findUnique({
+          where: { id: executionData.userId },
+          select: { email: true },
+        });
+
+        if (!user?.email) {
+          this.logger.warn(
+            `Config ${config.id}: User ${executionData.userId} has no email address`,
+          );
+          return false;
+        }
+
+        // Send email digest
+        const emailResult = await this.emailService.sendDigestEmail({
+          to: user.email,
+          configName: config.name,
+          scopeType: config.scopeType,
+          teamName,
+          currentUserLogin: executionData.userGithubLogin,
+          digest,
+        });
+
+        result = { id: emailResult.id };
       }
 
       if (result) {
         // Record digest in database
-        await this.recordDigestSentForConfig(executionData, digest, result.ts);
+        await this.recordDigestSentForConfig(
+          executionData,
+          digest,
+          result.ts || result.id || 'email',
+        );
         this.logger.log(`Successfully sent digest for config ${config.id}`);
         return true;
       } else {
