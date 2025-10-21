@@ -20,7 +20,7 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     try {
       // Store the intended redirect URL before OAuth
-      sessionStorage.setItem('auth_redirect', '/settings/notifications');
+      sessionStorage.setItem('auth_redirect', '/dashboard');
 
       await authClient.signIn.social({
         provider: 'google',
@@ -48,9 +48,9 @@ export default function SignInPage() {
       const slackStatus = await slackResponse.json();
       const githubStatus = await githubResponse.json();
 
-      // If user has connected either Slack or GitHub, redirect to notifications settings
+      // If user has connected either Slack or GitHub, redirect to dashboard
       if (slackStatus.connected || githubStatus.connected) {
-        router.push('/settings/notifications');
+        router.push('/dashboard');
       } else {
         router.push('/onboarding');
       }

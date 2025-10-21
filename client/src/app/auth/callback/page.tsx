@@ -29,9 +29,9 @@ export default function AuthCallbackPage() {
           const slackStatus = await slackResponse.json();
           const githubStatus = await githubResponse.json();
 
-          // If user has connected either Slack or GitHub, redirect to notifications settings
+          // If user has connected either Slack or GitHub, redirect to dashboard
           if (slackStatus.connected || githubStatus.connected) {
-            router.push('/settings/notifications');
+            router.push('/dashboard');
           } else {
             router.push(redirectUrl);
           }
