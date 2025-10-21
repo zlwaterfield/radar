@@ -499,7 +499,7 @@ export default function DigestSettings() {
                       </div>
                       <div className="text-right">
                         <div className="flex items-center gap-4 text-sm">
-                          <span className="text-marian-blue-600 dark:text-marian-blue-300">
+                          <span className="text-marian-blue-600 dark:text-gray-400">
                             🔄 {digest.pullRequestCount} PRs
                           </span>
                           {digest.issueCount > 0 && (
@@ -508,7 +508,13 @@ export default function DigestSettings() {
                             </span>
                           )}
                           <span className="text-gray-500 dark:text-gray-400">
-                            📤 {digest.deliveryType === 'dm' ? 'DM' : `Channel: ${digest.deliveryTarget}`}
+                            📤 {digest.deliveryType === 'dm'
+                              ? 'DM'
+                              : digest.deliveryType === 'channel'
+                                ? `Channel: ${digest.deliveryTarget}`
+                                : digest.deliveryType === 'email'
+                                  ? `Email: ${digest.deliveryTarget}`
+                                  : digest.deliveryType}
                           </span>
                         </div>
                       </div>
