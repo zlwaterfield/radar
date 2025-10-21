@@ -455,7 +455,7 @@ export class SlackService {
         type: 'header',
         text: {
           type: 'plain_text',
-          text: '🎯 Pull Request Dashboard',
+          text: 'Radar dashboard',
           emoji: true,
         },
       },
@@ -464,7 +464,7 @@ export class SlackService {
         elements: [
           {
             type: 'mrkdwn',
-            text: `Hello ${user.name || 'there'}! Here's your PR overview`,
+            text: `Hello ${user.name || 'there'}! Here's your Radar overview`,
           },
         ],
       },
@@ -474,7 +474,21 @@ export class SlackService {
     if (!user.githubId) {
       blocks.push(
         {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ' ',
+          },
+        },
+        {
           type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ' ',
+          },
         },
         {
           type: 'section',
@@ -507,9 +521,25 @@ export class SlackService {
       const stats = await this.pullRequestService.getPullRequestStats(user.githubId);
 
       // Add divider before stats
-      blocks.push({
-        type: 'divider',
-      });
+      blocks.push(
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ' ',
+          },
+        },
+        {
+          type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ' ',
+          },
+        },
+      );
 
       // Add stats cards section
       blocks.push(...this.createStatsBlocks(stats));
@@ -518,9 +548,25 @@ export class SlackService {
       if (stats.waitingOnMe > 0 || stats.myOpenPRs > 0) {
         // Fetch PRs waiting on me
         if (stats.waitingOnMe > 0) {
-          blocks.push({
-            type: 'divider',
-          });
+          blocks.push(
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: ' ',
+              },
+            },
+            {
+              type: 'divider',
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: ' ',
+              },
+            },
+          );
 
           const waitingOnMe = await this.pullRequestService.listPullRequests({
             reviewerGithubId: user.githubId,
@@ -531,14 +577,30 @@ export class SlackService {
             includeChecks: true,
           });
 
-          blocks.push(...this.createPRListBlocks('🚨 Waiting on Me', waitingOnMe, stats.waitingOnMe));
+          blocks.push(...this.createPRListBlocks('Needs your review', waitingOnMe, stats.waitingOnMe, user.githubId, true));
         }
 
         // Fetch my open PRs
         if (stats.myOpenPRs > 0) {
-          blocks.push({
-            type: 'divider',
-          });
+          blocks.push(
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: ' ',
+              },
+            },
+            {
+              type: 'divider',
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: ' ',
+              },
+            },
+          );
 
           const myOpenPRs = await this.pullRequestService.listPullRequests({
             authorGithubId: user.githubId,
@@ -551,14 +613,28 @@ export class SlackService {
           });
 
           if (myOpenPRs.length > 0) {
-            blocks.push(...this.createPRListBlocks('📝 My Open PRs', myOpenPRs, stats.myOpenPRs));
+            blocks.push(...this.createPRListBlocks('My open PRs', myOpenPRs, stats.myOpenPRs, user.githubId, false));
           }
         }
       } else {
         // Empty state
         blocks.push(
           {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: ' ',
+            },
+          },
+          {
             type: 'divider',
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: ' ',
+            },
           },
           {
             type: 'section',
@@ -573,7 +649,21 @@ export class SlackService {
       // Add action buttons at the bottom
       blocks.push(
         {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ' ',
+          },
+        },
+        {
           type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ' ',
+          },
         },
         {
           type: 'actions',
@@ -605,7 +695,21 @@ export class SlackService {
       // Fallback to basic view
       blocks.push(
         {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ' ',
+          },
+        },
+        {
           type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ' ',
+          },
         },
         {
           type: 'section',
@@ -644,11 +748,11 @@ export class SlackService {
         fields: [
           {
             type: 'mrkdwn',
-            text: `🔴 *Waiting on Me*\n${stats.waitingOnMe} PRs`,
+            text: `🔴 *Needs your review*\n${stats.waitingOnMe} PRs`,
           },
           {
             type: 'mrkdwn',
-            text: `🟢 *Ready to Merge*\n${stats.approvedReadyToMerge} PRs`,
+            text: `🟢 *Ready to merge*\n${stats.approvedReadyToMerge} PRs`,
           },
         ],
       },
@@ -657,11 +761,11 @@ export class SlackService {
         fields: [
           {
             type: 'mrkdwn',
-            text: `🔵 *My Open PRs*\n${stats.myOpenPRs} PRs`,
+            text: `🔵 *My open PRs*\n${stats.myOpenPRs} PRs`,
           },
           {
             type: 'mrkdwn',
-            text: `⚫ *My Drafts*\n${stats.myDraftPRs} PRs`,
+            text: `⚫ *My drafts*\n${stats.myDraftPRs} PRs`,
           },
         ],
       },
@@ -671,7 +775,7 @@ export class SlackService {
   /**
    * Create PR list blocks for Slack home view
    */
-  private createPRListBlocks(title: string, prs: any[], totalCount?: number): any[] {
+  private createPRListBlocks(title: string, prs: any[], totalCount?: number, currentUserGithubId?: string, showAuthor?: boolean): any[] {
     const blocks: any[] = [
       {
         type: 'section',
@@ -683,7 +787,7 @@ export class SlackService {
     ];
 
     prs.slice(0, 3).forEach((pr) => {
-      blocks.push(this.createPRCardBlock(pr));
+      blocks.push(this.createPRCardBlock(pr, currentUserGithubId, showAuthor));
     });
 
     // Add "View all" link if there are more PRs
@@ -705,9 +809,22 @@ export class SlackService {
   /**
    * Create a single PR card block
    */
-  private createPRCardBlock(pr: any): any {
+  private createPRCardBlock(pr: any, currentUserGithubId?: string, showAuthor?: boolean): any {
     const reviewers = pr.reviewers || [];
     const checks = pr.checks || [];
+
+    // Helper function to calculate relative time
+    const getRelativeTime = (dateString: string) => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+      if (seconds < 60) return 'just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+      return `${Math.floor(seconds / 604800)}w ago`;
+    };
 
     // Calculate check status
     const passing = checks.filter((c: any) => c.status === 'completed' && c.conclusion === 'success').length;
@@ -717,19 +834,37 @@ export class SlackService {
     // Build status line with icons
     const statusParts: string[] = [];
 
-    // Add reviewer status (compact)
+    // Add reviewer status with names/teams
     if (reviewers.length > 0) {
-      const approved = reviewers.filter((r: any) => r.reviewState === 'approved').length;
-      const changesRequested = reviewers.filter((r: any) => r.reviewState === 'changes_requested').length;
+      const approvedReviewers = reviewers.filter((r: any) => r.reviewState === 'approved');
+      const changesRequestedReviewers = reviewers.filter((r: any) => r.reviewState === 'changes_requested');
+      const pendingReviewers = reviewers.filter((r: any) =>
+        r.reviewState === 'pending' || (!r.reviewState || r.reviewState === 'commented')
+      );
 
-      if (approved > 0) {
-        statusParts.push(`✅ ${approved}`);
+      if (approvedReviewers.length > 0) {
+        const names = approvedReviewers
+          .slice(0, 2)
+          .map((r: any) => r.isTeamReview ? `@${r.teamSlug}` : r.login)
+          .join(', ');
+        const extra = approvedReviewers.length > 2 ? ` +${approvedReviewers.length - 2}` : '';
+        statusParts.push(`✅ ${names}${extra}`);
       }
-      if (changesRequested > 0) {
-        statusParts.push(`❌ ${changesRequested}`);
+      if (changesRequestedReviewers.length > 0) {
+        const names = changesRequestedReviewers
+          .slice(0, 2)
+          .map((r: any) => r.isTeamReview ? `@${r.teamSlug}` : r.login)
+          .join(', ');
+        const extra = changesRequestedReviewers.length > 2 ? ` +${changesRequestedReviewers.length - 2}` : '';
+        statusParts.push(`❌ ${names}${extra}`);
       }
-      if (approved === 0 && changesRequested === 0) {
-        statusParts.push(`⏳ ${reviewers.length}`);
+      if (pendingReviewers.length > 0) {
+        const names = pendingReviewers
+          .slice(0, 2)
+          .map((r: any) => r.isTeamReview ? `@${r.teamSlug}` : r.login)
+          .join(', ');
+        const extra = pendingReviewers.length > 2 ? ` +${pendingReviewers.length - 2}` : '';
+        statusParts.push(`⏳ ${names}${extra}`);
       }
     }
 
@@ -744,8 +879,8 @@ export class SlackService {
       }
     }
 
-    // Add change stats (compact)
-    statusParts.push(`+${pr.additions} -${pr.deletions}`);
+    // Add change stats (aligned with notification messages)
+    statusParts.push(`${pr.additions > 0 ? `+${pr.additions}` : 'No'} additions • ${pr.deletions > 0 ? `-${pr.deletions}` : 'No'} deletions`);
 
     const statusLine = statusParts.length > 0 ? `\n${statusParts.join(' • ')}` : '';
 
@@ -755,13 +890,39 @@ export class SlackService {
       ? `\n🏷 ${labels.slice(0, 2).map((l: any) => `\`${l.name}\``).join(' ')}${labels.length > 2 ? ` +${labels.length - 2}` : ''}`
       : '';
 
-    return {
+    // Capitalize first character of title, lowercase rest
+    const formattedTitle = pr.title.charAt(0).toUpperCase() + pr.title.slice(1).toLowerCase();
+
+    // Build dates line
+    const openedTime = getRelativeTime(pr.openedAt);
+    const updatedTime = getRelativeTime(pr.updatedAt);
+    const datesLine = `\nOpened ${openedTime} • Updated ${updatedTime}`;
+
+    // Build metadata line: repository • [author] • PR number
+    // Only show author if showAuthor is true OR if it's not the current user's PR
+    const shouldShowAuthor = showAuthor === true || (showAuthor !== false && pr.authorGithubId !== currentUserGithubId);
+    const metadataLine = shouldShowAuthor
+      ? `${pr.repositoryName} • ${pr.authorLogin} • #${pr.number}`
+      : `${pr.repositoryName} • #${pr.number}`;
+
+    const block: any = {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `<${pr.url}|*${pr.title}*>\n\`#${pr.number}\` in ${pr.repositoryName}${statusLine}${labelText}`,
+        text: `<${pr.url}|*${formattedTitle}*>\n${metadataLine}${datesLine}${statusLine}${labelText}`,
       },
     };
+
+    // Add profile image as accessory only if showing author
+    if (shouldShowAuthor && pr.authorAvatarUrl) {
+      block.accessory = {
+        type: 'image',
+        image_url: pr.authorAvatarUrl,
+        alt_text: pr.authorLogin,
+      };
+    }
+
+    return block;
   }
 
   /**

@@ -189,7 +189,7 @@ export default function DashboardPage() {
           {/* Waiting on Me */}
           {(stats?.waitingOnMe || 0) > 0 && (
             <PullRequestSection
-              title="Waiting on Me"
+              title="Needs your review"
               icon="🚨"
               prs={waitingOnMe}
               loading={loadingPRs}
@@ -201,8 +201,7 @@ export default function DashboardPage() {
           {/* Ready to Merge */}
           {(stats?.approvedReadyToMerge || 0) > 0 && (
             <PullRequestSection
-              title="Ready to Merge"
-              icon="✅"
+              title="Ready to merge"
               prs={readyToMerge}
               loading={loadingPRs}
               emptyMessage="No PRs ready to merge"
@@ -213,8 +212,7 @@ export default function DashboardPage() {
           {/* My Open PRs */}
           {(stats?.myOpenPRs || 0) > 0 && (
             <PullRequestSection
-              title="My Open PRs"
-              icon="📝"
+              title="My open PRs"
               prs={myOpenPRs}
               loading={loadingPRs}
               emptyMessage="No open PRs"
