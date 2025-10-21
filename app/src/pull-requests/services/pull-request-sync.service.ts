@@ -108,20 +108,14 @@ export class PullRequestSyncService {
       } else {
         // Update existing PR
         await this.updatePullRequest(existingPR.id, pull_request);
-        this.logger.log(`Updated PR ${repository.full_name}#${pull_request.number}`);
-      }
 
-      // Handle specific webhook actions
-      if (action === 'review_requested' || action === 'review_request_removed') {
+        // Sync related data on PR updates to keep them fresh
+        // This ensures labels, reviewers, and assignees are always up-to-date
         await this.syncReviewers(githubId, pull_request);
-      }
-
-      if (action === 'labeled' || action === 'unlabeled') {
         await this.syncLabels(githubId, pull_request);
-      }
-
-      if (action === 'assigned' || action === 'unassigned') {
         await this.syncAssignees(githubId, pull_request);
+
+        this.logger.log(`Updated PR ${repository.full_name}#${pull_request.number}`);
       }
 
       // Handle review submission
@@ -248,11 +242,20 @@ export class PullRequestSyncService {
       mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
       baseBranch: pr.base.ref,
       headBranch: pr.head.ref,
-      additions: pr.additions || 0,
-      deletions: pr.deletions || 0,
-      changedFiles: pr.changed_files || 0,
       lastSyncedAt: new Date(),
     };
+
+    // Only update these fields if they are present in the payload
+    // GitHub doesn't include them in all webhook events (e.g., review events)
+    if (pr.additions !== undefined) {
+      data.additions = pr.additions;
+    }
+    if (pr.deletions !== undefined) {
+      data.deletions = pr.deletions;
+    }
+    if (pr.changed_files !== undefined) {
+      data.changedFiles = pr.changed_files;
+    }
 
     await this.databaseService.pullRequest.update({
       where: { id },
