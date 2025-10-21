@@ -7,7 +7,7 @@ import { pullRequestsApi, PullRequestStats, PullRequest } from '@/lib/api/pull-r
 import { PullRequestSection } from '@/components/dashboard/PullRequestSection';
 
 export default function DashboardPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<PullRequestStats | null>(null);
   const [waitingOnMe, setWaitingOnMe] = useState<PullRequest[]>([]);
@@ -17,12 +17,12 @@ export default function DashboardPage() {
   const [loadingPRs, setLoadingPRs] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Redirect to sign in if not authenticated
+  // Redirect to sign in if not authenticated (but wait for auth to load first)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       router.push('/auth/signin');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, authLoading, router]);
 
   // Fetch PR stats
   useEffect(() => {
@@ -88,6 +88,15 @@ export default function DashboardPage() {
 
     fetchPRLists();
   }, [isAuthenticated, stats]);
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return null;
