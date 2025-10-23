@@ -69,7 +69,7 @@ export function PullRequestRow({ pr, onClick }: PullRequestRowProps) {
       `}
     >
       {/* Header: Title and PR number */}
-      <div className="flex items-start gap-3 mb-3">
+      <div className="flex items-start gap-3">
         <div className="flex-shrink-0 mt-1">
           {pr.isDraft ? (
             <FiGitPullRequest className="text-gray-400 dark:text-gray-500" size={20} />
@@ -105,57 +105,57 @@ export function PullRequestRow({ pr, onClick }: PullRequestRowProps) {
               {pr.changedFiles} {pr.changedFiles === 1 ? 'file' : 'files'}
             </span>
           </div>
+
+          {/* Reviewers */}
+          {reviewStatus && reviewStatus.total > 0 && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Reviewers:</span>
+              <div className="flex items-center gap-1">
+                {pr.reviewers?.slice(0, 5).map((reviewer) => {
+                  let icon = '⏳';
+                  let color = 'text-gray-500 dark:text-gray-400';
+
+                  if (reviewer.reviewState === 'approved') {
+                    icon = '✅';
+                    color = 'text-green-600 dark:text-green-400';
+                  } else if (reviewer.reviewState === 'changes_requested') {
+                    icon = '❌';
+                    color = 'text-red-600 dark:text-red-400';
+                  } else if (reviewer.reviewState === 'commented') {
+                    icon = '💬';
+                    color = 'text-blue-600 dark:text-blue-400';
+                  }
+
+                  return (
+                    <span
+                      key={reviewer.githubId}
+                      className={`text-xs ${color} flex items-center gap-1`}
+                      title={`${reviewer.login} - ${reviewer.reviewState}`}
+                    >
+                      {icon} {reviewer.login}
+                    </span>
+                  );
+                })}
+                {reviewStatus.total > 5 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    +{reviewStatus.total - 5}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {reviewStatus.approved > 0 && `${reviewStatus.approved}/${reviewStatus.total} approved`}
+                {reviewStatus.changesRequested > 0 && ` • ${reviewStatus.changesRequested} changes requested`}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      <div>
+      <div className="flex flex-col items-center gap-2">
         {pr.isDraft && (
           <span className="flex-shrink-0 px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
             Draft
           </span>
-        )}
-        
-        {/* Reviewers */}
-        {reviewStatus && reviewStatus.total > 0 && (
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Reviewers:</span>
-            <div className="flex items-center gap-1">
-              {pr.reviewers?.slice(0, 5).map((reviewer) => {
-                let icon = '⏳';
-                let color = 'text-gray-500 dark:text-gray-400';
-
-                if (reviewer.reviewState === 'approved') {
-                  icon = '✅';
-                  color = 'text-green-600 dark:text-green-400';
-                } else if (reviewer.reviewState === 'changes_requested') {
-                  icon = '❌';
-                  color = 'text-red-600 dark:text-red-400';
-                } else if (reviewer.reviewState === 'commented') {
-                  icon = '💬';
-                  color = 'text-blue-600 dark:text-blue-400';
-                }
-
-                return (
-                  <span
-                    key={reviewer.githubId}
-                    className={`text-xs ${color} flex items-center gap-1`}
-                    title={`${reviewer.login} - ${reviewer.reviewState}`}
-                  >
-                    {icon} {reviewer.login}
-                  </span>
-                );
-              })}
-              {reviewStatus.total > 5 && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  +{reviewStatus.total - 5}
-                </span>
-              )}
-            </div>
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              {reviewStatus.approved > 0 && `${reviewStatus.approved}/${reviewStatus.total} approved`}
-              {reviewStatus.changesRequested > 0 && ` • ${reviewStatus.changesRequested} changes requested`}
-            </span>
-          </div>
         )}
 
         {/* Bottom row: CI status, stats, labels */}

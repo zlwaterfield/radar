@@ -613,7 +613,7 @@ export class SlackService {
           });
 
           if (myOpenPRs.length > 0) {
-            blocks.push(...this.createPRListBlocks('My open PRs', myOpenPRs, stats.myOpenPRs, user.githubId, false));
+            blocks.push(...this.createPRListBlocks('Open PRs', myOpenPRs, stats.myOpenPRs, user.githubId, false));
           }
         }
       } else {
@@ -761,11 +761,11 @@ export class SlackService {
         fields: [
           {
             type: 'mrkdwn',
-            text: `🔵 *My open PRs*\n${stats.myOpenPRs} PRs`,
+            text: `🔵 *Open PRs*\n${stats.myOpenPRs} PRs`,
           },
           {
             type: 'mrkdwn',
-            text: `⚫ *My drafts*\n${stats.myDraftPRs} PRs`,
+            text: `⚫ *Draft PRs*\n${stats.myDraftPRs} PRs`,
           },
         ],
       },

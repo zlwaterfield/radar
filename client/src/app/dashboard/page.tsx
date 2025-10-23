@@ -179,27 +179,23 @@ export default function DashboardPage() {
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Waiting on Me"
+          title="Needs your review"
           count={stats?.waitingOnMe || 0}
-          subtitle="Review requested"
           color="red"
         />
         <StatCard
-          title="Ready to Merge"
-          count={stats?.approvedReadyToMerge || 0}
-          subtitle="Approved"
+          title="Ready to merge"
           color="green"
+          count={stats?.approvedReadyToMerge || 0}
         />
         <StatCard
-          title="My Open PRs"
+          title="Open PRs"
           count={stats?.myOpenPRs || 0}
-          subtitle="Active pull requests"
           color="blue"
         />
         <StatCard
-          title="My Drafts"
+          title="Draft PRs"
           count={stats?.myDraftPRs || 0}
-          subtitle="Draft pull requests"
           color="gray"
         />
       </div>
@@ -255,7 +251,7 @@ export default function DashboardPage() {
           {/* My Open PRs */}
           {(stats?.myOpenPRs || 0) > 0 && (
             <PullRequestSection
-              title="My open PRs"
+              title="Open PRs"
               prs={myOpenPRs}
               loading={loadingPRs}
               emptyMessage="No open PRs"
@@ -271,11 +267,10 @@ export default function DashboardPage() {
 interface StatCardProps {
   title: string;
   count: number;
-  subtitle: string;
   color: 'red' | 'green' | 'blue' | 'gray';
 }
 
-function StatCard({ title, count, subtitle, color }: StatCardProps) {
+function StatCard({ title, count, color }: StatCardProps) {
   const colorClasses = {
     red: 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20',
     green: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20',
@@ -291,16 +286,13 @@ function StatCard({ title, count, subtitle, color }: StatCardProps) {
   };
 
   return (
-    <div className={`rounded-lg border-2 p-6 ${colorClasses[color]}`}>
+    <div className={`rounded-lg border-2 p-3 ${colorClasses[color]}`}>
       <div className="flex flex-col">
         <span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
           {title}
         </span>
-        <span className={`text-3xl font-bold ${textColorClasses[color]} mb-1`}>
+        <span className={`text-3xl font-bold ${textColorClasses[color]}`}>
           {count}
-        </span>
-        <span className="text-xs text-gray-500 dark:text-gray-500">
-          {subtitle}
         </span>
       </div>
     </div>
