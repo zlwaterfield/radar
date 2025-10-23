@@ -1,5 +1,7 @@
 version: '3.8'
 
+name: radar-dev
+
 services:
   # PostgreSQL Database for Development
   postgres:
