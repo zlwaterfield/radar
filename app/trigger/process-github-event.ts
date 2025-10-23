@@ -585,14 +585,7 @@ function createPRStateBlocks(prState: any): any[] {
   // Reviewers section
   if (prState.reviewers && prState.reviewers.length > 0) {
     const reviewerText = prState.reviewers
-      .map((r: any) => {
-        let icon = '⏳'; // Pending
-        if (r.reviewState === 'approved') icon = '✅';
-        else if (r.reviewState === 'changes_requested') icon = '❌';
-        else if (r.reviewState === 'commented') icon = '💬';
-        else if (r.reviewState === 'dismissed') icon = '🚫';
-        return `${icon} @${r.login}`;
-      })
+      .map((r: any) => `@${r.login}`)
       .join(', ');
 
     blocks.push({
@@ -600,7 +593,7 @@ function createPRStateBlocks(prState: any): any[] {
       elements: [
         {
           type: 'mrkdwn',
-          text: `👥 *Reviewers:* ${reviewerText}`,
+          text: `*Reviewers:* ${reviewerText}`,
         },
       ],
     });
@@ -682,7 +675,7 @@ async function createPRSlackMessage(data: any, notificationDecision?: any) {
   else if (action === "assigned") icon = "👤";
 
   // Create GitHub user link
-  const user = payload.pull_request?.user?.login || payload.sender?.login;
+  const user = payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
 
   // Create contextual text based on action
@@ -816,7 +809,7 @@ function createIssueSlackMessage(data: any, notificationDecision?: any) {
   else if (action === "assigned") icon = "👤";
 
   // Create GitHub user link
-  const user = payload.issue?.user?.login || payload.sender?.login;
+  const user = payload.sender?.login;
   const githubUserLink = `<https://github.com/${user}|${user}>`;
 
   // Create contextual text based on action

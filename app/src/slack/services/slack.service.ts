@@ -890,9 +890,6 @@ export class SlackService {
       ? `\n🏷 ${labels.slice(0, 2).map((l: any) => `\`${l.name}\``).join(' ')}${labels.length > 2 ? ` +${labels.length - 2}` : ''}`
       : '';
 
-    // Capitalize first character of title, lowercase rest
-    const formattedTitle = pr.title.charAt(0).toUpperCase() + pr.title.slice(1).toLowerCase();
-
     // Build dates line
     const openedTime = getRelativeTime(pr.openedAt);
     const updatedTime = getRelativeTime(pr.updatedAt);
@@ -909,7 +906,7 @@ export class SlackService {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `<${pr.url}|*${formattedTitle}*>\n${metadataLine}${datesLine}${statusLine}${labelText}`,
+        text: `<${pr.url}|*${pr.title}*>\n${metadataLine}${datesLine}${statusLine}${labelText}`,
       },
     };
 

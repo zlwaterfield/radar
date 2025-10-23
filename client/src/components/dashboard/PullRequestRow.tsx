@@ -141,7 +141,7 @@ export function PullRequestRow({ pr, onClick }: PullRequestRowProps) {
                     className={`text-xs ${color} flex items-center gap-1`}
                     title={`${reviewer.login} - ${reviewer.reviewState}`}
                   >
-                    {icon} {reviewer.avatarUrl ? <img src={reviewer.avatarUrl} alt={reviewer.login} className="w-4 h-4 rounded-full" /> : null}
+                    {icon} {reviewer.login}
                   </span>
                 );
               })}

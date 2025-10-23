@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadingPRs, setLoadingPRs] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
   // Redirect to sign in if not authenticated (but wait for auth to load first)
   useEffect(() => {
@@ -24,9 +25,42 @@ export default function DashboardPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  // Fetch PR stats
+  // Check if user has completed onboarding (connected Slack or GitHub)
   useEffect(() => {
-    if (!isAuthenticated) return;
+    const checkOnboarding = async () => {
+      if (!isAuthenticated || authLoading) {
+        return;
+      }
+
+      try {
+        const [slackResponse, githubResponse] = await Promise.all([
+          fetch('/api/integrations/slack/status'),
+          fetch('/api/integrations/github/status'),
+        ]);
+
+        const slackStatus = await slackResponse.json();
+        const githubStatus = await githubResponse.json();
+
+        // If user hasn't connected either Slack or GitHub, redirect to onboarding
+        if (!slackStatus.connected && !githubStatus.connected) {
+          router.push('/onboarding');
+          return;
+        }
+
+        setCheckingOnboarding(false);
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        // On error, allow them to stay on dashboard
+        setCheckingOnboarding(false);
+      }
+    };
+
+    checkOnboarding();
+  }, [isAuthenticated, authLoading, router]);
+
+  // Fetch PR stats (only after onboarding check is complete)
+  useEffect(() => {
+    if (!isAuthenticated || checkingOnboarding) return;
 
     const fetchStats = async () => {
       try {
@@ -43,11 +77,11 @@ export default function DashboardPage() {
     };
 
     fetchStats();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, checkingOnboarding]);
 
-  // Fetch PR lists
+  // Fetch PR lists (only after onboarding check is complete)
   useEffect(() => {
-    if (!isAuthenticated || !stats) return;
+    if (!isAuthenticated || !stats || checkingOnboarding) return;
 
     const fetchPRLists = async () => {
       try {
@@ -87,10 +121,10 @@ export default function DashboardPage() {
     };
 
     fetchPRLists();
-  }, [isAuthenticated, stats]);
+  }, [isAuthenticated, stats, checkingOnboarding]);
 
-  // Show loading while checking authentication
-  if (authLoading) {
+  // Show loading while checking authentication or onboarding status
+  if (authLoading || checkingOnboarding) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>

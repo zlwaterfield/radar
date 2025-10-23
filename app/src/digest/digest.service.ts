@@ -30,9 +30,14 @@ export class DigestService {
   ) {}
 
   /**
-   * Map database PR to GitHub PR format
+   * Map database PR to GitHub PR format with extended fields
    */
-  private mapDatabasePRToGitHub(pr: PullRequestWithRelations): GitHubPullRequest {
+  private mapDatabasePRToGitHub(pr: PullRequestWithRelations): GitHubPullRequest & {
+    reviewers?: any[];
+    labels?: any[];
+    checks?: any[];
+    openedAt?: string;
+  } {
     // Extract owner and repo from repositoryName (format: "owner/repo")
     const [owner, repo] = pr.repositoryName.split('/');
 
@@ -119,6 +124,11 @@ export class DigestService {
       additions: pr.additions,
       deletions: pr.deletions,
       changed_files: pr.changedFiles,
+      // Extended fields for digest formatting
+      reviewers: pr.reviewers,
+      labels: pr.labels,
+      checks: pr.checks,
+      openedAt: pr.openedAt?.toISOString(),
     };
   }
 
@@ -639,6 +649,107 @@ export class DigestService {
   }
 
   /**
+   * Helper function to calculate relative time
+   */
+  private getRelativeTime(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return `${Math.floor(seconds / 604800)}w ago`;
+  }
+
+  /**
+   * Create detailed PR card text matching dashboard format
+   */
+  private createPRCardText(pr: any, currentUserLogin?: string, showAuthor?: boolean): string {
+    const reviewers = pr.reviewers || [];
+    const checks = pr.checks || [];
+    const labels = pr.labels || [];
+
+    // Calculate check status
+    const passing = checks.filter((c: any) => c.status === 'completed' && c.conclusion === 'success').length;
+    const failing = checks.filter((c: any) => c.status === 'completed' && c.conclusion === 'failure').length;
+    const pending = checks.filter((c: any) => c.status !== 'completed').length;
+
+    // Build status line with icons
+    const statusParts: string[] = [];
+
+    // Add reviewer status with names/teams
+    if (reviewers.length > 0) {
+      const approvedReviewers = reviewers.filter((r: any) => r.reviewState === 'approved');
+      const changesRequestedReviewers = reviewers.filter((r: any) => r.reviewState === 'changes_requested');
+      const pendingReviewers = reviewers.filter((r: any) =>
+        r.reviewState === 'pending' || (!r.reviewState || r.reviewState === 'commented')
+      );
+
+      if (approvedReviewers.length > 0) {
+        const names = approvedReviewers
+          .slice(0, 2)
+          .map((r: any) => r.isTeamReview ? `@${r.teamSlug}` : r.login)
+          .join(', ');
+        const extra = approvedReviewers.length > 2 ? ` +${approvedReviewers.length - 2}` : '';
+        statusParts.push(`✅ ${names}${extra}`);
+      }
+      if (changesRequestedReviewers.length > 0) {
+        const names = changesRequestedReviewers
+          .slice(0, 2)
+          .map((r: any) => r.isTeamReview ? `@${r.teamSlug}` : r.login)
+          .join(', ');
+        const extra = changesRequestedReviewers.length > 2 ? ` +${changesRequestedReviewers.length - 2}` : '';
+        statusParts.push(`❌ ${names}${extra}`);
+      }
+      if (pendingReviewers.length > 0) {
+        const names = pendingReviewers
+          .slice(0, 2)
+          .map((r: any) => r.isTeamReview ? `@${r.teamSlug}` : r.login)
+          .join(', ');
+        const extra = pendingReviewers.length > 2 ? ` +${pendingReviewers.length - 2}` : '';
+        statusParts.push(`⏳ ${names}${extra}`);
+      }
+    }
+
+    // Add check status (compact)
+    if (checks.length > 0) {
+      if (failing > 0) {
+        statusParts.push(`🔴 ${failing} failing`);
+      } else if (pending > 0) {
+        statusParts.push(`🟡 ${pending} pending`);
+      } else if (passing > 0) {
+        statusParts.push(`🟢 ${passing} passing`);
+      }
+    }
+
+    // Add change stats (aligned with notification messages)
+    statusParts.push(`${pr.additions > 0 ? `+${pr.additions}` : 'No'} additions • ${pr.deletions > 0 ? `-${pr.deletions}` : 'No'} deletions`);
+
+    const statusLine = statusParts.length > 0 ? `\n${statusParts.join(' • ')}` : '';
+
+    // Build labels (compact, max 2)
+    const labelText = labels.length > 0
+      ? `\n🏷 ${labels.slice(0, 2).map((l: any) => `\`${l.name}\``).join(' ')}${labels.length > 2 ? ` +${labels.length - 2}` : ''}`
+      : '';
+
+    // Build dates line
+    const openedTime = this.getRelativeTime(pr.openedAt || pr.created_at);
+    const updatedTime = this.getRelativeTime(pr.updated_at);
+    const datesLine = `\nOpened ${openedTime} • Updated ${updatedTime}`;
+
+    // Build metadata line: repository • [author] • PR number
+    // Only show author if showAuthor is true OR if it's not the current user's PR
+    const shouldShowAuthor = showAuthor === true || (showAuthor !== false && pr.user.login !== currentUserLogin);
+    const metadataLine = shouldShowAuthor
+      ? `${pr.base.repo.full_name} • ${pr.user.login} • #${pr.number}`
+      : `${pr.base.repo.full_name} • #${pr.number}`;
+
+    return `<${pr.html_url}|*${pr.title}*>\n${metadataLine}${datesLine}${statusLine}${labelText}`;
+  }
+
+  /**
    * Create Slack message for digest with config name
    */
   private createDigestSlackMessage(
@@ -697,20 +808,12 @@ export class DigestService {
 
       // Display PRs grouped by repo
       for (const [repoName, prs] of prsByRepo) {
-        waitingBlocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `${repoName}`,
-          },
-        });
-
         for (const pr of prs.slice(0, 5)) {
           waitingBlocks.push({
             type: 'section',
             text: {
               type: 'mrkdwn',
-              text: `<${pr.html_url}|${pr.title} (#${pr.number})> (<https://github.com/${pr.user.login}|${pr.user.login}>)`,
+              text: this.createPRCardText(pr, currentUserLogin, true),
             },
           });
         }
@@ -762,20 +865,12 @@ export class DigestService {
 
       // Display PRs grouped by repo
       for (const [repoName, prs] of prsByRepo) {
-        approvedBlocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `${repoName}`,
-          },
-        });
-
         for (const pr of prs.slice(0, 5)) {
           approvedBlocks.push({
             type: 'section',
             text: {
               type: 'mrkdwn',
-              text: `<${pr.html_url}|${pr.title} (#${pr.number})>`,
+              text: this.createPRCardText(pr, currentUserLogin, false),
             },
           });
         }
@@ -827,23 +922,12 @@ export class DigestService {
 
       // Display PRs grouped by repo
       for (const [repoName, prs] of prsByRepo) {
-        openBlocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `${repoName}`,
-          },
-        });
-
         for (const pr of prs.slice(0, 5)) {
-          const authorInfo = pr.user.login !== currentUserLogin
-            ? ` (<https://github.com/${pr.user.login}|${pr.user.login}>)`
-            : '';
           openBlocks.push({
             type: 'section',
             text: {
               type: 'mrkdwn',
-              text: `<${pr.html_url}|${pr.title} (#${pr.number})>${authorInfo}`,
+              text: this.createPRCardText(pr, currentUserLogin, scopeType === 'team'),
             },
           });
         }
@@ -895,23 +979,12 @@ export class DigestService {
 
       // Display PRs grouped by repo
       for (const [repoName, prs] of prsByRepo) {
-        draftBlocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `${repoName}`,
-          },
-        });
-
         for (const pr of prs.slice(0, 5)) {
-          const authorInfo = pr.user.login !== currentUserLogin
-            ? ` (<https://github.com/${pr.user.login}|${pr.user.login}>)`
-            : '';
           draftBlocks.push({
             type: 'section',
             text: {
               type: 'mrkdwn',
-              text: `<${pr.html_url}|${pr.title} (#${pr.number})>${authorInfo}`,
+              text: this.createPRCardText(pr, currentUserLogin, scopeType === 'team'),
             },
           });
         }
