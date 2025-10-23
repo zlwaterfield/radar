@@ -38,7 +38,7 @@ const PLANS = [
     billing: 'per month',
     annualPrice: '$60',
     annualBilling: 'per year',
-    savings: 'Save $12/year',
+    savings: 'Get 2 months free',
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY_PRICE_ID,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL_PRICE_ID,
     features: [
@@ -57,7 +57,7 @@ const PLANS = [
     billing: 'per month',
     annualPrice: '$150',
     annualBilling: 'per year',
-    savings: 'Save $30/year',
+    savings: 'Get 2 months free',
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
     features: [
