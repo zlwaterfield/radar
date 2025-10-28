@@ -29,7 +29,7 @@ export default function SettingsLayout({
   const pathname = usePathname();
   const surveyId = process.env.NEXT_PUBLIC_POSTHOG_SURVEY_ID || '';
   const { showSurvey, isReady } = useSurvey(surveyId);
-  const paymentEnabled = process.env.NEXT_PUBLIC_PAYMENT_ENABLED !== 'false';
+  const paymentEnabled = process.env.NEXT_PUBLIC_PAYMENT_DISABLED !== 'true';
 
   const isActive = (path: string) => {
     return pathname === path;

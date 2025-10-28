@@ -79,8 +79,8 @@ async function initializeNewUser(userId: string) {
     console.log(`Created default digest config for user ${userId}`);
 
     // Initialize feature entitlements based on payment mode
-    const paymentEnabled = process.env.PAYMENT_ENABLED === 'true';
-    const entitlements = paymentEnabled
+    const paymentDisabled = process.env.PAYMENT_DISABLED === 'true';
+    const entitlements = !paymentDisabled
       ? [
           { featureLookupKey: 'repository_limit', featureName: 'Repository Limit', value: '2' },
           { featureLookupKey: 'notification_profiles', featureName: 'Notification Configurations', value: '1' },

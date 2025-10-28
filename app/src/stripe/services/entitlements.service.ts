@@ -5,21 +5,21 @@ import { DatabaseService } from '@/database/database.service';
 @Injectable()
 export class EntitlementsService {
   private readonly logger = new Logger(EntitlementsService.name);
-  private readonly paymentEnabled: boolean;
+  private readonly paymentDisabled: boolean;
 
   constructor(
     private db: DatabaseService,
     private configService: ConfigService,
   ) {
-    this.paymentEnabled = this.configService.get<string>('PAYMENT_ENABLED', 'true') === 'true';
-    if (!this.paymentEnabled) {
+    this.paymentDisabled = this.configService.get<string>('PAYMENT_DISABLED', 'false') === 'true';
+    if (this.paymentDisabled) {
       this.logger.log('Running in open-source mode: Payment system disabled, full features granted to all users');
     }
   }
 
   async syncUserEntitlements(userId: string) {
     // If payment is disabled, grant full pro-level entitlements
-    if (!this.paymentEnabled) {
+    if (this.paymentDisabled) {
       return this.setOpenSourceEntitlements(userId);
     }
 
@@ -126,7 +126,7 @@ export class EntitlementsService {
 
   async hasFeature(userId: string, featureLookupKey: string): Promise<boolean> {
     // If payment is disabled, grant all features
-    if (!this.paymentEnabled) {
+    if (this.paymentDisabled) {
       return true;
     }
 
@@ -147,7 +147,7 @@ export class EntitlementsService {
     featureLookupKey: string,
   ): Promise<number | boolean | null> {
     // If payment is disabled, return unlimited/true values
-    if (!this.paymentEnabled) {
+    if (this.paymentDisabled) {
       // Return unlimited for limits, true for boolean features
       if (featureLookupKey.includes('limit')) {
         return -1; // unlimited
