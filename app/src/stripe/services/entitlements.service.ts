@@ -58,7 +58,7 @@ export class EntitlementsService {
           },
           {
             featureLookupKey: 'notification_profiles',
-            featureName: 'Notification Profiles',
+            featureName: 'Notification Configurations',
             value: '3',
           },
           {
@@ -69,7 +69,7 @@ export class EntitlementsService {
           {
             featureLookupKey: 'keyword_limit',
             featureName: 'Keyword Limit',
-            value: '2',
+            value: '3',
           },
           {
             featureLookupKey: 'ai_keyword_matching',
@@ -88,7 +88,7 @@ export class EntitlementsService {
           },
           {
             featureLookupKey: 'notification_profiles',
-            featureName: 'Notification Profiles',
+            featureName: 'Notification Configurations',
             value: '-1', // unlimited
           },
           {
@@ -239,7 +239,7 @@ export class EntitlementsService {
       },
       {
         featureLookupKey: 'notification_profiles',
-        featureName: 'Notification Profiles',
+        featureName: 'Notification Configurations',
         value: '1',
       },
       {
@@ -282,7 +282,7 @@ export class EntitlementsService {
       },
       {
         featureLookupKey: 'notification_profiles',
-        featureName: 'Notification Profiles',
+        featureName: 'Notification Configurations',
         value: '-1',
       },
       {

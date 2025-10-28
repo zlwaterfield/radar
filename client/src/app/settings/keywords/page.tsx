@@ -191,7 +191,7 @@ export default function KeywordsSettings() {
                   Keywords
                 </h3>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  Manage reusable keywords for notification filtering. Keywords can be used across multiple notification profiles.
+                  Manage reusable keywords for notification filtering. Keywords can be used across multiple notifications.
                 </p>
               </div>
               <Button

@@ -113,7 +113,7 @@ export class NotificationProfileService {
       );
 
       if (!profile) {
-        throw new NotFoundException('Notification profile not found');
+        throw new NotFoundException('Notification not found');
       }
 
       return {
