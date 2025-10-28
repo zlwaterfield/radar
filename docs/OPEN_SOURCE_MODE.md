@@ -6,14 +6,14 @@ Radar can be run in **open-source mode**, which disables the payment/billing sys
 
 ### Backend Configuration
 
-Set the `PAYMENT_ENABLED` environment variable to `false` in your backend `.env` file:
+Set the `PAYMENT_DISABLED` environment variable to `true` in your backend `.env` file:
 
 ```bash
 # app/.env
-PAYMENT_ENABLED=false
+PAYMENT_DISABLED=true
 ```
 
-When this is set to `false`:
+When this is set to `true`:
 - All users automatically receive unlimited entitlements
 - Stripe integration is bypassed for entitlements
 - Users get:
@@ -27,14 +27,14 @@ When this is set to `false`:
 
 ### Frontend Configuration
 
-Set the `NEXT_PUBLIC_PAYMENT_ENABLED` environment variable to `false` in your frontend `.env.local` file:
+Set the `NEXT_PUBLIC_PAYMENT_DISABLED` environment variable to `true` in your frontend `.env` file:
 
 ```bash
-# client/.env.local
-NEXT_PUBLIC_PAYMENT_ENABLED=false
+# client/.env
+NEXT_PUBLIC_PAYMENT_DISABLED=true
 ```
 
-When this is set to `false`:
+When this is set to `true`:
 - The billing page is hidden from the settings sidebar
 - Upgrade banners are hidden throughout the UI
 - All limit-related warnings are suppressed
@@ -66,24 +66,24 @@ When payment is disabled:
 
 ### Backend (NestJS)
 
-The `EntitlementsService` (`app/src/stripe/services/entitlements.service.ts`) checks the `PAYMENT_ENABLED` environment variable:
+The `EntitlementsService` (`app/src/stripe/services/entitlements.service.ts`) checks the `PAYMENT_DISABLED` environment variable:
 
 ```typescript
 // On service initialization
-this.paymentEnabled = this.configService.get<string>('PAYMENT_ENABLED', 'true') === 'true';
+this.paymentDisabled = this.configService.get<string>('PAYMENT_DISABLED', 'false') === 'true';
 
 // When syncing entitlements
-if (!this.paymentEnabled) {
+if (this.paymentDisabled) {
   return this.setOpenSourceEntitlements(userId);
 }
 
 // When checking features
-if (!this.paymentEnabled) {
+if (this.paymentDisabled) {
   return true; // Grant all features
 }
 
 // When getting feature values
-if (!this.paymentEnabled) {
+if (this.paymentDisabled) {
   if (featureLookupKey.includes('limit')) {
     return -1; // unlimited
   }
@@ -93,10 +93,10 @@ if (!this.paymentEnabled) {
 
 ### Frontend (Next.js)
 
-Components check `process.env.NEXT_PUBLIC_PAYMENT_ENABLED`:
+Components check `process.env.NEXT_PUBLIC_PAYMENT_DISABLED`:
 
 ```typescript
-const paymentEnabled = process.env.NEXT_PUBLIC_PAYMENT_ENABLED !== 'false';
+const paymentEnabled = process.env.NEXT_PUBLIC_PAYMENT_DISABLED !== 'true';
 
 // Hide billing UI
 {paymentEnabled && (
@@ -117,10 +117,10 @@ if (!paymentEnabled) {
 2. Update environment variables:
    ```bash
    # Backend
-   PAYMENT_ENABLED=false
+   PAYMENT_DISABLED=true
 
    # Frontend
-   NEXT_PUBLIC_PAYMENT_ENABLED=false
+   NEXT_PUBLIC_PAYMENT_DISABLED=true
    ```
 3. Restart your application
 4. Existing users will automatically receive full entitlements on their next login
@@ -131,12 +131,14 @@ if (!paymentEnabled) {
 2. Update environment variables:
    ```bash
    # Backend
-   PAYMENT_ENABLED=true
+   # Remove or comment out PAYMENT_DISABLED
+   # PAYMENT_DISABLED=true
    STRIPE_SECRET_KEY=sk_live_your_key
    # ... other Stripe config
 
    # Frontend
-   NEXT_PUBLIC_PAYMENT_ENABLED=true
+   # Remove or comment out NEXT_PUBLIC_PAYMENT_DISABLED
+   # NEXT_PUBLIC_PAYMENT_DISABLED=true
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_your_key
    # ... other Stripe config
    ```
@@ -184,7 +186,7 @@ Users running Radar in open-source mode get:
 
 ### For SaaS Deployments
 
-Keep `PAYMENT_ENABLED=true` to:
+Keep `PAYMENT_DISABLED` unset or commented out to:
 - Enable the billing system
 - Show upgrade prompts
 - Enforce feature limits based on subscription plans
@@ -205,8 +207,8 @@ Keep `PAYMENT_ENABLED=true` to:
 **Problem**: After disabling payments, users still see upgrade banners.
 
 **Solution**:
-1. Verify `PAYMENT_ENABLED=false` in backend `.env`
-2. Verify `NEXT_PUBLIC_PAYMENT_ENABLED=false` in frontend `.env.local`
+1. Verify `PAYMENT_DISABLED=true` in backend `.env`
+2. Verify `NEXT_PUBLIC_PAYMENT_DISABLED=true` in frontend `.env`
 3. Restart both backend and frontend
 4. Clear browser localStorage (banners may be dismissed)
 5. Check backend logs for the open-source mode message
@@ -216,7 +218,7 @@ Keep `PAYMENT_ENABLED=true` to:
 **Problem**: The billing link appears in the sidebar.
 
 **Solution**:
-1. Verify `NEXT_PUBLIC_PAYMENT_ENABLED=false` in frontend `.env.local`
+1. Verify `NEXT_PUBLIC_PAYMENT_DISABLED=true` in frontend `.env`
 2. Rebuild the frontend: `npm run build` or restart dev server
 3. Clear browser cache
 
@@ -225,7 +227,7 @@ Keep `PAYMENT_ENABLED=true` to:
 **Problem**: Users report hitting feature limits.
 
 **Solution**:
-1. Check `PAYMENT_ENABLED` in backend environment
+1. Check `PAYMENT_DISABLED` in backend environment
 2. Verify the EntitlementsService logs show "open-source mode"
 3. Test the entitlements API: `GET /api/users/me/entitlements`
 4. Manually sync entitlements via API or database

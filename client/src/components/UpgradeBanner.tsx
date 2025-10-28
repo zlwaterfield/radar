@@ -11,7 +11,7 @@ interface UpgradeBannerProps {
 export function UpgradeBanner({ limitType, currentLimit, children }: UpgradeBannerProps) {
   const storageKey = `radar_banner_dismissed_${limitType}`;
   const [isDismissed, setIsDismissed] = useState(false);
-  const paymentEnabled = process.env.NEXT_PUBLIC_PAYMENT_ENABLED !== 'false';
+  const paymentEnabled = process.env.NEXT_PUBLIC_PAYMENT_DISABLED !== 'true';
 
   useEffect(() => {
     // Check if banner was previously dismissed

@@ -137,8 +137,8 @@ Determines why a user should receive a notification.
 Run self-hosted with billing disabled, granting all users full pro-level access.
 
 **Setup**:
-- Set `PAYMENT_ENABLED=false` in backend `.env`
-- Set `NEXT_PUBLIC_PAYMENT_ENABLED=false` in frontend `.env.local`
+- Set `PAYMENT_DISABLED=true` in backend `.env`
+- Set `NEXT_PUBLIC_PAYMENT_DISABLED=true` in frontend `.env`
 - Entitlements service automatically grants unlimited features
 
 **Key Files**:
@@ -173,13 +173,13 @@ Run self-hosted with billing disabled, granting all users full pro-level access.
 **Trigger.dev**: `TRIGGER_PROJECT_REF`, `TRIGGER_SECRET_KEY`
 **OpenAI**: `OPENAI_API_KEY`
 **Resend**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
-**Stripe (Optional)**: `PAYMENT_ENABLED`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+**Stripe (Optional)**: `PAYMENT_DISABLED`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 
 ### Frontend (`client/.env.example`)
 
 **Application**: `NEXT_PUBLIC_API_URL`
 **PostHog**: `NEXT_PUBLIC_POSTHOG_KEY`
-**Stripe (Optional)**: `NEXT_PUBLIC_PAYMENT_ENABLED`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+**Stripe (Optional)**: `NEXT_PUBLIC_PAYMENT_DISABLED`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 
 ## Development Workflow
 

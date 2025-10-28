@@ -157,7 +157,7 @@ Key environment variables include:
 - GitHub API credentials
 - Application settings
 - Trigger credentials
-- **Payment settings** (optional - set `PAYMENT_ENABLED=false` for open-source mode)
+- **Payment settings** (optional - set `PAYMENT_DISABLED=true` for open-source mode)
 
 ## 🤝 Contributing
 
