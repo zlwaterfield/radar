@@ -92,14 +92,6 @@ export class AuthService {
       return session;
     } catch (error) {
       this.logger.error('Error validating session:', error);
-      await this.analyticsService.trackError(
-        sessionId || 'unknown',
-        error instanceof Error ? error : new Error(String(error)),
-        {
-          operation: 'session_validation',
-          category: 'auth_critical',
-        },
-      );
       return null;
     }
   }

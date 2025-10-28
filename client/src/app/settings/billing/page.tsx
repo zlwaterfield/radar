@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Loader from '@/components/Loader';
 import Button from '@/components/Button';
 import { FiCreditCard, FiCheck, FiX } from 'react-icons/fi';
 
@@ -72,15 +74,24 @@ const PLANS = [
 ];
 
 export default function BillingPage() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchSubscription();
-  }, []);
+    if (!authLoading && !isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, authLoading, router]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchSubscription();
+    }
+  }, [isAuthenticated]);
 
   const fetchSubscription = async () => {
     try {
@@ -132,12 +143,12 @@ export default function BillingPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600 dark:text-gray-400">Loading subscription details...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loader size="large" />;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
