@@ -267,7 +267,7 @@ export default function BillingPage() {
                       <span className="font-semibold text-red-600 dark:text-red-400">
                         {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                       </span>
-                      . You'll have access until then.
+                      . You&apos;ll have access until then.
                     </>
                   ) : (
                     <>
