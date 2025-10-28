@@ -6,6 +6,7 @@
 - Later
    - Slack / Github user connecting to @ in notifications
    - Email verifications
+   - Integration tests for the engine logic 
    - Look into duplicate notifications from PR comments
    - Github Discussions support
    - Storing PRs so we have better state on them for notifications?
