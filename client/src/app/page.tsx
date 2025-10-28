@@ -226,7 +226,7 @@ export default function Home() {
                         <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded font-medium">AI</span>
                       </div>
                       <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400 mb-2">PR TITLE: "Add OAuth authentication flow"</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 mb-2">PR TITLE: &quot;Add OAuth authentication flow&quot;</div>
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <FiCheck className="text-green-500 flex-shrink-0" size={14} />
