@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
 import GitHubStarButton from '@/components/GitHubStarButton';
-import { FiArrowRight, FiGithub, FiBell, FiFilter, FiZap } from 'react-icons/fi';
+import { FiArrowRight, FiGithub, FiBell, FiFilter, FiZap, FiTag, FiCheck, FiX } from 'react-icons/fi';
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
@@ -63,31 +63,31 @@ export default function Home() {
 
         <main className="flex flex-col items-center w-full max-w-5xl px-4 sm:px-8 pb-20 relative z-10">
           {/* Hero Section */}
-          <div className="w-full border border-gray-200 dark:border-gray-700 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-16 mt-12 text-center shadow-xl hover:shadow-2xl transition-shadow duration-300">
-            <div className="space-y-8">
-              <h1 className="text-6xl md:text-7xl font-extrabold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent tracking-tight leading-tight">
+          <div className="w-full border border-gray-200 dark:border-gray-700 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 sm:p-10 md:p-16 mt-12 text-center shadow-xl hover:shadow-2xl transition-shadow duration-300">
+            <div className="space-y-6 sm:space-y-8">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent tracking-tight leading-tight">
                 Stay in Sync with Your Pull Requests
               </h1>
-              <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto font-medium">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto font-medium px-2">
                 Smart GitHub notifications for your Slack workspace. Stay informed without the noise.
               </p>
-              <div className="flex flex-wrap justify-center gap-3 pt-6">
-                <div className="px-5 py-2.5 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-200 dark:border-green-700 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <span className="text-sm font-mono font-bold text-green-700 dark:text-green-400">REAL-TIME SYNC</span>
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-4 sm:pt-6">
+                <div className="px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-200 dark:border-green-700 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <span className="text-xs sm:text-sm font-mono font-bold text-green-700 dark:text-green-400">REAL-TIME SYNC</span>
                 </div>
-                <div className="px-5 py-2.5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-700 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <span className="text-sm font-mono font-bold text-blue-700 dark:text-blue-400">AI-POWERED FILTERING</span>
+                <div className="px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-700 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <span className="text-xs sm:text-sm font-mono font-bold text-blue-700 dark:text-blue-400">AI-POWERED FILTERING</span>
                 </div>
-                <div className="px-5 py-2.5 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 border border-purple-200 dark:border-purple-700 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <span className="text-sm font-mono font-bold text-purple-700 dark:text-purple-400">ZERO CONFIG</span>
+                <div className="px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 border border-purple-200 dark:border-purple-700 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <span className="text-xs sm:text-sm font-mono font-bold text-purple-700 dark:text-purple-400">ZERO CONFIG</span>
                 </div>
               </div>
               {!isAuthenticated && (
-                <div className="pt-8 flex justify-center">
+                <div className="pt-6 sm:pt-8 flex justify-center">
                   <Button
                     onClick={() => router.push('/auth/signup')}
                     variant="primary"
-                    className="text-lg px-10 py-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    className="text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                   >
                     Get Started Free
                   </Button>
@@ -225,11 +225,211 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* Feature 4 - AI Keywords */}
+            <div className="group w-full border border-gray-200 dark:border-gray-700 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-10 border-l-4 border-l-blue-500 shadow-lg hover:shadow-2xl hover:scale-[1.01] transition-all duration-300">
+              <div className="flex flex-col md:flex-row gap-8 items-center">
+                <div className="flex-1 order-2 md:order-1">
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-md group-hover:shadow-lg transition-shadow">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-mono text-gray-700 dark:text-gray-300">Keyword Matching</span>
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded font-medium">AI</span>
+                      </div>
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 mb-2">PR TITLE: "Add OAuth authentication flow"</div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <FiCheck className="text-green-500 flex-shrink-0" size={14} />
+                            <span className="text-xs font-mono px-2 py-1 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded text-purple-700 dark:text-purple-400">authentication</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FiCheck className="text-green-500 flex-shrink-0" size={14} />
+                            <span className="text-xs font-mono px-2 py-1 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded text-purple-700 dark:text-purple-400">security</span>
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-3">✨ AI matched semantic keywords</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 order-1 md:order-2">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                      <FiTag className="text-blue-600 dark:text-blue-400" size={28} />
+                    </div>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">AI-Powered Keywords</h2>
+                  </div>
+                  <p className="text-lg text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+                    Create custom keywords to filter notifications. Our AI understands semantic meaning, not just exact matches. Get notified about &quot;authentication&quot; when PRs mention &quot;OAuth&quot; or &quot;login&quot;.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-xs font-mono px-3 py-1.5 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 font-semibold">Semantic matching</span>
+                    <span className="text-xs font-mono px-3 py-1.5 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 font-semibold">Context-aware</span>
+                    <span className="text-xs font-mono px-3 py-1.5 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 font-semibold">Regex support</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing Section */}
+          <div className="w-full mt-32">
+            <h2 className="text-4xl md:text-5xl font-bold text-center mb-6 text-gray-900 dark:text-white">Simple, Transparent Pricing</h2>
+            <p className="text-center text-lg text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto">
+              Choose the plan that fits your team&apos;s needs. Start free, upgrade anytime.
+            </p>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {/* Free Plan */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 flex flex-col border-2 border-gray-200 dark:border-gray-700">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Free</h3>
+                  <div className="mb-4">
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">$0</span>
+                    <span className="text-gray-600 dark:text-gray-400">/forever</span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Perfect for individuals getting started</p>
+                </div>
+
+                <ul className="space-y-3 mb-8 flex-1">
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">2 repositories</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">1 notification profile</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">1 digest configuration</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">1 keyword (regex matching)</span>
+                  </li>
+                  <li className="flex items-start opacity-50">
+                    <FiX className="text-gray-400 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-500">AI keyword matching</span>
+                  </li>
+                </ul>
+
+                {!isAuthenticated && (
+                  <Button
+                    onClick={() => router.push('/auth/signup')}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    Get Started
+                  </Button>
+                )}
+              </div>
+
+              {/* Basic Plan */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 flex flex-col border-2 border-blue-500 relative transform scale-105">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                  MOST POPULAR
+                </div>
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Basic</h3>
+                  <div className="mb-1">
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">$6</span>
+                    <span className="text-gray-600 dark:text-gray-400">/month</span>
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-400 mb-4">
+                    or $60/year (save 2 months)
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Great for small teams</p>
+                </div>
+
+                <ul className="space-y-3 mb-8 flex-1">
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">5 repositories</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">3 notification profiles</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">3 digest configurations</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">2 keywords</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">AI keyword matching</span>
+                  </li>
+                </ul>
+
+                {!isAuthenticated && (
+                  <Button
+                    onClick={() => router.push('/auth/signup')}
+                    variant="primary"
+                    className="w-full"
+                  >
+                    Get Started
+                  </Button>
+                )}
+              </div>
+
+              {/* Pro Plan */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 flex flex-col border-2 border-gray-200 dark:border-gray-700">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Pro</h3>
+                  <div className="mb-1">
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">$15</span>
+                    <span className="text-gray-600 dark:text-gray-400">/month</span>
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-400 mb-4">
+                    or $150/year (save 2 months)
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">For growing teams and power users</p>
+                </div>
+
+                <ul className="space-y-3 mb-8 flex-1">
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300"><strong>Unlimited</strong> repositories</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300"><strong>Unlimited</strong> notification profiles</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300"><strong>Unlimited</strong> digest configurations</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300"><strong>Unlimited</strong> keywords</span>
+                  </li>
+                  <li className="flex items-start">
+                    <FiCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" size={18} />
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">AI keyword matching</span>
+                  </li>
+                </ul>
+
+                {!isAuthenticated && (
+                  <Button
+                    onClick={() => router.push('/auth/signup')}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    Get Started
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* How it works */}
-          <div className="w-full mt-32 border border-gray-200 dark:border-gray-700 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-16 shadow-xl">
-            <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 text-gray-900 dark:text-white">How it works</h2>
+          <div className="w-full mt-32 border border-gray-200 dark:border-gray-700 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-8 sm:p-12 md:p-16 shadow-xl">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-16 text-gray-900 dark:text-white">How it works</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               <div className="relative text-center group">
                 <div className="relative inline-flex mb-6">
