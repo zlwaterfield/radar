@@ -45,4 +45,31 @@ export class BillingController {
     await this.entitlementsService.syncUserEntitlements(userId);
     return { success: true, message: 'Subscription synced successfully' };
   }
+
+  @Post('change-subscription')
+  async changeSubscription(
+    @CurrentUser('id') userId: string,
+    @Body('priceId') priceId: string,
+  ) {
+    await this.stripeService.changeSubscription(userId, priceId);
+    await this.entitlementsService.syncUserEntitlements(userId);
+    return { success: true, message: 'Subscription updated successfully' };
+  }
+
+  @Post('cancel')
+  async cancelSubscription(
+    @CurrentUser('id') userId: string,
+    @Body('immediately') immediately?: boolean,
+  ) {
+    await this.stripeService.cancelSubscription(userId, immediately);
+    await this.entitlementsService.syncUserEntitlements(userId);
+    return { success: true, message: 'Subscription canceled successfully' };
+  }
+
+  @Post('reactivate')
+  async reactivateSubscription(@CurrentUser('id') userId: string) {
+    await this.stripeService.reactivateSubscription(userId);
+    await this.entitlementsService.syncUserEntitlements(userId);
+    return { success: true, message: 'Subscription reactivated successfully' };
+  }
 }

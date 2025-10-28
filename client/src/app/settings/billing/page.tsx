@@ -112,18 +112,88 @@ export default function BillingPage() {
   const handleUpgrade = async (priceId: string) => {
     try {
       setError(null);
+
+      // If user has an active paid subscription, use change-subscription endpoint
+      if (subscription?.planName !== 'free' && subscription?.status === 'active') {
+        const res = await fetch('/api/billing/change-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ priceId }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to update subscription');
+        }
+
+        // Refresh subscription data
+        await fetchSubscription();
+        return;
+      }
+
+      // For free plan users, use checkout flow
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ priceId }),
       });
+
       if (!res.ok) throw new Error('Failed to create checkout session');
       const { url } = await res.json();
       window.location.href = url;
     } catch (error) {
-      console.error('Failed to create checkout session:', error);
-      setError('Failed to start checkout. Please try again.');
+      console.error('Failed to update subscription:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update subscription. Please try again.');
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!confirm('Are you sure you want to cancel your subscription? It will remain active until the end of your billing period.')) {
+      return;
+    }
+
+    try {
+      setError(null);
+      const res = await fetch('/api/billing/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ immediately: false }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to cancel subscription');
+      }
+
+      // Refresh subscription data
+      await fetchSubscription();
+    } catch (error) {
+      console.error('Failed to cancel subscription:', error);
+      setError(error instanceof Error ? error.message : 'Failed to cancel subscription. Please try again.');
+    }
+  };
+
+  const handleReactivateSubscription = async () => {
+    try {
+      setError(null);
+      const res = await fetch('/api/billing/reactivate', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to reactivate subscription');
+      }
+
+      // Refresh subscription data
+      await fetchSubscription();
+    } catch (error) {
+      console.error('Failed to reactivate subscription:', error);
+      setError(error instanceof Error ? error.message : 'Failed to reactivate subscription. Please try again.');
     }
   };
 
@@ -180,25 +250,58 @@ export default function BillingPage() {
                     Legacy Plan
                   </span>
                 )}
+                {subscription.cancelAtPeriodEnd && (
+                  <span className="ml-2 text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded">
+                    Canceling
+                  </span>
+                )}
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Status: {subscription.status}
               </p>
               {subscription.currentPeriodEnd && (
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {subscription.cancelAtPeriodEnd ? 'Cancels' : 'Renews'} on{' '}
-                  {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                  {subscription.cancelAtPeriodEnd ? (
+                    <>
+                      Your subscription will be canceled on{' '}
+                      <span className="font-semibold text-red-600 dark:text-red-400">
+                        {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                      </span>
+                      . You'll have access until then.
+                    </>
+                  ) : (
+                    <>
+                      Renews on {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                    </>
+                  )}
                 </p>
               )}
             </div>
             {subscription.planName !== 'free' && (
-              <Button
-                onClick={handleManageSubscription}
-                icon={<FiCreditCard />}
-                variant="secondary"
-              >
-                Manage Subscription
-              </Button>
+              <div className="flex gap-2">
+                {subscription.cancelAtPeriodEnd ? (
+                  <Button
+                    onClick={handleReactivateSubscription}
+                    variant="primary"
+                  >
+                    Reactivate Subscription
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleCancelSubscription}
+                    variant="secondary"
+                  >
+                    Cancel Subscription
+                  </Button>
+                )}
+                <Button
+                  onClick={handleManageSubscription}
+                  icon={<FiCreditCard />}
+                  variant="secondary"
+                >
+                  Manage Subscription
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -306,8 +409,15 @@ export default function BillingPage() {
                   if (priceId) handleUpgrade(priceId);
                 }}
                 className="w-full"
+                disabled={subscription?.cancelAtPeriodEnd}
               >
-                {subscription?.planName === 'free' ? 'Get Started' : 'Upgrade'}
+                {subscription?.planName === 'free'
+                  ? 'Get Started'
+                  : subscription?.planName === 'basic' && plan.id === 'pro'
+                  ? 'Upgrade'
+                  : subscription?.planName === 'pro' && plan.id === 'basic'
+                  ? 'Downgrade'
+                  : 'Change Plan'}
               </Button>
             ) : (
               <Button variant="ghost" disabled className="w-full">
