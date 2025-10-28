@@ -67,7 +67,7 @@ async function initializeNewUser(userId: string) {
         userId,
         name: 'Daily Digest',
         description: 'Daily summary of GitHub activity',
-        isEnabled: false, // Disabled by default
+        isEnabled: true,
         digestTime: '09:00',
         timezone: 'UTC',
         daysOfWeek: [1, 2, 3, 4, 5], // Monday-Friday
