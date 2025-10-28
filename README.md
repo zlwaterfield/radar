@@ -4,7 +4,7 @@
 
 A Slack application that connects GitHub activity to your team's Slack workspace, delivering customizable notifications about Pull Requests, Issues, Discussions, etc. in near real-time.
 
-Radar was built with inspiration from [Toast](https://toast.ninja/) and [Graphite](https://graphite.dev/). I wanted something simpler and lighter than Graphite but with a few key features that Toast was missing. I built it to be more configurable and feature-rich yet still simple and fast.
+Radar was built with inspiration from [Toast](https://toast.ninja/), the Github Slack app, [Graphite](https://graphite.dev/). I wanted something simpler and lighter than Graphite but with a few key features that Toast and Github app were missing. I built it to be more configurable and feature-rich yet still simple and fast.
 
 ## ✨ Features
 
