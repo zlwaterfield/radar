@@ -53,7 +53,7 @@ function AuthSuccessContent() {
         // Small delay to ensure cookies are set before redirect
         setTimeout(() => {
           // Use window.location.href to ensure a full navigation that triggers AuthContext
-          window.location.href = '/settings/notifications';
+          window.location.href = '/dashboard';
         }, 200);
       } else {
         setError('Invalid authentication response');
