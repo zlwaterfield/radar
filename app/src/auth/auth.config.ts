@@ -82,14 +82,14 @@ async function initializeNewUser(userId: string) {
     const paymentEnabled = process.env.PAYMENT_ENABLED === 'true';
     const entitlements = paymentEnabled
       ? [
-          { featureLookupKey: 'repositories', featureName: 'Repository Limit', value: '1' },
+          { featureLookupKey: 'repository_limit', featureName: 'Repository Limit', value: '2' },
           { featureLookupKey: 'notification_profiles', featureName: 'Notification Configurations', value: '1' },
           { featureLookupKey: 'digest_configs', featureName: 'Digest Configs', value: '1' },
           { featureLookupKey: 'keyword_limit', featureName: 'Keyword Limit', value: '0' },
           { featureLookupKey: 'ai_keyword_matching', featureName: 'AI Keyword Matching', value: 'false' },
         ]
       : [
-          { featureLookupKey: 'repositories', featureName: 'Repository Limit', value: '-1' }, // unlimited
+          { featureLookupKey: 'repository_limit', featureName: 'Repository Limit', value: '-1' }, // unlimited
           { featureLookupKey: 'notification_profiles', featureName: 'Notification Configurations', value: '-1' },
           { featureLookupKey: 'digest_configs', featureName: 'Digest Configs', value: '-1' },
           { featureLookupKey: 'keyword_limit', featureName: 'Keyword Limit', value: '-1' },
