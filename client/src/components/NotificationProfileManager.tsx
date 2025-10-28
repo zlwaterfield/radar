@@ -78,11 +78,11 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
   };
 
   const handleDeleteProfile = async (profileId: string) => {
-    if (window.confirm('Are you sure you want to delete this notification profile?')) {
+    if (window.confirm('Are you sure you want to delete this notification?')) {
       try {
         await deleteProfile(profileId);
       } catch (error) {
-        console.error('Failed to delete profile:', error);
+        console.error('Failed to delete notification:', error);
         // You might want to show a toast notification here
       }
     }
@@ -96,10 +96,10 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
   const handleToggleProfile = async (profile: NotificationProfile) => {
     try {
       await updateProfile(profile.id!, { isEnabled: !profile.isEnabled });
-      toast.success(`Notification profile ${!profile.isEnabled ? 'enabled' : 'disabled'}`);
+      toast.success(`Notification ${!profile.isEnabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
-      console.error('Failed to toggle profile:', error);
-      toast.error('Failed to update notification profile');
+      console.error('Failed to toggle notification:', error);
+      toast.error('Failed to update notification');
     }
   };
 
@@ -151,7 +151,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
     // Check entitlement limit
     if (!canAddMore('notification_profiles', profiles.length)) {
       const limit = getFeatureValue('notification_profiles') as number;
-      toast.error(`You've reached your notification profile limit (${limit}). Upgrade your plan to create more profiles.`);
+      toast.error(`You've reached your notification limit (${limit}). Upgrade your plan to create more notifications.`);
       return;
     }
     setShowForm(true);
@@ -177,7 +177,7 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
           onClick={handleCreateProfile}
           className="flex items-center gap-2"
         >
-          Create profile
+          Create notification
         </Button>
       </div>
 
@@ -192,10 +192,10 @@ export function NotificationProfileManager({ className = '' }: NotificationProfi
         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 text-center">
           <div className="text-4xl mb-2">🔔</div>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            No notification profiles yet
+            No notifications yet
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
-            Create your first notification profile to customize how you receive GitHub notifications
+            Create your first notification to customize how you receive GitHub notifications
           </p>
         </div>
       ) : (

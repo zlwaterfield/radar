@@ -133,7 +133,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
       
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save profile');
+      setError(err instanceof Error ? err.message : 'Failed to save notification');
     } finally {
       setLoading(false);
     }
@@ -171,7 +171,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
       console.error('Update failed:', err);
       // Revert the toggle if the update fails
       setFormData(prev => ({ ...prev, isEnabled: !enabled }));
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      setError(err instanceof Error ? err.message : 'Failed to update notification');
     }
   };
 
@@ -179,7 +179,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
     <Modal isOpen={true} onClose={onClose}>
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {profile ? 'Edit' : 'Create'} notification profile
+          {profile ? 'Edit' : 'Create'} notification
         </h3>
       </div>
 
@@ -215,7 +215,7 @@ export function NotificationProfileForm({ profile, onClose, createProfile, updat
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-marian-blue-500 focus:border-marian-blue-500 sm:text-sm"
                 rows={2}
-                placeholder="Optional description for this profile"
+                placeholder="Optional description for this notification"
               />
             </div>
           </div>

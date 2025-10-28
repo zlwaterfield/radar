@@ -33,8 +33,8 @@ export function UpgradeBanner({ limitType, currentLimit, children }: UpgradeBann
 
   const messages = {
     notification_profiles: {
-      title: 'Notification profile limit reached',
-      description: `You've reached your notification profile limit of ${currentLimit}.`
+      title: 'Notification limit reached',
+      description: `You've reached your notification limit of ${currentLimit}.`
     },
     digest_configs: {
       title: 'Digest configuration limit reached',

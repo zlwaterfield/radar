@@ -23,7 +23,7 @@ const PLANS = [
     billing: 'forever',
     features: [
       '2 repositories',
-      '1 notification profile',
+      '1 notification configuration',
       '1 digest configuration',
       '1 keyword (regex matching)',
     ],
@@ -43,9 +43,9 @@ const PLANS = [
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL_PRICE_ID,
     features: [
       '5 repositories',
-      '3 notification profiles',
+      '3 notification configurations',
       '3 digest configurations',
-      '2 keywords',
+      '3 keywords',
       'AI keyword matching',
     ],
     notIncluded: [],
@@ -62,7 +62,7 @@ const PLANS = [
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
     features: [
       'Unlimited repositories',
-      'Unlimited notification profiles',
+      'Unlimited notification configurations',
       'Unlimited digest configurations',
       'Unlimited keywords',
       'AI keyword matching',
