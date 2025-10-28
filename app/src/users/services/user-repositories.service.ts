@@ -83,6 +83,7 @@ export class UserRepositoriesService {
       ownerAvatarUrl: string;
       ownerUrl: string;
       organization?: string;
+      enabled?: boolean;
     },
   ): Promise<UserRepository> {
     try {
@@ -187,6 +188,12 @@ export class UserRepositoriesService {
       let added = 0;
       let updated = 0;
 
+      // Check if this is the first sync (user has no repos yet)
+      const existingRepoCount = await this.databaseService.userRepository.count({
+        where: { userId },
+      });
+      const isFirstSync = existingRepoCount === 0;
+
       for (const repo of githubRepos) {
         const existingRepo =
           await this.databaseService.userRepository.findFirst({
@@ -222,14 +229,24 @@ export class UserRepositoriesService {
           });
           updated++;
         } else {
-          // Add new repository
-          await this.addUserRepository(userId, repoData);
+          // Add new repository, enable first 2 on initial sync
+          const shouldEnable = isFirstSync && added < 2;
+          await this.addUserRepository(userId, {
+            ...repoData,
+            enabled: shouldEnable,
+          });
           added++;
+
+          if (shouldEnable) {
+            this.logger.log(
+              `Auto-enabled repository ${repoData.fullName} (${added}/2)`,
+            );
+          }
         }
       }
 
       this.logger.log(
-        `Synced repositories for user ${userId}: ${added} added, ${updated} updated`,
+        `Synced repositories for user ${userId}: ${added} added, ${updated} updated${isFirstSync ? ' (first sync - enabled first 2 repos)' : ''}`,
       );
 
       return {
