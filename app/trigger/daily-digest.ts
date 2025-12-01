@@ -99,7 +99,7 @@ export const dailyDigest = schedules.task({
               // Check if it's time to send this digest
               const now = new Date();
               if (!digestService.isDigestTimeMatched(config.digestTime, config.timezone, config.daysOfWeek, now)) {
-                logger.debug("Skipping config (not scheduled time)", {
+                logger.info("Skipping config (not scheduled time)", {
                   configId: config.id,
                   scheduledTime: config.digestTime,
                   timezone: config.timezone,
@@ -112,7 +112,7 @@ export const dailyDigest = schedules.task({
               // Check if digest was already sent today for this config
               const alreadySent = await digestService.wasDigestSentToday(config.id, config.timezone);
               if (alreadySent) {
-                logger.debug("Skipping config (already sent today)", { configId: config.id });
+                logger.info("Skipping config (already sent today)", { configId: config.id });
                 successCount++; // Count as success since already sent
                 continue;
               }
@@ -149,7 +149,7 @@ export const dailyDigest = schedules.task({
                   });
                 }
               } else {
-                logger.debug("No PRs to report, skipping", { configId: config.id });
+                logger.info("No PRs to report, skipping", { configId: config.id });
                 successCount++; // Count as success since there was nothing to send
               }
 
