@@ -252,24 +252,55 @@ export class DigestService {
     daysOfWeek: number[],
     now: Date = new Date(),
   ): boolean {
-    const [hours, minutes] = digestTime.split(':').map(Number);
+    const [configHours, configMinutes] = digestTime.split(':').map(Number);
 
-    // Round minutes to nearest 15-minute interval
-    const roundedMinutes = Math.floor(minutes / 15) * 15;
+    // Round config minutes to nearest 15-minute interval
+    const configRoundedMinutes = Math.floor(configMinutes / 15) * 15;
 
-    // Convert current time to user's timezone
-    const userTime = new Date(
-      now.toLocaleString('en-US', { timeZone: timezone }),
+    // Get current time components in user's timezone using Intl.DateTimeFormat
+    // This avoids the bug of parsing a locale string back into a Date
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: 'numeric',
+      minute: 'numeric',
+      weekday: 'short',
+      hour12: false,
+    });
+
+    const parts = formatter.formatToParts(now);
+    const currentHour = parseInt(
+      parts.find((p) => p.type === 'hour')?.value || '0',
+      10,
+    );
+    const currentMinute = parseInt(
+      parts.find((p) => p.type === 'minute')?.value || '0',
+      10,
     );
 
+    // Map weekday abbreviation to day number (0=Sunday, 6=Saturday)
+    const weekdayMap: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+    const weekdayValue = parts.find((p) => p.type === 'weekday')?.value || '';
+    const currentDay = weekdayMap[weekdayValue] ?? -1;
+
     // Check if current day is in the configured days
-    const currentDay = userTime.getDay(); // 0=Sunday, 6=Saturday
     if (!daysOfWeek.includes(currentDay)) {
       return false;
     }
 
+    // Round CURRENT minutes to see if we're in the same 15-min window as config
+    const currentRoundedMinutes = Math.floor(currentMinute / 15) * 15;
+
     return (
-      userTime.getHours() === hours && userTime.getMinutes() === roundedMinutes
+      currentHour === configHours &&
+      currentRoundedMinutes === configRoundedMinutes
     );
   }
 
@@ -481,31 +512,47 @@ export class DigestService {
       let result: any = null;
 
       // Send based on delivery type
+      this.logger.log(
+        `Sending digest for config ${config.id} via ${deliveryInfo.type}`,
+      );
+
       if (deliveryInfo.type === 'dm') {
         if (!deliveryInfo.slackId || !deliveryInfo.slackBotToken) {
           this.logger.warn(
-            `Config ${config.id} missing Slack credentials for DM delivery`,
+            `Config ${config.id} missing Slack credentials for DM delivery - slackId: ${!!deliveryInfo.slackId}, slackBotToken: ${!!deliveryInfo.slackBotToken}`,
           );
           return false;
         }
 
+        this.logger.log(
+          `Sending DM to slackId ${deliveryInfo.slackId} for config ${config.id}`,
+        );
         result = await this.slackService.sendDirectMessage(
           deliveryInfo.slackBotToken,
           deliveryInfo.slackId,
           message,
         );
+        this.logger.log(
+          `DM send result for config ${config.id}: ${JSON.stringify(result)}`,
+        );
       } else if (deliveryInfo.type === 'channel') {
         if (!deliveryInfo.target || !deliveryInfo.slackBotToken) {
           this.logger.warn(
-            `Config ${config.id} missing channel or Slack bot token for channel delivery`,
+            `Config ${config.id} missing channel or Slack bot token for channel delivery - target: ${deliveryInfo.target}, slackBotToken: ${!!deliveryInfo.slackBotToken}`,
           );
           return false;
         }
 
+        this.logger.log(
+          `Sending to channel ${deliveryInfo.target} for config ${config.id}`,
+        );
         result = await this.slackService.sendChannelMessage(
           deliveryInfo.slackBotToken,
           deliveryInfo.target,
           message,
+        );
+        this.logger.log(
+          `Channel send result for config ${config.id}: ${JSON.stringify(result)}`,
         );
       } else if (deliveryInfo.type === 'email') {
         // Get user email

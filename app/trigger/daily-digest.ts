@@ -98,12 +98,38 @@ export const dailyDigest = schedules.task({
 
               // Check if it's time to send this digest
               const now = new Date();
+
+              // Log detailed time info for debugging
+              const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: config.timezone,
+                hour: 'numeric',
+                minute: 'numeric',
+                weekday: 'short',
+                hour12: false,
+              });
+              const parts = formatter.formatToParts(now);
+              const userHour = parts.find((p) => p.type === 'hour')?.value;
+              const userMinute = parts.find((p) => p.type === 'minute')?.value;
+              const userWeekday = parts.find((p) => p.type === 'weekday')?.value;
+
+              logger.info("Time check details", {
+                configId: config.id,
+                configName: config.name,
+                scheduledTime: config.digestTime,
+                timezone: config.timezone,
+                daysOfWeek: config.daysOfWeek,
+                serverTimeUTC: now.toISOString(),
+                userLocalTime: `${userHour}:${userMinute}`,
+                userWeekday,
+                userMinuteRounded: Math.floor(parseInt(userMinute || '0') / 15) * 15,
+              });
+
               if (!digestService.isDigestTimeMatched(config.digestTime, config.timezone, config.daysOfWeek, now)) {
                 logger.info("Skipping config (not scheduled time)", {
                   configId: config.id,
                   scheduledTime: config.digestTime,
                   timezone: config.timezone,
-                  currentTime: `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`
+                  userLocalTime: `${userHour}:${userMinute}`,
                 });
                 successCount++; // Count as success since it's not time yet
                 continue;
@@ -120,7 +146,17 @@ export const dailyDigest = schedules.task({
               logger.info("Time matches, processing digest", { configId: config.id });
 
               // Get execution data for this config
+              logger.info("Getting execution data", { configId: config.id });
               const executionData = await digestConfigService.getDigestExecutionData(config.id);
+
+              logger.info("Execution data retrieved", {
+                configId: config.id,
+                deliveryType: executionData.deliveryInfo.type,
+                deliveryTarget: executionData.deliveryInfo.target,
+                hasSlackBotToken: !!executionData.deliveryInfo.slackBotToken,
+                hasSlackId: !!executionData.deliveryInfo.slackId,
+                repositoryCount: executionData.repositories.length,
+              });
 
               // Generate digest content
               logger.info("Generating digest content", { configId: config.id });
@@ -132,7 +168,20 @@ export const dailyDigest = schedules.task({
                                digest.userOpenPRs.length +
                                digest.userDraftPRs.length;
 
+              logger.info("Digest generated", {
+                configId: config.id,
+                waitingOnUser: digest.waitingOnUser.length,
+                approvedReadyToMerge: digest.approvedReadyToMerge.length,
+                userOpenPRs: digest.userOpenPRs.length,
+                userDraftPRs: digest.userDraftPRs.length,
+                totalPRs,
+              });
+
               if (totalPRs > 0) {
+                logger.info("Sending digest", {
+                  configId: config.id,
+                  deliveryType: executionData.deliveryInfo.type,
+                });
                 const sent = await digestService.sendDigestForConfig(executionData, digest);
                 if (sent) {
                   successCount++;
@@ -143,9 +192,10 @@ export const dailyDigest = schedules.task({
                   });
                 } else {
                   errorCount++;
-                  logger.error("Failed to send digest", {
+                  logger.error("Failed to send digest (sendDigestForConfig returned false)", {
                     configId: config.id,
-                    configName: config.name
+                    configName: config.name,
+                    deliveryType: executionData.deliveryInfo.type,
                   });
                 }
               } else {
